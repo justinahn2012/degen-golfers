@@ -93,5 +93,10 @@
 "tex": "face_sheldon_tex.jpg",
 "por": "face_sheldon_por.jpg",
 "skin": "#c48d6c"
+},
+"kanishka": {
+"tex": "face_kanishka_tex.jpg",
+"por": "face_kanishka_por.jpg",
+"skin": "#af6f53"
 }
 }
