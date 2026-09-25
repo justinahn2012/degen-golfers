@@ -29,6 +29,9 @@ const TEES=D.f.filter(f=>f.k==='tee'&&f.c).map(f=>mkPoly(f.p));
 const BUNKERS=D.f.filter(f=>(f.k==='bunker'||f.k==='sand')&&f.c).map(f=>mkPoly(f.p));
 const PATHS=D.f.filter(f=>f.k==='cartpath'||f.k==='path').map(f=>f.p);
 const WATER=D.f.filter(f=>f.k==='water'&&f.c&&f.p.length>3).map(f=>mkPoly(f.p));
+/* creeks (USGS NHD centerlines): a narrow channel that counts as a water hazard */
+const CREEKS=[];for(const l of (D.creek||[])){if(l.length<2)continue;const hw=1.6,L=[],Rt=[];for(let i=0;i<l.length;i++){const a=l[Math.max(0,i-1)],b=l[Math.min(l.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],n=Math.hypot(dx,dy)||1,nx=-dy/n,ny=dx/n;L.push([l[i][0]+nx*hw,l[i][1]+ny*hw]);Rt.push([l[i][0]-nx*hw,l[i][1]-ny*hw]);}
+  const w=mkPoly(L.concat(Rt.reverse()));w.creek=true;w.line=l;WATER.push(w);CREEKS.push(w);}
 const WOODS=D.f.filter(f=>f.k==='wood'&&f.c&&f.p.length>3).map(f=>mkPoly(f.p));
 const HOLES=D.holes.filter(h=>h.main).sort((a,b)=>+a.ref-+b.ref), P3HOLES=D.holes.filter(h=>!h.main);
 // fairways: OSM polygons, plus a centerline corridor for any par 4/5 the map leaves bare
@@ -59,7 +62,7 @@ function H(x,y){let h=baseH(x,y);
   if(!LI)for(const g of GREENS){const dx=x-g.cx,dy=y-g.cy,r=g.R+12;if(dx>r||dx<-r||dy>r||dy<-r)continue;const d=Math.hypot(dx,dy);if(d>r)continue;const w=1-sstep(g.R*.75,r,d);const t=g.h0+g.ax*dx+g.ay*dy+.08*Math.sin(dx/3.7+1)*Math.cos(dy/4.9);h=h*(1-w)+t*w;}
   if(!LI)for(const g of TEES){const dx=x-g.cx,dy=y-g.cy,r=g.R+6;if(dx>r||dx<-r||dy>r||dy<-r)continue;const d=Math.hypot(dx,dy);if(d>r)continue;const w=1-sstep(g.R*.9,r,d);h=h*(1-w)+g.h0*w;}
   for(const b of BUNKERS){if(x<b.x0-1.4||x>b.x1+1.4||y<b.y0-1.4||y>b.y1+1.4)continue;const e=edgeDist(b,x,y);if(inP(b,x,y))h-=(LI?.05:.1)+(LI?.22:.44)*sstep(0,2.4,e);else if(e<1.35)h+=(LI?.08:.14)*sstep(0,.35,e)*(1-sstep(.4,1.35,e));}
-  for(const w of WATER){if(inP(w,x,y))h-=0.6;}
+  for(const w of WATER){if(inP(w,x,y))h-=w.creek?.28:0.6;}
   return h;}
 function edgeDist(b,x,y){let m=1e9;const p=b.p;for(let i=0,j=p.length-1;i<p.length;j=i++)m=Math.min(m,dSeg(x,y,p[j][0],p[j][1],p[i][0],p[i][1]));return m;}
 function grad(x,y){const e=.3;return[(H(x+e,y)-H(x-e,y))/(2*e),(H(x,y+e)-H(x,y-e))/(2*e)];}
@@ -161,11 +164,15 @@ function swayMat(mt,amp){mt.onBeforeCompile=sh=>{sh.uniforms.uTime=WT;sh.vertexS
 const IMPS=[];let NEAR=null;
 /* trees: Pacific Northwest mix, kept out of every hole's playing corridor */
 const TREES=[],THASH=new Map();
+const CAN=D.canopy?(()=>{const s=atob(D.canopy.b64),a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;})():null;
+function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor((y-c.y0)/c.sy+.5);return(i<0||j<0||i>=c.nx||j>=c.ny)?-1:CAN[j*c.nx+i]/255;}
 {const lines=D.holes.filter(h=>h.main||!PAR3).map(h=>({p:h.p,w:+h.par>=4?27:19}));const obst=GREENS.concat(TEES,BUNKERS);
  const TS0=WW*HH>600000?8.5:7;for(let x=X0;x<X1;x+=TS0)for(let y=Y0;y<Y1;y+=TS0){
   const tx=x+rnd()*TS0*.85,ty=y+rnd()*TS0*.85,r=rnd();let ok=false;
    if(WATER.some(w=>inP(w,tx,ty)))continue;
   if(RANGE.some(g=>inP(g,tx,ty))||CLUBH.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+10))continue;
+  if(CAN){const cv=canAt(tx,ty);if(cv>=0){if(FAIRWAYS.some(f=>inP(f,tx,ty))||obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+4)||PATHS.some(p=>dPL(tx,ty,p)<2.5)||lines.some(l=>dPL(tx,ty,l.p)<(l.w>20?11:8)))continue;if(!(r<cv*1.08))continue;
+    const fir=rnd()<.62,t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?14+rnd()*16:11+rnd()*9,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}continue;}}
   if(inP(MAIN,tx,ty)){if(lines.some(l=>dPL(tx,ty,l.p)<l.w))continue;if(FAIRWAYS.some(f=>inP(f,tx,ty)))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+8))continue;if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<.55;}
   else if(PAR3&&inP(PAR3,tx,ty)){if(P3HOLES.some(l=>dPL(tx,ty,l.p)<12))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+5))continue;ok=r<.2;}
   else{if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<(WOODS.some(w=>inP(w,tx,ty))?.62:.26);}
@@ -207,7 +214,9 @@ if(WATER.length&&skyT){const wm=new THREE.ShaderMaterial({transparent:true,depth
    'void main(){vec2 p=vW.xz;float a=t*1.2;vec3 n=normalize(vec3(.05*sin(p.x*1.7+a)+.035*sin(p.x*3.1-p.y*2.3+a*1.7)+.018*sin(p.y*7.+a*2.3),1.,.045*cos(p.y*1.9+a*1.1)+.03*sin(p.x*2.7+p.y*1.3-a*1.4)+.018*cos(p.x*6.3-a*2.)));'+
    'vec3 v=normalize(cameraPosition-vW);vec3 r=reflect(-v,n);r.y=abs(r.y);float fr=.03+.97*pow(1.-max(dot(n,v),0.),5.);vec3 c=mix(vec3(.03,.075,.08),skyS(r),clamp(fr*1.1+.1,0.,1.));c+=vec3(1.,.95,.85)*pow(max(dot(r,normalize(sun)),0.),180.)*1.5;'+
    'c=mix(c,fogC,smoothstep(fogN,fogF,length(cameraPosition-vW)));if(uLin>.5)c=pow(c,vec3(2.2));gl_FragColor=vec4(c,.95);}'});
-  for(const w of WATER){const g=new THREE.ShapeGeometry(new THREE.Shape(w.p.map(q=>new THREE.Vector2(q[0],q[1]))),2);g.rotateX(-Math.PI/2);let lv=1e9;for(const q of w.p)lv=Math.min(lv,baseH(q[0],q[1]));const m=new THREE.Mesh(g,wm);m.position.y=lv-.12;m.renderOrder=1;scene.add(m);}}
+  for(const w of WATER){if(w.creek){const l=w.line,P=[],I=[];for(let i=0;i<l.length;i++){const a=l[Math.max(0,i-1)],b=l[Math.min(l.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],n=Math.hypot(dx,dy)||1,nx=-dy/n,ny=dx/n;for(const s of[-1.5,1.5]){const x=l[i][0]+nx*s,y=l[i][1]+ny*s,v=V(x,y,H(l[i][0],l[i][1])+.05);P.push(v.x,v.y,v.z);}if(i){const k=(i-1)*2;I.push(k,k+1,k+2,k+1,k+3,k+2);}}
+      const cg=new THREE.BufferGeometry();cg.setAttribute('position',new THREE.Float32BufferAttribute(P,3));cg.setIndex(I);const cm=new THREE.Mesh(cg,wm);cm.renderOrder=1;scene.add(cm);continue;}
+    const g=new THREE.ShapeGeometry(new THREE.Shape(w.p.map(q=>new THREE.Vector2(q[0],q[1]))),2);g.rotateX(-Math.PI/2);let lv=1e9;for(const q of w.p)lv=Math.min(lv,baseH(q[0],q[1]));const m=new THREE.Mesh(g,wm);m.position.y=lv-.12;m.renderOrder=1;scene.add(m);}}
 /* distant horizon: hills, Mount Rainier to the southeast, downtown skyline to the north */
 const CEN={x:MAIN.cx,y:MAIN.cy};
 {const N=160,pos=[],idx=[],R=2250;for(let i=0;i<=N;i++){const a=i/N*Math.PI*2,x=CEN.x+Math.cos(a)*R,y=CEN.y+Math.sin(a)*R,top=12+22*Math.abs(Math.sin(a*7.3)*Math.cos(a*3.1))+8*Math.sin(a*19);pos.push(x,HZ-60,-y,x,HZ+top,-y);if(i<N){const k=i*2;idx.push(k,k+1,k+2,k+1,k+3,k+2);}}
