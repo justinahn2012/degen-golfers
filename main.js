@@ -278,8 +278,10 @@ function getEnv(){if(ENV)return ENV;try{const img=skyT&&skyT.image;if(!img||!img
   const gr=x.createLinearGradient(0,256,0,512);gr.addColorStop(0,'#9aa493');gr.addColorStop(.06,'#557440');gr.addColorStop(1,'#35502a');x.fillStyle=gr;x.fillRect(0,257,1024,255);
   const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;const pm=new THREE.PMREMGenerator(renderer);ENV=pm.fromEquirectangular(t).texture;pm.dispose();t.dispose();}catch(e){console.warn(e);ENV=null;}return ENV;}
 function clubType(i){return i===0?'driver':i<=3?'wood':i<=8?'iron':i<=12?'wedge':'putter';}
-const CLUB_LEN={driver:1.1,wood:1.03,iron:.95,wedge:.9,putter:.84};
+const CLUB_LEN={driver:1.1,wood:1.03,iron:.95,wedge:.9,putter:.89};
 /* one club built in its own frame: lead hand at origin, shaft down -Y, face toward +X, toe toward +Z */
+function fitPutterNeck(hb){const n=hb.userData.neck;if(!n)return;const t=hb.rotation.x,top=new THREE.Vector3(0,.075*Math.cos(t),-.075*Math.sin(t)),A=new THREE.Vector3(.009,.025,.007),B=new THREE.Vector3(.009,.04,.007),C=new THREE.Vector3(.002,.046,.005);
+  placeSeg(n[0],A,B);placeSeg(n[1],B,C);placeSeg(n[2],C,top);hb.userData.jn[0].position.copy(B);hb.userData.jn[1].position.copy(C);}
 function makeClubs(){const env=getEnv(),S=o=>{const m=new THREE.MeshStandardMaterial(o);if(env)m.envMap=env;return m;};
   const cv=(w,h,f)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.anisotropy=8;return t;};
   if(!window._clubTex){window._clubTex={
@@ -303,10 +305,10 @@ function makeClubs(){const env=getEnv(),S=o=>{const m=new THREE.MeshStandardMate
   const out={};
   const seg=(y0,y1,r0,r1,m,par,sg)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,Math.abs(y1-y0),sg||20),m);c.position.y=(y0+y1)/2;par.add(c);return c;};
   const mk=(type,build)=>{const L=CLUB_LEN[type],cg=new THREE.Group();
-    const gp=seg(.11,-.165,.0132,.0104,gripM,cg,24);const cap=new THREE.Mesh(new THREE.SphereGeometry(.0133,20,10,0,Math.PI*2,0,Math.PI/2),gripM);cap.position.y=.11;cg.add(cap);
+    const gp=seg(.11,-.165,.0132,.0104,gripM,cg,24);if(type==='putter')gp.scale.set(1.32,1,.95);const cap=new THREE.Mesh(new THREE.SphereGeometry(.0133,20,10,0,Math.PI*2,0,Math.PI/2),gripM);cap.position.y=.11;cg.add(cap);
     const top=-.165,bot=-L+.075;seg(top,bot,.0064,.0045,type==='putter'?mirror:steel,cg,18);
     if(type!=='putter')for(let k=0;k<5;k++){const y=bot+.12+k*.055;const rr=.0045+(.0064-.0045)*((y-bot)/(top-bot));const r=new THREE.Mesh(new THREE.TorusGeometry(rr+.0003,.00045,6,20),steel);r.rotation.x=Math.PI/2;r.position.y=y;cg.add(r);}
-    const hg=new THREE.Group(),hb=new THREE.Group();hg.position.y=-L;hb.rotation.x=type==='putter'?.3:.44;hg.add(hb);build(hg,hb);cg.add(hg);cg.visible=false;cg.userData.L=L;out[type]=cg;};
+    const hg=new THREE.Group(),hb=new THREE.Group();hg.position.y=-L;hb.rotation.x=type==='putter'?.3:.44;hg.add(hb);build(hg,hb);cg.add(hg);cg.userData.hb=hb;cg.visible=false;cg.userData.L=L;out[type]=cg;};
   const wood=k=>(hg,hb)=>{const b=new THREE.Mesh(new THREE.SphereGeometry(.058*k,40,24),carbon);b.scale.set(1.02,.54,1.12);b.position.set(-.035*k,.028*k,.052*k);hb.add(b);
     const sk=new THREE.Mesh(new THREE.SphereGeometry(.0585*k,40,12,0,Math.PI*2,Math.PI*.55,Math.PI*.45),satin);sk.scale.set(1.02,.54,1.12);sk.position.copy(b.position);hb.add(sk);
     const f=new THREE.Mesh(new THREE.SphereGeometry(.0585*k,32,16,-Math.PI*.3,Math.PI*.6,Math.PI*.3,Math.PI*.42),faceM);f.scale.set(1.03,.55,1.13);f.rotation.y=Math.PI/2;f.position.set(-.035*k,.028*k,.052*k);hb.add(f);
@@ -325,10 +327,21 @@ function makeClubs(){const env=getEnv(),S=o=>{const m=new THREE.MeshStandardMate
       bl.rotation.y=-Math.PI/2;const lg=new THREE.Group();lg.add(bl);lg.rotation.z=loft;lg.scale.setScalar(sc);hb.add(lg);
       const hs=new THREE.Mesh(new THREE.CylinderGeometry(.0062,.0078,.068,18),satin);hs.position.set(0,.036,.002);hg.add(hs);const fe=new THREE.Mesh(new THREE.CylinderGeometry(.0058,.0062,.012,18),ferr);fe.position.set(0,.075,.002);hg.add(fe);};
   mk('driver',wood(1));mk('wood',wood(.8));mk('iron',blade(.5,1));mk('wedge',blade(.92,1.05));
-  mk('putter',(hg,hb)=>{const ml=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.026,40,1,false,0,Math.PI),blk);ml.rotation.y=Math.PI;ml.position.set(-.001,.013,.05);hb.add(ml);
-    const fc=new THREE.Mesh(new THREE.BoxGeometry(.006,.026,.1),mirror);fc.position.set(.002,.013,.05);hb.add(fc);
-    const ln=new THREE.Mesh(new THREE.BoxGeometry(.04,.0016,.004),white);ln.position.set(-.024,.0265,.05);hb.add(ln);const ac=new THREE.Mesh(new THREE.BoxGeometry(.03,.0016,.003),accent);ac.position.set(-.028,.0265,.028);hb.add(ac);
-    const hs=new THREE.Mesh(new THREE.CylinderGeometry(.005,.006,.05,14),mirror);hs.position.set(0,.03,.01);hg.add(hs);});
+  mk('putter',(hg,hb)=>{const sat=S({color:0xd6dadf,metalness:.92,roughness:.3}),dk=S({color:0x1a1b1e,metalness:.5,roughness:.35}),red=S({color:0xc8202c,metalness:.2,roughness:.35});
+    const rr=(w,h,r)=>{const s=new THREE.Shape();s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);s.lineTo(w/2,h/2-r);s.quadraticCurveTo(w/2,h/2,w/2-r,h/2);s.lineTo(-w/2+r,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);return s;};
+    const blade=new THREE.Group();
+    /* face bar: 9 cm heel to toe, 2.5 cm tall, soft radii on every edge */
+    const fg=new THREE.ExtrudeGeometry(rr(.012,.025,.0035),{depth:.088,bevelEnabled:true,bevelThickness:.002,bevelSize:.0012,bevelSegments:3,curveSegments:6});const fb=new THREE.Mesh(fg,sat);fb.position.set(.009,.0135,.004);blade.add(fb);
+    /* flange behind the face, lower, with the sightline and two cherry dots */
+    const flg=new THREE.ExtrudeGeometry(rr(.026,.082,.007),{depth:.0085,bevelEnabled:true,bevelThickness:.0012,bevelSize:.0012,bevelSegments:2,curveSegments:6});flg.rotateX(Math.PI/2);flg.translate(0,.0097,0);const fl=new THREE.Mesh(flg,sat);fl.position.set(-.008,0,.049);blade.add(fl);
+    const cav=new THREE.Mesh(new THREE.BoxGeometry(.01,.0012,.058),dk);cav.position.set(-.001,.0108,.049);blade.add(cav);
+    const sl=new THREE.Mesh(new THREE.BoxGeometry(.016,.0008,.0022),S({color:0xf4f4f2,roughness:.4}));sl.position.set(-.013,.0103,.049);blade.add(sl);
+    for(const z of[.028,.07]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.0024,.0024,.0008,14),red);d.position.set(-.012,.0104,z);blade.add(d);}
+    const fc=new THREE.Mesh(new THREE.PlaneGeometry(.084,.02),S({color:0xc9ced4,metalness:.85,roughness:.5}));fc.rotation.y=Math.PI/2;fc.position.set(.0172,.0135,.049);blade.add(fc);
+    hb.add(blade);
+    /* plumber's neck: up from the heel, a short jog, then into the shaft (re-fitted whenever the lie changes) */
+    hb.userData.neck=[segMesh(.0042,.0042,sat,hb),segMesh(.0042,.0042,sat,hb),segMesh(.0046,.0042,sat,hb)];hb.userData.jn=[new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),sat),new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),sat)];hb.userData.jn.forEach(m=>hb.add(m));fitPutterNeck(hb);
+    const hs=new THREE.Mesh(new THREE.CylinderGeometry(.005,.0052,.03,14),dk);hs.position.set(0,.09,.0);hg.add(hs);});
   return out;}
 
 /* ---- rig geometry helpers ---- */
@@ -809,6 +822,10 @@ function animGround(g,ck){const An=animSetup(g),R=g.userData.rig,B=R.B;if(An.gnd
   An.gnd[ck]=R.J_ankY-Math.min(gpG(g,B.foot_l).y,gpG(g,B.foot_r).y);}
 function gripPt(g,s){const B=g.userData.rig.B;return gpG(g,B['hand_'+s]).lerp(gpG(g,B['middle_01_'+s]),.62);}
 function animCal(g,ck,type){const An=animSetup(g),key=ck+':'+type;if(An.cal[key])return An.cal[key];animGround(g,ck);const C=ANIM.clips[ck],B=g.userData.rig.B;
+  if(type==='putter'){animApply(g,ck,C.keys.imp);const L=CLUB_LEN.putter,lg=gripPt(g,'l'),tY=.012,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-.0004));const head=new THREE.Vector3(lg.x+.02,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
+    const iq=relQ(g,B.hand_l).invert(),cal={dL:d1.clone().applyQuaternion(iq),fL:face.clone().applyQuaternion(iq),bx:head.x+.039,bz:head.z+.047,lie:Math.PI/2-Math.atan2(dy,hz)};An.cal[key]=cal;const pc=g.userData.rig.clubs.putter;if(pc&&pc.userData.hb){pc.userData.hb.rotation.x=cal.lie;fitPutterNeck(pc.userData.hb);
+    /* put the ball where the face actually is at impact: pose the club and measure the face centre */
+    animClub(g,ck,'putter');pc.updateMatrixWorld(true);const fp=g.worldToLocal(pc.userData.hb.localToWorld(new THREE.Vector3(.0175+.0214,.013,.049)));cal.bx=fp.x;cal.bz=fp.z;}return cal;}
   animApply(g,ck,C.keys.imp);const L=CLUB_LEN[type],lg=gripPt(g,'l'),tg=gripPt(g,'r');let d0=tg.clone().sub(lg);if(d0.lengthSq()<1e-6)d0.set(0,-1,.3);d0.normalize();
   const face=new THREE.Vector3(1,0,0);face.addScaledVector(d0,-face.dot(d0)).normalize();const tY=type==='driver'?.035:.012,hy=th=>lg.y+d0.clone().applyAxisAngle(face,th).y*L;
   let best=0,bd=1e9;for(let k=0;k<=120;k++){const th=(k%2?1:-1)*Math.ceil(k/2)*.01,e=Math.abs(hy(th)-tY);if(e<.006){best=th;bd=e;break;}if(e<bd){bd=e;best=th;}}
@@ -817,12 +834,18 @@ function animCal(g,ck,type){const An=animSetup(g),key=ck+':'+type;if(An.cal[key]
 function animClub(g,ck,type){const R=g.userData.rig,cal=animCal(g,ck,type),hq=relQ(g,R.B.hand_l),grip=gripPt(g,'l');
   const sh=cal.dL.clone().applyQuaternion(hq),fc=cal.fL.clone().applyQuaternion(hq),ya=sh.clone().negate(),xa=fc.clone().addScaledVector(ya,-fc.dot(ya)).normalize(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();
   _m4.makeBasis(xa,ya,za);for(const kk in R.clubs){const cg=R.clubs[kk];cg.visible=kk===type;if(kk===type){cg.position.copy(grip);cg.quaternion.setFromRotationMatrix(_m4);}}}
+
+function setRelG(g,b,q){const gi=g.getWorldQuaternion(new THREE.Quaternion()).invert(),pr=gi.multiply(b.parent.getWorldQuaternion(new THREE.Quaternion()));b.quaternion.copy(pr.invert().multiply(q));b.updateMatrixWorld(true);}
+function headLift(g,w){if(w<=.01)return;const R=g.userData.rig,B=R.B,An=R.anim;if(!B.Head||!B.neck_01||!An.restQ.Head)return;
+  const hq=relQ(g,B.Head),face=new THREE.Vector3(0,0,1).applyQuaternion(hq.clone().multiply(An.restQ.Head.clone().invert())).normalize(),want=new THREE.Vector3(.5,.14,.86).normalize();
+  const full=new THREE.Quaternion().setFromUnitVectors(face,want),part=new THREE.Quaternion().slerp(full,w),nq=relQ(g,B.neck_01);
+  setRelG(g,B.neck_01,new THREE.Quaternion().slerp(part,.45).multiply(nq));setRelG(g,B.Head,part.clone().multiply(hq));}
 function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(type),C=ANIM.clips[ck];if(!C)return false;
-  try{animSetup(g);animGround(g,ck);animCal(g,ck,type);const K=C.keys,p=Math.max(0,Math.min(1,S._pw||0)),ph=S._ph,u=S._u||0;let f=K.addr,f2,w=0;
-    if(ph==='back')f=K.addr+(K.top-K.addr)*p;
-    else if(ph==='down'){const uu=Math.min(1,u);f=K.top+(K.imp-K.top)*uu;if(p<.98){f2=K.addr+(K.top-K.addr)*p;w=1-Math.min(1,uu/.5);w*=w;}}
+  try{animSetup(g);animGround(g,ck);animCal(g,ck,type);const K=C.keys,p=Math.max(0,Math.min(1,S._pw||0)),ph=S._ph,u=S._u||0,A0=ck==='putt'?K.imp:K.addr;let f=A0,f2,w=0;
+    if(ph==='back')f=A0+(K.top-A0)*p;
+    else if(ph==='down'){const uu=Math.min(1,u);f=K.top+(K.imp-K.top)*uu;if(p<.98){f2=A0+(K.top-A0)*p;w=1-Math.min(1,uu/.5);w*=w;}}
     else if(ph==='thru'){f=u<=1?K.imp+(K.fin-K.imp)*u:Math.min(K.end,K.fin+(u-1)*(K.fin-K.imp)*.5);}
-    animApply(g,ck,f,f2,w);animClub(g,ck,type);return true;}catch(e){console.warn('anim',e);return false;}}
+    animApply(g,ck,f,f2,w);animClub(g,ck,type);const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
