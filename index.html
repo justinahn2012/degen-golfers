@@ -1240,7 +1240,7 @@ const PORT={};for(const r of ROSTER)PORT[r.id]=(window.FACES&&FACES[r.id])?FACES
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);}
 const STATN=[['pow','Power'],['acc','Accuracy'],['sg','Short game'],['put','Putting'],['rec','Recovery']];
 const STATS2=[['pow','PWR','Power'],['acc','ACC','Accuracy'],['sg','SHT','Short game'],['put','PUT','Putting'],['rec','REC','Recovery']];
-function segBar(v){const c=v>=85?'#f2c230':v>=70?'#8cc265':v>=50?'#c3d466':'#e8914a';let h='<span class="sbar" style="--sc:'+c+'">';for(let k=0;k<5;k++){const f=Math.max(0,Math.min(1,(v-k*20)/20));h+='<i><b style="width:'+(f*100).toFixed(0)+'%"></b></i>';}return h+'</span>';}
+function segBar(v){const full=Math.floor(v/20),c=full>=4?'#58c95e':full===3?'#f5d02f':full===2?'#f28c28':'#e5484d';let h='<span class="sbar" style="--sc:'+c+'">';for(let k=0;k<5;k++){const f=Math.max(0,Math.min(1,(v-k*20)/20));h+='<i><b style="width:'+(f*100).toFixed(0)+'%"></b></i>';}return h+'</span>';}
 function buildMenu(){const w=$('picks');w.innerHTML='';const order=[...picked];for(const r of ROSTER){const on=picked.has(r.id),d=document.createElement('button');d.className='gc';d.setAttribute('aria-pressed',String(on));d.style.setProperty('--pc',r.color);
   d.innerHTML='<div class="hd"><img alt="" src="'+(PORT[r.id]||'')+'"><div><div class="nm">'+esc(r.name)+'</div><div class="hc">Hcp '+r.hcp+'</div></div></div><div class="abl">'+esc(ABIL[r.ab].n)+'</div>'+
     STATS2.map(s=>'<div class="sr" title="'+s[2]+' '+r[s[0]]+'"><span class="sl">'+s[1]+'</span><span class="sv">'+r[s[0]]+'</span>'+segBar(r[s[0]])+'</div>').join('')+(on?'<span class="pk">'+(order.indexOf(r.id)+1)+'</span>':'');
