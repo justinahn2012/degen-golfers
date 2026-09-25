@@ -48,11 +48,11 @@ for(const g of GREENS){let dx=0,dy=-1;for(const h of D.holes){const e=h.p[h.p.le
 // real terrain: USGS 10 m elevation (via OpenTopoData), sampled every 20 m, relative to the 1st tee, smoothed with a bicubic
 const DM=D.dem;function dz(i,j){i=i<0?0:i>=DM.nx?DM.nx-1:i;j=j<0?0:j>=DM.ny?DM.ny-1:j;return DM.z[j*DM.nx+i];}
 function crm(p0,p1,p2,p3,t){return p1+.5*t*(p2-p0+t*(2*p0-5*p1+4*p2-p3+t*(3*(p1-p2)+p3-p0)));}
-const LI=D.lidar&&D.lidar.data?D.lidar:null;
+const LI=D.lidar&&D.lidar.data?D.lidar:null,RELIEF=.5;
 function lz(i,j){i=i<0?0:i>=LI.nx?LI.nx-1:i;j=j<0?0:j>=LI.ny?LI.ny-1:j;return LI.data[j*LI.nx+i]*.01;}
 function demH(x,y){if(LI){const fx=(x-LI.x0)/LI.sx,fy=(y-LI.y0)/LI.sy;if(fx>=0&&fy>=0&&fx<=LI.nx-1&&fy<=LI.ny-1){const i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j;
-  return crm(crm(lz(i-1,j-1),lz(i,j-1),lz(i+1,j-1),lz(i+2,j-1),u),crm(lz(i-1,j),lz(i,j),lz(i+1,j),lz(i+2,j),u),crm(lz(i-1,j+1),lz(i,j+1),lz(i+1,j+1),lz(i+2,j+1),u),crm(lz(i-1,j+2),lz(i,j+2),lz(i+1,j+2),lz(i+2,j+2),u),v);}}
-  return demH20(x,y);}
+  return RELIEF*demH20(x,y)+crm(crm(lz(i-1,j-1),lz(i,j-1),lz(i+1,j-1),lz(i+2,j-1),u),crm(lz(i-1,j),lz(i,j),lz(i+1,j),lz(i+2,j),u),crm(lz(i-1,j+1),lz(i,j+1),lz(i+1,j+1),lz(i+2,j+1),u),crm(lz(i-1,j+2),lz(i,j+2),lz(i+1,j+2),lz(i+2,j+2),u),v);}}
+  return (1+RELIEF)*demH20(x,y);}
 function demH20(x,y){const fx=(x-DM.x0)/DM.st,fy=(y-DM.y0)/DM.st,i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j;
   return crm(crm(dz(i-1,j-1),dz(i,j-1),dz(i+1,j-1),dz(i+2,j-1),u),crm(dz(i-1,j),dz(i,j),dz(i+1,j),dz(i+2,j),u),crm(dz(i-1,j+1),dz(i,j+1),dz(i+1,j+1),dz(i+2,j+1),u),crm(dz(i-1,j+2),dz(i,j+2),dz(i+1,j+2),dz(i+2,j+2),u),v);}
 function baseH(x,y){if(LI)return demH(x,y);return demH(x,y)+.35*(1.5*Math.sin(x/43+.7)*Math.cos(y/61)+1.1*Math.sin((x+y)/79+1.3)+.5*Math.sin(y/27+x/33)+.3*Math.sin(x/13.7)*Math.sin(y/17.3));}
@@ -92,7 +92,7 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(basePR()*DRS);renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 const scene=new THREE.Scene();
 const SKY=0xa9b3c4;scene.background=new THREE.Color(SKY);scene.fog=new THREE.Fog(SKY,220,1200);
-const camera=new THREE.PerspectiveCamera(50,1,0.05,6000);
+const camera=new THREE.PerspectiveCamera(45,1,0.05,6000);
 const HEMI=new THREE.HemisphereLight(0xcfe0ea,0x55663f,0.72);scene.add(HEMI);let TOD='mid';try{TOD=localStorage.getItem('dg-tod')||'mid';}catch(e){}const SUNOFF=new THREE.Vector3(-15.4,23,11.5),WARM={value:0};
 const sun=new THREE.DirectionalLight(0xfff1d6,1.7);sun.position.set(-200,300,150);scene.add(sun,sun.target);
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;sun.castShadow=true;sun.shadow.mapSize.set(MOBILE?1024:2048,MOBILE?1024:2048);Object.assign(sun.shadow.camera,{left:-4.5,right:4.5,top:4.5,bottom:-4.5,near:1,far:80});sun.shadow.bias=-.0006;sun.shadow.camera.updateProjectionMatrix();
@@ -172,7 +172,7 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
    if(WATER.some(w=>inP(w,tx,ty)))continue;
   if(RANGE.some(g=>inP(g,tx,ty))||CLUBH.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+10))continue;
   if(CAN){const cv=canAt(tx,ty);if(cv>=0){if(FAIRWAYS.some(f=>inP(f,tx,ty))||obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+4)||PATHS.some(p=>dPL(tx,ty,p)<2.5)||lines.some(l=>dPL(tx,ty,l.p)<(l.w>20?11:8)))continue;if(!(r<cv*1.08))continue;
-    const fir=rnd()<.62,t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?14+rnd()*16:11+rnd()*9,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}continue;}}
+    const fir=rnd()<.62,t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?13+rnd()*11:11+rnd()*9,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}continue;}}
   if(inP(MAIN,tx,ty)){if(lines.some(l=>dPL(tx,ty,l.p)<l.w))continue;if(FAIRWAYS.some(f=>inP(f,tx,ty)))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+8))continue;if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<.55;}
   else if(PAR3&&inP(PAR3,tx,ty)){if(P3HOLES.some(l=>dPL(tx,ty,l.p)<12))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+5))continue;ok=r<.2;}
   else{if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<(WOODS.some(w=>inP(w,tx,ty))?.62:.26);}
@@ -1391,7 +1391,7 @@ function frameInner(){const now=performance.now()/1000,rawDt=now-last,dt=Math.mi
     if(state==='aim'&&p.intro&&now<p.intro){const P=p.av.position,k=p.look.tall||1,fx=Math.sin(p.aim),fz=Math.cos(p.aim),tx=Math.cos(p.aim),tz=-Math.sin(p.aim);want=new THREE.Vector3(P.x+fx*1.6+tx*.55,P.y+1.5*k,P.z+fz*1.6+tz*.55);look=new THREE.Vector3(P.x+fx*.28,P.y+1.52*k,P.z+fz*.28);}
     else if(overhead&&state==='aim'){const d=dist(p),mx=(p.x+PIN.x)/2,my=(p.y+PIN.y)/2;want=V(mx-dx*d*.25,my-dy*d*.25,z+Math.max(25,d*.85));look=V(mx,my,z);}
     else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75);look=V(p.x+dx*4,p.y+dy*4,z);}
-    else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.7);look=V(p.x+dx*40,p.y+dy*40,z+2);}}
+    else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
     if(state==='flight'&&t>0){if(!plan.landSnd&&!plan.putt&&plan.club&&t>=plan.club.T*TS*(.5+.5*Math.min(1,swingPow))){plan.landSnd=1;SND.land(lieAt(pos.x,pos.y));}if(t<2.6)flightSparks(p.ball.b.position,camera.position.distanceTo(p.ball.b.position));trailPts.push(V(pos.x,pos.y,pos.z));if(trailPts.length>690)trailPts.shift();setRibbon(trailPts);}
