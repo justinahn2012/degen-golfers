@@ -215,7 +215,11 @@ const CEN={x:MAIN.cx,y:MAIN.cy};
 {const g=new THREE.ConeGeometry(430,140,72,8),p=g.attributes.position,col=[],cS=new THREE.Color(0xeef3f6).convertSRGBToLinear(),cR=new THREE.Color(0x8497a8).convertSRGBToLinear(),tmp=new THREE.Color();
  for(let i=0;i<p.count;i++){const y=p.getY(i),x=p.getX(i),z=p.getZ(i),r=Math.hypot(x,z);if(r>1){const a=Math.atan2(z,x),k=1+.08*Math.sin(a*9)+.05*Math.sin(a*23);p.setX(i,x*k);p.setZ(i,z*k);}const u=(y+70)/140+.06*Math.sin(Math.atan2(z,x)*13);tmp.copy(u>.5?cS:cR);col.push(tmp.r,tmp.g,tmp.b);}
  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();const rn=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,fog:false}));rn.userData.lin=1;rn.material.userData.lin=1;
- rn.position.copy(V(CEN.x+.574*2450,CEN.y-.819*2450,40+HZ));scene.add(rn);}
+ rn.position.copy(V(CEN.x+.574*2450,CEN.y-.819*2450,40+HZ));if(!ASSETS.rainier)scene.add(rn);}
+/* Mount Rainier: a public-domain NPS photograph ("Mount Rainier in Winter"), cut out of its sky and stood on the south-east horizon */
+if(ASSETS.rainier){const t=new THREE.TextureLoader().load(ASSETS.rainier);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;const Wm=1500,Hm=Wm*2/3;
+  const mm=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,fog:false,toneMapped:false,color:new THREE.Color(.93,.95,1.0)});mm.userData.lin=1;
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(Wm,Hm),mm);const dx=.574,dy=-.819,D=2600;pl.position.copy(V(CEN.x+dx*D,CEN.y+dy*D,HZ+Hm*.5-Hm*.18));pl.lookAt(V(CEN.x,CEN.y,HZ+Hm*.3));pl.renderOrder=-1;pl.frustumCulled=false;scene.add(pl);}
 {const grp=new THREE.Group(),bm=new THREE.MeshLambertMaterial({color:0xa3b2bc,fog:false}),bm2=new THREE.MeshLambertMaterial({color:0x93a6b4,fog:false}),dx=window.COURSE.down[0],dy=window.COURSE.down[1],px=-dy,py=dx,D=2300;
  for(let i=0;i<34;i++){const off=(rnd()-.5)*520,dep=(rnd()-.5)*140,tall=Math.abs(off)<120?40+rnd()*85:14+rnd()*45,w=16+rnd()*26;const b=new THREE.Mesh(new THREE.BoxGeometry(w,tall,w*(.7+rnd()*.6)),rnd()<.5?bm:bm2);b.position.copy(V(CEN.x+dx*(D+dep)+px*off,CEN.y+dy*(D+dep)+py*off,tall/2-4));grp.add(b);}
  const nx=window.COURSE.needle[0],ny=window.COURSE.needle[1],sm=new THREE.MeshLambertMaterial({color:0xc2ccd2,fog:false}),NP=V(CEN.x+nx*2350+px*-260,CEN.y+ny*2350+py*-260,0);
@@ -928,9 +932,9 @@ function autoSetup(p){const d=dist(p);let tx=PIN.x,ty=PIN.y;
   p.aim=Math.atan2(ty-p.y,tx-p.x);p.pmax=Math.max(2.5,Math.min(40,d*1.3+.8));}
 
 /* ---------- shot planning ---------- */
-function simRoll(x,y,vx,vy,t,cupOK,noise){const pts=[];const dt=1/90;let holed=false,oob=false;
+function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;const pts=[];const dt=1/90;let holed=false,oob=false;
   for(let i=0;i<90*30;i++){const lie=lieAt(x,y);if(lie==='oob'||lie==='water'){oob=true;break;}
-    const fr=FR[lie],g=grad(x,y),ax=-7*g[0],ay=-7*g[1];let sp=Math.hypot(vx,vy);
+    const fr=FR[lie],g=grad(x,y),ax=-7*g[0]*slopeK,ay=-7*g[1]*slopeK;let sp=Math.hypot(vx,vy);
     if(sp<.05&&Math.hypot(ax,ay)<fr*.8)break;
     if(sp>1e-6){const dec=Math.min(fr*dt,sp);vx-=vx/sp*dec;vy-=vy/sp*dec;}
     vx+=ax*dt;vy+=ay*dt;x+=vx*dt;y+=vy*dt;t+=dt;
@@ -963,8 +967,11 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
     for(let k=1;k<=6;k++){const s2=k/6,qx=ex+ux*hl*s2,qy=ey+uy*hl*s2;pts.push({t:a.t+dt2*s2,x:qx,y:qy,z:H(qx,qy)+.021+4*hh*s2*(1-s2)});}sx=hx;sy=hy;st0=a.t+dt2;rd2=Math.max(.05,rd-hl);}
   const v0=Math.sqrt(2*FR[land]*rd2);
   const r=simRoll(sx,sy,ux*v0,uy*v0,st0,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob});return res;}
-function planPutt(p,power,err){const d=p.pmax*power,v0=Math.sqrt(2*FR[p.lie]*d),a=p.aim+err*.02*(1.3-ST(p,'put')*.007);
-  const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true);return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
+function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace is pulled toward a firm, holeable speed, the line tightens and the break softens, more so for better putters */
+  const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=Math.max(0,1-D0/3.6)*(p.lie==='green'?1:.6);
+  let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.45+.5*sk);
+  const e2=err*(1-near*(.55+.4*sk)),a=p.aim+e2*.02*(1.3-ST(p,'put')*.007),v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
+  const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.5+.4*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
 
 /* ---------- balls ---------- */
 const ballGeo=new THREE.SphereGeometry(.0214,40,28),shadowGeo=new THREE.CircleGeometry(.03,16);
