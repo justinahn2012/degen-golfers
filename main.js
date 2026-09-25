@@ -505,6 +505,14 @@ function prepTemplate(sc,k){sc.updateMatrixWorld(true);let body=null,eye=null;co
       groups.push([s0,ix.length,mats.length]);mats.push(m.material);off+=n;}
     const G=new THREE.BufferGeometry();G.setAttribute('position',new THREE.Float32BufferAttribute(A.position,3));G.setAttribute('normal',new THREE.Float32BufferAttribute(A.normal,3));G.setAttribute('uv',new THREE.Float32BufferAttribute(A.uv,2));
     G.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(A.skinIndex,4));G.setAttribute('skinWeight',new THREE.Float32BufferAttribute(A.skinWeight,4));G.setIndex(I);groups.forEach(q=>G.addGroup(q[0],q[1],q[2]));
+    {const Pp=G.attributes.position,Mw=parts[0].matrixWorld,v=new THREE.Vector3(),ix=G.index.array,keep=[],ng=[];
+      const hidden=(nm,a,b,c)=>{const pts=[a,b,c].map(k=>v.fromBufferAttribute(Pp,k).applyMatrix4(Mw).clone());
+        if(/ARM/.test(nm))return pts.every(q=>Math.abs(q.x)<.325);            /* upper arms and shoulders under the sleeves */
+        if(/TSHIRT/.test(nm))return pts.every(q=>q.y<.985);                    /* shirt tail tucked inside the trousers */
+        if(/HEAD/.test(nm))return pts.every(q=>q.y<1.385||(q.y<1.45&&Math.abs(q.x)>.072)||(q.y<1.47&&q.z<-.03));   /* neck base and the shoulder/trapezius skin under the collar and shoulders */
+        return false;};
+      for(const gr of G.groups){const nm=mats[gr.materialIndex].name||'',s0=keep.length;for(let t=gr.start;t<gr.start+gr.count;t+=3){const a=ix[t],b=ix[t+1],c=ix[t+2];if(hidden(nm,a,b,c))continue;keep.push(a,b,c);}ng.push([s0,keep.length-s0,gr.materialIndex]);}
+      G.setIndex(keep);G.clearGroups();ng.forEach(q=>G.addGroup(q[0],q[1],q[2]));}
     const p0=parts[0],mb=new THREE.SkinnedMesh(G,mats);mb.name='PRO_Body';p0.parent.add(mb);mb.position.copy(p0.position);mb.quaternion.copy(p0.quaternion);mb.scale.copy(p0.scale);mb.bind(p0.skeleton,p0.bindMatrix);parts.forEach(m=>m.parent.remove(m));sc.updateMatrixWorld(true);}
   sc.traverse(o=>{if(o.isSkinnedMesh&&o.geometry.attributes.position.count>5000)body=o;});
   sc.traverse(o=>{if(o.isMesh&&o!==body&&o.material&&/Eye/.test(o.material.name)){o.geometry.computeBoundingBox();eye=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);}});
@@ -990,7 +998,7 @@ const BASE=[
  {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{skin:'#d9a47c',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
  {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
- {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[49,70,63,63,64],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
+ {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,49,64],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
  {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'visor',color:'#1f2a44'},top:{type:'polo',color:'#f4f4f1'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
  {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
  {id:'shaka',name:'Brandon Kuntz',hcp:18,st:[79,75,64,64,66],ab:'rip',color:'#fd9644',look:{skin:'#f0c4a4',cap:{style:'fwd',color:'#1b1b1d'},top:{type:'polo',color:'#1b2640'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
