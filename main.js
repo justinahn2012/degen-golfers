@@ -998,7 +998,7 @@ const BASE=[
  {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{skin:'#d9a47c',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
  {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
- {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,49,64],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
+ {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
  {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'visor',color:'#1f2a44'},top:{type:'polo',color:'#f4f4f1'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
  {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
  {id:'shaka',name:'Brandon Kuntz',hcp:18,st:[79,75,64,64,66],ab:'rip',color:'#fd9644',look:{skin:'#f0c4a4',cap:{style:'fwd',color:'#1b1b1d'},top:{type:'polo',color:'#1b2640'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
@@ -1506,7 +1506,11 @@ function setupFX(){let vg=document.getElementById('vig');if(!vg){vg=document.cre
     COMP.addPass(GRADE);LINQ.value=1;}catch(e){console.warn('fx',e);COMP=null;GRADE=null;LINQ.value=0;}}
 addEventListener('resize',resize);resize();
 function frame(){try{frameInner();}catch(e){dgErr(e,'frame');}try{watchdog(performance.now()/1000);}catch(e){}requestAnimationFrame(frame);}
-function frameInner(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
+
+let OVH_ON=false;
+function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
+  renderer.setPixelRatio(basePR()*DRS*(on?(MOBILE?.78:.88):1));resize();}catch(e){}}
+function frameInner(){overheadMode(!!(overhead&&state==='aim'));const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
