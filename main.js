@@ -864,10 +864,10 @@ function clubFaceBall(g,cg,faceH){/* ball centre = middle of the head, pushed ou
   hg.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i+=Math.max(1,Math.floor(P.count/400))){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);g.worldToLocal(v);const d=v.x*faceH.x+v.z*faceH.z;if(d>mx)mx=d;sx+=v.x;sy+=v.y;sz+=v.z;n++;}});
   if(!n)return null;const cx=sx/n,cz=sz/n,cd=cx*faceH.x+cz*faceH.z,push=mx-cd+.0214;return{bx:cx+faceH.x*push,bz:cz+faceH.z*push};}
 function animCal(g,ck,type){const An=animSetup(g),key=ck+':'+type;if(An.cal[key])return An.cal[key];animGround(g,ck);const C=ANIM.clips[ck],B=g.userData.rig.B;
-  if(type!=='putter'){const L0=CLUB_LEN[type],tgtY=.95*L0;An.bend=An.bend||{};An.bend[key]=0;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY){let lo=0,hi=.7;for(let k=0;k<14;k++){const m=(lo+hi)/2;An.bend[key]=m;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY)lo=m;else hi=m;}An.bend[key]=hi;}
-    animApply(g,ck,C.keys.imp,undefined,0,type);const L=CLUB_LEN[type],lg=gripPt(g,'l'),tY=type==='driver'?.034:type==='wood'?.016:.012,lean=type==='driver'?.0:type==='wood'?-.02:type==='wedge'?-.06:-.05,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-lean*lean));
+  if(type!=='putter'){const L0=CLUB_LEN[type],tgtY=.95*L0;An.bend=An.bend||{};An.bend[key]=0;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY){let lo=0,hi=.16;for(let k=0;k<14;k++){const m=(lo+hi)/2;An.bend[key]=m;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY)lo=m;else hi=m;}An.bend[key]=hi;}
+    animApply(g,ck,C.keys.imp,undefined,0,type);const lg0=gripPt(g,'l'),L=Math.max(CLUB_LEN[type],(lg0.y-.012)/.93),lg=lg0,tY=type==='driver'?.034:type==='wood'?.016:.012,lean=type==='driver'?.0:type==='wood'?-.02:type==='wedge'?-.06:-.05,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-lean*lean));
     const head=new THREE.Vector3(lg.x+lean,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
-    const iq=relQ(g,B.hand_l).invert(),cal={dL:d1.clone().applyQuaternion(iq),fL:face.clone().applyQuaternion(iq),bx:head.x+.03,bz:head.z+.045,lie:Math.PI/2-Math.atan2(dy,Math.hypot(hz,lean))};An.cal[key]=cal;
+    const iq=relQ(g,B.hand_l).invert(),cal={dL:d1.clone().applyQuaternion(iq),fL:face.clone().applyQuaternion(iq),bx:head.x+.03,bz:head.z+.045,lie:Math.PI/2-Math.atan2(dy,Math.hypot(hz,lean)),len:L};An.cal[key]=cal;
     const cg=g.userData.rig.clubs[type];if(cg&&cg.userData.hb){cg.userData.hb.rotation.x=cal.lie;g.userData.rig.calib=1;animClub(g,ck,type);g.userData.rig.calib=0;const fb=clubFaceBall(g,cg,new THREE.Vector3(1,0,0));if(fb){cal.bx=fb.bx;cal.bz=fb.bz;}}
     return cal;}
   if(type==='putter'){animApply(g,ck,C.keys.imp);const L=CLUB_LEN.putter,lg=gripPt(g,'l'),tY=.012,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-.0004));const head=new THREE.Vector3(lg.x+.02,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
@@ -884,9 +884,9 @@ function animClub(g,ck,type,wA){const R=g.userData.rig,cal=animCal(g,ck,type),hq
   /* at address the club is soled right behind the ball, square to the target; it hands over to the captured hands during the takeaway */
   if(wA>0&&!R.calib){const tgt=new THREE.Vector3(cal.bx-.034,type==='driver'?.034:.013,cal.bz-.047),dA=tgt.sub(grip).normalize();sh.lerp(dA,wA).normalize();fc.lerp(new THREE.Vector3(1,0,0),wA);}
   let xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();
-  if(!R.calib){const L=CLUB_LEN[type]||1,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(H(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(type==='putter'?.004:.01);
+  if(!R.calib){const L=cal.len||CLUB_LEN[type]||1,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(H(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(type==='putter'?.004:.01);
     if(head.y<gy){const c=new THREE.Vector3().crossVectors(xa,sh),k=(gy-grip.y)/L,Rr=Math.hypot(sh.y,c.y);if(Rr>1e-4&&Math.abs(k)<=Rr){const ph=Math.atan2(c.y,sh.y),ac=Math.acos(k/Rr),t1=ph+ac,t2=ph-ac,th=Math.abs(t1)<Math.abs(t2)?t1:t2;sh.multiplyScalar(Math.cos(th)).addScaledVector(c,Math.sin(th)).normalize();xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();}}}
-  const ya=sh.clone().negate(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();
+  const ya=sh.clone().negate(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();{const cgs=R.clubs[type];if(cgs&&cal.len)cgs.scale.set(1,cal.len/(CLUB_LEN[type]||cal.len),1);}
   _m4.makeBasis(xa,ya,za);for(const kk in R.clubs){const cg=R.clubs[kk];cg.visible=kk===type;if(kk===type){cg.position.copy(grip);cg.quaternion.setFromRotationMatrix(_m4);}}}
 
 function setRelG(g,b,q){const gi=g.getWorldQuaternion(new THREE.Quaternion()).invert(),pr=gi.multiply(b.parent.getWorldQuaternion(new THREE.Quaternion()));b.quaternion.copy(pr.invert().multiply(q));b.updateMatrixWorld(true);}
@@ -1116,15 +1116,22 @@ function armTo(g,s,tgt,pole){const B=g.userData.rig.B,up=B['upperarm_'+s],lo=B['
   const E=S0.clone().addScaledVector(dn,a).addScaledVector(pl,h);aimBoneG(g,up,lo,E);aimBoneG(g,lo,ha,S0.clone().add(d));}
 function startBeer(p){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel)return;if(BEERA&&BEERA.can)BEERA.can.parent&&BEERA.can.parent.remove(BEERA.can);const shot=Math.random()<.5,can=beerCan();p.av.add(can);
   BEERA={p,t0:performance.now()/1000,shot,dur:shot?2.6:3.4,can,gulp:0,cracked:false};for(const k in p.av.userData.rig.clubs)p.av.userData.rig.clubs[k].visible=false;p.intro=performance.now()/1000+(shot?2.8:3.6);return shot;}
-function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove(A.can);BEERA=null;return;}const p=A.p,g=p.av,R=g.userData.rig,B=R.B,t=now-A.t0,u=t/A.dur;if(u>=1||!g.visible){g.remove(A.can);BEERA=null;if(cur===p&&state==='aim')posGolfer(p,0);return;}
-  animReset(g);const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);};const raise=ss(0,.18,u)*(1-ss(.84,1,u)),drink=ss(.16,.3,u)*(1-ss(.8,.92,u));
-  const nk=B.neck_01,hd=B.Head,hq0=relQ(g,hd),back=(A.shot?.75:.55)*drink,Rx=a=>new THREE.Quaternion().setFromAxisAngle(v3(1,0,0),a);setRelG(g,nk,Rx(-back*.4).multiply(relQ(g,nk)));setRelG(g,hd,Rx(-back).multiply(hq0));
-  const hp=gpG(g,hd),mouth=hp.clone().add(v3(0,-.06-back*.02,.11-back*.03)),shR=gpG(g,B.upperarm_r),shL=gpG(g,B.upperarm_l);
-  const side=v=>v.clone().add(v3(0,-.55,.06));armTo(g,'l',A.shot?side(shL).lerp(mouth.clone().add(v3(.05,-.05,.02)),raise):side(shL),shL.clone().add(v3(.3,-.4,-.5)));
-  const hr=side(shR).lerp(mouth.clone().add(v3(-.015,-.03,.02)),raise);armTo(g,'r',hr,shR.clone().add(v3(-.3,-.5,-.4)));
-  const grip=gripPt(g,'r'),tilt=A.shot?1.35+.25*drink:.2+1.55*drink;A.can.position.copy(grip).add(v3(0,.01,.01));A.can.rotation.set(tilt,0,0);
-  if(!A.cracked&&u>.1){A.cracked=true;SND.crack&&SND.crack(A.shot);const w=g.localToWorld(mouth.clone());for(let i=0;i<(A.shot?45:18);i++){const R2=Math.random;emit('n',part(w.x,w.y,w.z,(R2()-.5)*.8,R2()*1.2,(R2()-.5)*.8,.5+R2()*.5,.008+R2()*.012,[.96,.94,.86],6,1.5,true));}}
-  if(drink>.5&&t>A.gulp){A.gulp=t+(A.shot?.22:.38);SND.gulp&&SND.gulp();}}
+function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove(A.can);BEERA=null;return;}
+  const p=A.p,g=p.av,R=g.userData.rig,B=R.B,t=now-A.t0,u=t/A.dur;if(u>=1||!g.visible){g.remove(A.can);BEERA=null;if(cur===p&&state==='aim')posGolfer(p,0);return;}
+  const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+  const out=ss(0,.14,u),up=ss(.14,.3,u),drink=ss(.28,.4,u)*(1-ss(.8,.9,u)),down=ss(.86,1,u);
+  animReset(g);/* a relaxed, upright stance */
+  const nk=B.neck_01,hd=B.Head,hq0=relQ(g,hd),back=(A.shot?.62:.48)*drink,Rx=a=>new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),a);setRelG(g,nk,Rx(-back*.35).multiply(relQ(g,nk)));setRelG(g,hd,Rx(-back).multiply(hq0));
+  if(!R.mouthL){animReset(g);const ey=gpG(g,hd);R.mouthL=hd.worldToLocal(g.localToWorld(V3(0,ey.y+.03,ey.z+.12)));const T0=g.userData.tpl;}
+  const mouth=g.worldToLocal(hd.localToWorld(R.mouthL.clone())),shR=gpG(g,B.upperarm_r),shL=gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis);
+  const sideR=pel.clone().add(V3(-.26,-.05,.06)),sideL=pel.clone().add(V3(.26,-.05,.06)),hold=shR.clone().add(V3(.06,-.2,.4)),atMouth=mouth.clone().add(V3(-.02,-.07,.07));
+  let tR=sideR.clone().lerp(hold,out).lerp(atMouth,up);tR.lerp(sideR,down);
+  let tL=sideL.clone();if(A.shot){tL.lerp(atMouth.clone().add(V3(.07,-.02,.02)),up*(1-down));}
+  armTo(g,'r',tR,shR.clone().add(V3(-.45,-.35,-.25)));armTo(g,'l',tL,shL.clone().add(V3(.45,-.35,-.3)));
+  /* the can sits in the right palm: upright when held out, tipping bottom-up while glugging */
+  const palm=gripPt(g,'r'),tilt=A.shot?1.45*up:(.35*up+1.25*drink),ax=V3(0,Math.cos(tilt),-Math.sin(tilt));A.can.position.copy(palm).addScaledVector(ax,.01).add(V3(.035,0,0));A.can.quaternion.setFromUnitVectors(V3(0,1,0),ax);
+  if(!A.cracked&&u>.12){A.cracked=true;SND.crack&&SND.crack(A.shot);const w=g.localToWorld(palm.clone().addScaledVector(ax,.07));for(let i=0;i<(A.shot?40:14);i++){const R2=Math.random;emit('n',part(w.x,w.y,w.z,(R2()-.5)*.6,R2()*1.0,(R2()-.5)*.6,.5+R2()*.5,.008+R2()*.01,[.96,.94,.86],6,1.5,true));}}
+  if(drink>.5&&t>A.gulp){A.gulp=t+(A.shot?.22:.36);SND.gulp&&SND.gulp();}}
 function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)return null;const fresh=live.find(p=>p.strokes===0);if(fresh)return fresh;return live.reduce((a,b)=>dist(b)>dist(a)?b:a);}
 function startTurn(){for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
   buildTufts(cur.x,cur.y);try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
