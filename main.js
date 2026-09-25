@@ -226,9 +226,9 @@ const CEN={x:MAIN.cx,y:MAIN.cy};
  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));g.computeVertexNormals();const rn=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,fog:false}));rn.userData.lin=1;rn.material.userData.lin=1;
  rn.position.copy(V(CEN.x+.574*2450,CEN.y-.819*2450,40+HZ));if(!ASSETS.rainier)scene.add(rn);}
 /* Mount Rainier: a public-domain NPS photograph ("Mount Rainier in Winter"), cut out of its sky and stood on the south-east horizon */
-if(ASSETS.rainier){const t=new THREE.TextureLoader().load(ASSETS.rainier);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;const Wm=1500,Hm=Wm*2/3;
-  const mm=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,fog:false,toneMapped:false,color:new THREE.Color(.93,.95,1.0)});mm.userData.lin=1;
-  const pl=new THREE.Mesh(new THREE.PlaneGeometry(Wm,Hm),mm);const dx=.574,dy=-.819,D=2600;pl.position.copy(V(CEN.x+dx*D,CEN.y+dy*D,HZ+Hm*.5-Hm*.18));pl.lookAt(V(CEN.x,CEN.y,HZ+Hm*.3));pl.renderOrder=-1;pl.frustumCulled=false;scene.add(pl);}
+if(ASSETS.rainier){const t=new THREE.TextureLoader().load(ASSETS.rainier);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;const Wm=880,Hm=Wm*2/3;
+  const mm=new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,fog:false,toneMapped:false,color:new THREE.Color(.86,.9,.98)});mm.userData.lin=1;
+  const pl=new THREE.Mesh(new THREE.PlaneGeometry(Wm,Hm),mm);const dx=.574,dy=-.819,D=2600;pl.position.copy(V(CEN.x+dx*D,CEN.y+dy*D,HZ+Hm*.5-Hm*.34));pl.lookAt(V(CEN.x,CEN.y,HZ+Hm*.3));pl.renderOrder=-1;pl.frustumCulled=false;scene.add(pl);}
 {const grp=new THREE.Group(),bm=new THREE.MeshLambertMaterial({color:0xa3b2bc,fog:false}),bm2=new THREE.MeshLambertMaterial({color:0x93a6b4,fog:false}),dx=window.COURSE.down[0],dy=window.COURSE.down[1],px=-dy,py=dx,D=2300;
  for(let i=0;i<34;i++){const off=(rnd()-.5)*520,dep=(rnd()-.5)*140,tall=Math.abs(off)<120?40+rnd()*85:14+rnd()*45,w=16+rnd()*26;const b=new THREE.Mesh(new THREE.BoxGeometry(w,tall,w*(.7+rnd()*.6)),rnd()<.5?bm:bm2);b.position.copy(V(CEN.x+dx*(D+dep)+px*off,CEN.y+dy*(D+dep)+py*off,tall/2-4));grp.add(b);}
  const nx=window.COURSE.needle[0],ny=window.COURSE.needle[1],sm=new THREE.MeshLambertMaterial({color:0xc2ccd2,fog:false}),NP=V(CEN.x+nx*2350+px*-260,CEN.y+ny*2350+py*-260,0);
@@ -977,10 +977,10 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   const v0=Math.sqrt(2*FR[land]*rd2);
   const r=simRoll(sx,sy,ux*v0,uy*v0,st0,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob});return res;}
 function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace is pulled toward a firm, holeable speed, the line tightens and the break softens, more so for better putters */
-  const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=Math.max(0,1-D0/3.6)*(p.lie==='green'?1:.6);
-  let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.45+.5*sk);
-  const e2=err*(1-near*(.55+.4*sk)),a=p.aim+e2*.02*(1.3-ST(p,'put')*.007),v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
-  const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.5+.4*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
+  const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=(D0<=1.25?1-.25*D0/1.25:.75*Math.pow(Math.max(0,1-(D0-1.25)/1.6),2))*(p.lie==='green'?1:.6);
+  let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.35+.6*sk);
+  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.02*(1.3-ST(p,'put')*.007),v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
+  const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.35+.55*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
 
 /* ---------- balls ---------- */
 const ballGeo=new THREE.SphereGeometry(.0214,40,28),shadowGeo=new THREE.CircleGeometry(.03,16);
@@ -988,7 +988,7 @@ function makeBall(p){const b=new THREE.Mesh(ballGeo,new THREE.MeshStandardMateri
   const sh=new THREE.Mesh(shadowGeo,new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.34,depthWrite:false}));sh.rotation.x=-Math.PI/2;
   const mk=new THREE.Mesh(new THREE.RingGeometry(.036,.041,40),new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.9,depthWrite:false}));mk.position.z=.001;sh.add(mk);scene.add(b,sh);return{b,sh};}
 function placeBall(p,x,y,z){p.ball.b.position.copy(V(x,y,z));p.ball.sh.position.copy(V(x,y,H(x,y)+.03));}
-function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=Math.max(1,d*.0038/.0214);p.ball.b.scale.setScalar(s);p.ball.sh.scale.setScalar(s);p.ball.b.visible=p.ball.sh.visible=!p.done;}}
+function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=Math.max(1,d*.0038/.0214);p.ball.b.scale.setScalar(s);p.ball.sh.scale.setScalar(s);p.ball.b.visible=p.ball.sh.visible=!p.done||(state==='replay'&&RP&&RP.p===p);}}
 
 /* ---------- game flow ---------- */
 let ROUND=null;
@@ -1069,7 +1069,7 @@ function armTo(g,s,tgt,pole){const B=g.userData.rig.B,up=B['upperarm_'+s],lo=B['
   const E=S0.clone().addScaledVector(dn,a).addScaledVector(pl,h);aimBoneG(g,up,lo,E);aimBoneG(g,lo,ha,S0.clone().add(d));}
 function startBeer(p){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel)return;if(BEERA&&BEERA.can)BEERA.can.parent&&BEERA.can.parent.remove(BEERA.can);const shot=Math.random()<.5,can=beerCan();p.av.add(can);
   BEERA={p,t0:performance.now()/1000,shot,dur:shot?2.6:3.4,can,gulp:0,cracked:false};for(const k in p.av.userData.rig.clubs)p.av.userData.rig.clubs[k].visible=false;p.intro=performance.now()/1000+(shot?2.8:3.6);return shot;}
-function updBeer(now){const A=BEERA;if(!A)return;const p=A.p,g=p.av,R=g.userData.rig,B=R.B,t=now-A.t0,u=t/A.dur;if(u>=1||!g.visible){g.remove(A.can);BEERA=null;if(cur===p&&state==='aim')posGolfer(p,0);return;}
+function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove(A.can);BEERA=null;return;}const p=A.p,g=p.av,R=g.userData.rig,B=R.B,t=now-A.t0,u=t/A.dur;if(u>=1||!g.visible){g.remove(A.can);BEERA=null;if(cur===p&&state==='aim')posGolfer(p,0);return;}
   animReset(g);const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);};const raise=ss(0,.18,u)*(1-ss(.84,1,u)),drink=ss(.16,.3,u)*(1-ss(.8,.92,u));
   const nk=B.neck_01,hd=B.Head,hq0=relQ(g,hd),back=(A.shot?.75:.55)*drink,Rx=a=>new THREE.Quaternion().setFromAxisAngle(v3(1,0,0),a);setRelG(g,nk,Rx(-back*.4).multiply(relQ(g,nk)));setRelG(g,hd,Rx(-back).multiply(hq0));
   const hp=gpG(g,hd),mouth=hp.clone().add(v3(0,-.06-back*.02,.11-back*.03)),shR=gpG(g,B.upperarm_r),shL=gpG(g,B.upperarm_l);
@@ -1101,14 +1101,27 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
 function contactWord(e){const a=Math.abs(e);if(a<.35)return'Pure';const s=e>0?'draw':'fade';if(a<1)return'Slight '+s;if(a<2)return s[0].toUpperCase()+s.slice(1);return e>0?'Hook':'Slice';}
 
 let RP=null;
-function worthReplay(r,p){if(r.oob)return false;const dp=Math.hypot(r.x-PIN.x,r.y-PIN.y),from=Math.hypot(r.startX-PIN.x,r.startY-PIN.y);
+function worthReplay(r,p){if(r.oob)return false;const s0=r.pts&&r.pts[0]||{x:r.startX,y:r.startY},dp=Math.hypot(r.x-PIN.x,r.y-PIN.y),from=Math.hypot(s0.x-PIN.x,s0.y-PIN.y);
   if(r.holed)return r.putt?from>4:true;if(r.putt)return false;if(dp<2.4&&from>22)return true;if(r.spin&&dp<5)return true;return Math.hypot(r.x-r.startX,r.y-r.startY)*TOYD>=285&&Math.abs(p.lastErr||0)<.35;}
 function replayBadge(on){let el=$('replayBadge');if(!el){el=document.createElement('div');el.id='replayBadge';el.innerHTML='<span class="rd"></span><b>REPLAY</b><i>Tap to skip</i>';document.body.appendChild(el);const st=document.createElement('style');
     st.textContent='#replayBadge{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:40;display:none;align-items:center;gap:8px;background:rgba(9,22,18,.85);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 14px;color:#fff;font:700 15px "Barlow Condensed",sans-serif;letter-spacing:.08em}#replayBadge.on{display:flex}#replayBadge i{font:500 12px Barlow,sans-serif;letter-spacing:0;color:#b8c9bf;font-style:normal}#replayBadge .rd{width:9px;height:9px;border-radius:50%;background:#e8412c;animation:rpb 1s infinite}@keyframes rpb{50%{opacity:.25}}';document.head.appendChild(st);}
   el.classList.toggle('on',on);}
-function startReplay(r,p,then){RP={r,p,then,t0:performance.now()/1000,sp:r.putt?.55:.42,trail:[]};state='replay';replayBadge(true);setRibbon([]);const pn=$('panel');if(pn)pn.style.visibility='hidden';}
-function endReplay(){if(!RP)return;const R0=RP;RP=null;replayBadge(false);const pn=$('panel');if(pn)pn.style.visibility='';placeBall(R0.p,R0.p.x,R0.p.y,R0.r.holed?H(R0.p.x,R0.p.y)-.06:H(R0.p.x,R0.p.y)+.021);state='result';setRibbon(trailPts);setTimeout(()=>{if(state==='result')R0.then();},650);}
+function startReplay(r,p,then){if(r.dir===undefined){const a=r.pts[0],b=r.pts[r.pts.length-1];r.dir=Math.atan2(b.y-a.y,b.x-a.x);r.startX=a.x;r.startY=a.y;}RP={r,p,then,t0:performance.now()/1000,sp:r.putt?.55:.42,trail:[]};state='replay';replayBadge(true);setRibbon([]);const pn=$('panel');if(pn)pn.style.visibility='hidden';}
+function endReplay(){if(!RP)return;const R0=RP;RP=null;replayBadge(false);const pn=$('panel');if(pn)pn.style.visibility='';placeBall(R0.p,R0.p.x,R0.p.y,R0.r.holed?H(R0.p.x,R0.p.y)-.06:H(R0.p.x,R0.p.y)+.021);state='result';setRibbon(trailPts);setTimeout(safe(()=>{if(state==='result')R0.then();},'after replay'),650);}
 document.addEventListener('pointerdown',()=>{if(state==='replay')endReplay();});
+
+/* ---------- crash guard: errors are caught and listed behind a small Bug button; a watchdog keeps the round moving ---------- */
+const DGERR=[];let STATE_T0=0,STATE_LAST='';
+function dgErr(e,where){const msg=(where?where+': ':'')+(e&&e.message?e.message:String(e))+(e&&e.stack?'\n'+String(e.stack).split('\n').slice(0,4).join('\n'):'');if(DGERR.length&&DGERR[DGERR.length-1].m===msg)return;DGERR.push({m:msg,t:new Date().toLocaleTimeString(),st:state});if(DGERR.length>12)DGERR.shift();console.error('[degen]',msg);
+  let b=$('bugPill');if(!b){b=document.createElement('button');b.id='bugPill';b.style.cssText='position:fixed;left:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;background:#e5484d;color:#fff;border:0;border-radius:999px;padding:6px 12px;font:700 13px Barlow,sans-serif';
+    b.onclick=()=>{const txt='Degen Golfers bug report\nCourse: '+(window.COURSE_KEY||'')+'  State: '+state+'\n\n'+DGERR.map(x=>'['+x.t+' '+x.st+'] '+x.m).join('\n\n');try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(_){}alert(txt+'\n\n(Copied to clipboard. Paste it to Claude.)');};document.body.appendChild(b);}
+  b.textContent='Bug ('+DGERR.length+')';}
+window.addEventListener('error',ev=>dgErr(ev.error||ev.message,'error'));window.addEventListener('unhandledrejection',ev=>dgErr(ev.reason,'promise'));
+const safe=(fn,where)=>()=>{try{fn();}catch(e){dgErr(e,where);}};
+function watchdog(now){if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;return;}const age=now-STATE_T0;
+  try{if(state==='flight'&&age>30){dgErr(new Error('flight never finished'),'watchdog');STATE_T0=now;finishShot();}
+    else if(state==='result'&&age>9){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
+    else if(state==='replay'&&age>25){STATE_T0=now;endReplay();}}catch(e){dgErr(e,'watchdog');}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
   if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;}
   else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?'In the water':'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
@@ -1117,7 +1130,7 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.tree?'Clipped a tree. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
     if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';}}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
-  if(worthReplay(r,p)){setTimeout(()=>{if(state==='result')startReplay(r,p,()=>startTurn());},1300);}else setTimeout(()=>{if(state==='result')startTurn();},r.holed?2600:2100);}
+  let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result')startReplay(r,p,safe(()=>startTurn(),'next turn'));},'replay'),1300);}else setTimeout(safe(()=>{if(state==='result')startTurn();},'next turn'),r.holed?2600:2100);}
 function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of players)p.card[hi]=p.strokes;const last=ROUND.k>=ROUND.list.length-1;
@@ -1368,7 +1381,8 @@ function setupFX(){COMP=null;GRADE=null;LINQ.value=0;if(GFX!=='ultra'||!THREE.Ef
         'vec2 q=vUv-.5;q.x*=uAsp;c*=1.-.24*smoothstep(.4,1.05,length(q));c+=(hs(vUv*vec2(1733.,977.)+uT)-.5)*.016;gl_FragColor=vec4(clamp(c,0.,1.),1.);}'});
     COMP.addPass(GRADE);LINQ.value=1;}catch(e){console.warn('fx',e);COMP=null;GRADE=null;LINQ.value=0;}}
 addEventListener('resize',resize);resize();
-function frame(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6){DRS=Math.max(.6,DRS-.1);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+1.5;}else if(FT<14.5&&DRS<1){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
+function frame(){try{frameInner();}catch(e){dgErr(e,'frame');}try{watchdog(performance.now()/1000);}catch(e){}requestAnimationFrame(frame);}
+function frameInner(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6){DRS=Math.max(.6,DRS-.1);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+1.5;}else if(FT<14.5&&DRS<1){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
@@ -1407,7 +1421,7 @@ function frame(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
   const fl=flagG.userData.fl;fl.parent.rotation.y=wind.a;const pa=fl.geometry.attributes.position;for(let i=0;i<pa.count;i++){const x=pa.getX(i);pa.setZ(i,Math.sin(x*6-now*(2+wind.sp))*.05*x);}pa.needsUpdate=true;
-  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);requestAnimationFrame(frame);}
+  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
 {const L=c=>new THREE.MeshLambertMaterial({color:c});
  for(const c of CLUBH){const sh=new THREE.Shape(c.p.map(q=>new THREE.Vector2(q[0],q[1])));const base=Math.min(...c.p.map(q=>H(q[0],q[1])))-.5;
    const wall=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:5.5,bevelEnabled:false}),L(0xb9ad98));wall.geometry.rotateX(-Math.PI/2);wall.position.y=base;scene.add(wall);
