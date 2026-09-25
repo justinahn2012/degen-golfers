@@ -180,6 +180,13 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
   const t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?12+rnd()*13:10+rnd()*8,r:fir?2.6+rnd()*1.8:3.4+rnd()*2.4,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);
   const R=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);
   for(let i=-R;i<=R;i++)for(let j=-R;j<=R;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
+ /* tree-line fill: where the aerial canopy map is solid near the course, pack trees tightly (rows of conifers between fairways) */
+ if(CAN&&D.canopy){const c=D.canopy,near=(x,y)=>inP(MAIN,x,y)||lines.some(l=>dPL(x,y,l.p)<75),tooClose=(x,y,r)=>{const k=Math.floor(x/10)+','+Math.floor(y/10),L=THASH.get(k);return L?L.some(t=>Math.hypot(t.x-x,t.y-y)<r):false;};
+   const tall=/Jefferson/i.test(D.name||'')?1.18:1;let added=0;
+   for(let j=0;j<c.ny;j++)for(let i=0;i<c.nx;i++){const cv=CAN[j*c.nx+i]/255;if(cv<.45)continue;const x=c.x0+i*c.sx+(rnd()-.5)*c.sx,y=c.y0+j*c.sy+(rnd()-.5)*c.sy;if(!near(x,y))continue;if(rnd()>(cv-.3)*.55)continue;
+     if(WATER.some(w=>inP(w,x,y))||FAIRWAYS.some(f=>inP(f,x,y))||obst.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||PATHS.some(p=>dPL(x,y,p)<2.5)||lines.some(l=>dPL(x,y,l.p)<(l.w>20?11:8))||tooClose(x,y,4.2))continue;
+     const fir=rnd()<.7,t={x,y,gz:H(x,y),fir,h:(fir?15+rnd()*12:12+rnd()*8)*tall,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);added++;const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
+   console.log('tree-line fill',added,'total',TREES.length);}
  /* each tree is a camera-facing card cut from an 8-angle (fir) / 4-angle (broadleaf) atlas, blended between neighbouring angles */
  const firs=TREES.filter(t=>t.fir),decs=TREES.filter(t=>!t.fir);
  const iq=new THREE.PlaneGeometry(1,1);iq.translate(0,.5,0);
@@ -259,10 +266,27 @@ function treeHit(x,y,z){const a=THASH.get(Math.floor(x/10)+','+Math.floor(y/10))
 
 /* flag, cup, markers */
 const flagG=new THREE.Group();
-{const pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,2.3,8),new THREE.MeshLambertMaterial({color:0xffffff}));pole.position.y=1.15;flagG.add(pole);
- const fl=new THREE.Mesh(new THREE.PlaneGeometry(.7,.44,6,1),new THREE.MeshLambertMaterial({color:0xd64533,side:THREE.DoubleSide}));fl.geometry.translate(.35,0,0);fl.position.y=2.05;flagG.add(fl);flagG.userData.fl=fl;
+{const pole=new THREE.Mesh(new THREE.CylinderGeometry(.013,.017,2.32,12),new THREE.MeshStandardMaterial({color:0xf4f3ee,roughness:.35,metalness:.1}));pole.position.y=1.16;pole.castShadow=true;flagG.add(pole);
+ const FW=.78,FH=.5,fg=new THREE.PlaneGeometry(FW,FH,30,12);fg.translate(FW/2,-FH/2,0);fg.userData.rest=fg.attributes.position.array.slice();
+ const fc=document.createElement('canvas');fc.width=512;fc.height=328;const ftex=new THREE.CanvasTexture(fc);ftex.encoding=THREE.sRGBEncoding;ftex.anisotropy=4;
+ const fm=new THREE.MeshStandardMaterial({map:ftex,side:THREE.DoubleSide,roughness:.72,metalness:0});fm.userData.lin=1;fm.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','vec2 fUv=gl_FrontFacing?vUv:vec2(1.-vUv.x,vUv.y);vec4 texelColor=texture2D(map,fUv);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;');};fm.customProgramCacheKey=()=>'flag2s';
+ const fl=new THREE.Mesh(fg,fm);fl.position.y=2.3;fl.castShadow=true;flagG.add(fl);flagG.userData.fl=fl;flagG.userData.fc=fc;flagG.userData.ftex=ftex;
+ const cap=new THREE.Mesh(new THREE.SphereGeometry(.026,12,8),new THREE.MeshStandardMaterial({color:0xd8b24a,metalness:.8,roughness:.3}));cap.position.y=2.31;flagG.add(cap);
+ const liner=new THREE.Mesh(new THREE.RingGeometry(.052,.058,28),new THREE.MeshBasicMaterial({color:0xf2f2ee}));liner.rotation.x=-Math.PI/2;liner.position.y=.013;flagG.add(liner);
  const cup=new THREE.Mesh(new THREE.CircleGeometry(.056,24),new THREE.MeshBasicMaterial({color:0x1a1a1a}));cup.rotation.x=-Math.PI/2;cup.position.y=.012;flagG.add(cup);
  flagG.position.copy(V(PIN.x,PIN.y,H(PIN.x,PIN.y)));scene.add(flagG);}
+
+/* flag artwork: deep red with a gold edge, a cream roundel and the hole number */
+function drawFlag(n){const c=flagG.userData.fc,x=c.getContext('2d'),W=c.width,H2=c.height;const gr=x.createLinearGradient(0,0,W,H2);gr.addColorStop(0,'#c21f2b');gr.addColorStop(1,'#9d1320');x.fillStyle=gr;x.fillRect(0,0,W,H2);
+  x.fillStyle='#e0b54a';x.fillRect(0,0,W,10);x.fillRect(0,H2-10,W,10);x.fillRect(W-12,0,12,H2);
+  x.fillStyle='rgba(255,255,255,.06)';for(let i=0;i<W;i+=6)x.fillRect(i,0,1,H2);
+  const cx=W*.5,cy=H2*.52,r=H2*.3;x.fillStyle='#f6f1e4';x.beginPath();x.arc(cx,cy,r,0,7);x.fill();x.strokeStyle='#e0b54a';x.lineWidth=8;x.stroke();
+  x.fillStyle='#9d1320';x.font='800 '+Math.round(r*1.25)+'px "Barlow Condensed","Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(String(n),cx,cy+r*.06);flagG.userData.ftex.needsUpdate=true;}
+/* cloth motion: in calm air the flag hangs against the pole; with wind it streams out, with travelling ripples that grow toward the fly end */
+function animFlag(now){const fl=flagG.userData.fl;if(!fl)return;const g=fl.geometry,P=g.attributes.position,R=g.userData.rest,W=.78,sp=Math.max(0,wind.sp||0),lift=Math.min(1,sp/13),hang=(1-lift)*1.25+.06,ch=Math.cos(hang),shn=Math.sin(hang),amp=.025+.045*lift,w1=3.2+sp*.28,w2=5.1+sp*.35;
+  for(let i=0;i<P.count;i++){const x=R[i*3],y=R[i*3+1],u=x/W,a=Math.pow(u,1.15);let px=x*ch,py=y-x*shn;
+    const z=amp*a*(Math.sin(u*9-now*w1)+.45*Math.sin(u*15.3-now*w2+y*7)+.25*Math.sin(u*23-now*(w2*1.3)+1.3));py+=a*.02*Math.sin(u*11-now*w1+.7)*lift;px-=Math.abs(z)*.35*u;P.setXYZ(i,px,py,z);}
+  P.needsUpdate=true;g.computeVertexNormals();}
 function spriteTex(draw){const c=document.createElement('canvas');c.width=c.height=64;draw(c.getContext('2d'));return new THREE.CanvasTexture(c);}
 const pinMark=new THREE.Sprite(new THREE.SpriteMaterial({map:spriteTex(g=>{g.fillStyle='#f2c230';g.beginPath();g.moveTo(32,60);g.lineTo(10,22);g.arc(32,24,22,Math.PI,0);g.closePath();g.fill();g.fillStyle='#16302a';g.beginPath();g.arc(32,24,8,0,7);g.fill();}),sizeAttenuation:false,depthTest:false}));
 pinMark.material.toneMapped=false;pinMark.scale.set(.045,.045,1);pinMark.center.set(.5,0);pinMark.position.copy(V(PIN.x,PIN.y,H(PIN.x,PIN.y)+2.6));pinMark.renderOrder=10;scene.add(pinMark);
@@ -759,18 +783,19 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
   /* rig bookkeeping */
   const B={},all=[];body.skeleton.bones.forEach(b=>{B[b.name]=b;all.push(b);b.userData.q0=b.quaternion.clone();b.userData.p0=b.position.clone();b.userData.r0=b.getWorldQuaternion(new THREE.Quaternion());});
   const gpR=nm=>B[nm].getWorldPosition(new THREE.Vector3());
-  const R={skel:true,pro:!!T.pro,rb:!!T.rb,shl:!!(SHL&&SHL.pants)||!!T.rb,B,all,ballZ:SK.ballZ*(lk.tall||1),pelvisPos:gpR('pelvis'),J_ankY:T.J.ankY,arms:{},legs:{}};g.userData.rig=R;
+  const R={skel:true,tpl:T,footPitch:(()=>{const o={};for(const s of['l','r']){const f=B['foot_'+s],b=B['ball_'+s];if(!f||!b)continue;const a=f.getWorldPosition(new THREE.Vector3()),c=b.getWorldPosition(new THREE.Vector3()),v=c.sub(a);o[s]=Math.atan2(v.y,Math.hypot(v.x,v.z));}return o;})(),footRestY:B.foot_l?B.foot_l.getWorldPosition(new THREE.Vector3()).y:undefined,pro:!!T.pro,rb:!!T.rb,shl:!!(SHL&&SHL.pants)||!!T.rb,B,all,ballZ:SK.ballZ*(lk.tall||1),pelvisPos:gpR('pelvis'),J_ankY:T.J.ankY,arms:{},legs:{}};g.userData.rig=R;
   for(const s of[1,-1]){const sd=s>0?'l':'r',u=gpR('upperarm_'+sd),l=gpR('lowerarm_'+sd),h=gpR('hand_'+sd),m=gpR('middle_01_'+sd);
     const f0=m.clone().sub(h).normalize(),n0=v3(0,-1,0);n0.addScaledVector(f0,-n0.dot(f0)).normalize();
     const hinge=v3(0,0,0).crossVectors(l.clone().sub(u).normalize(),v3(0,0,1)).normalize();
-    R.arms[sd]={l1:u.distanceTo(l),l2:l.distanceTo(h),hc:h.distanceTo(m)*.55,f0,n0,hingeL:hinge.applyQuaternion(B['upperarm_'+sd].userData.r0.clone().invert())};
+    const vV=B['thumb_01_'+sd]&&B['index_01_'+sd]?gpR('thumb_01_'+sd).add(gpR('index_01_'+sd)).multiplyScalar(.5):m.clone(),heel0=B['pinky_01_'+sd]?h.clone().lerp(gpR('pinky_01_'+sd),.22):h.clone(),u0=heel0.sub(vV).normalize();
+    R.arms[sd]={l1:u.distanceTo(l),l2:l.distanceTo(h),hc:h.distanceTo(m)*.55,f0,n0,u0,hingeL:hinge.applyQuaternion(B['upperarm_'+sd].userData.r0.clone().invert())};
     const t=gpR('thigh_'+sd),c=gpR('calf_'+sd),f=gpR('foot_'+sd);
     const lh=v3(0,0,0).crossVectors(c.clone().sub(t).normalize(),v3(0,0,-1)).normalize();
     R.legs[sd]={l1:t.distanceTo(c),l2:c.distanceTo(f),hingeL:lh.applyQuaternion(B['thigh_'+sd].userData.r0.clone().invert()),ankZ:f.z};
     /* curl the fingers into a grip once, relative to the rest pose */
     for(const fn of['index','middle','ring','pinky','thumb'])for(let j=1;j<=3;j++){const b=B[fn+'_0'+j+'_'+sd];if(!b)continue;const ch=b.children.find(q=>q.isBone);if(!ch)continue;
       const d=ch.getWorldPosition(new THREE.Vector3()).sub(b.getWorldPosition(new THREE.Vector3())).normalize(),ax=v3(0,0,0).crossVectors(d,n0);if(ax.lengthSq()<1e-6)continue;ax.normalize().applyQuaternion(b.userData.r0.clone().invert());
-      const ang=fn==='thumb'?.35:[1.05,1.15,.85][j-1];b.userData.qc=b.userData.q0.clone().multiply(new THREE.Quaternion().setFromAxisAngle(ax,ang));}}
+      const ang=fn==='thumb'?.55:[1.35,1.5,1.15][j-1];b.userData.qc=b.userData.q0.clone().multiply(new THREE.Quaternion().setFromAxisAngle(ax,ang));}}
   /* cap / hair from the original look, pinned to the head bone */
   const cloth=c=>new THREE.MeshLambertMaterial({color:c}),hair=cloth(lk.hair||'#1b1512');
   const kx=T.halfW*1.04/.104,ky=(T.top-T.eyeY)/.093,kz=(T.zFront-T.zBack)*1.02/2/.114,hd=new THREE.Group();if(!T.pro)headwear(hd,lk,cloth,hair,.112,true);if(lk.cap&&lk.cap.style&&lk.cap.style!=='none')hd.children.forEach(o=>{if(o.material!==hair)o.position.y+=.02;});hd.scale.multiplyScalar(1.1);
@@ -854,11 +879,13 @@ function animApply(g,ck,f,f2,w,ctype){const R=g.userData.rig,B=R.B,An=animSetup(
   const pp=An.pelvis0.clone().addScaledVector(dp,An.k);pp.y+=An.gnd[ck]||0;B.pelvis.position.copy(B.pelvis.parent.worldToLocal(g.localToWorld(pp)));B.pelvis.updateMatrixWorld(true);
   const q=new THREE.Quaternion();
   ANIM.bones.forEach((n,i)=>{const b=B[n];if(!b)return;clipQ(C,i,f,q);if(f2!==undefined&&w>0){clipQ(C,i,f2,_aq3);q.slerp(_aq3,w);}setRel(b,q.clone().multiply(An.A[n]).multiply(An.restQ[n]));});
-  ANIM.fingers.forEach((n,i)=>{const b=B[n];if(!b)return;const o=i*4;q.set(C.FG[o],C.FG[o+1],C.FG[o+2],C.FG[o+3]);setRel(b,q.clone().multiply(An.A[n]).multiply(An.restQ[n]));});
+  if(!R.pro)ANIM.fingers.forEach((n,i)=>{const b=B[n];if(!b)return;const o=i*4;q.set(C.FG[o],C.FG[o+1],C.FG[o+2],C.FG[o+3]);setRel(b,q.clone().multiply(An.A[n]).multiply(An.restQ[n]));});  /* the pro body keeps its own fist-around-the-grip finger curl */
   const bd=ctype&&An.bend?An.bend[ck+':'+ctype]:0;if(bd)setRel(B.spine_01,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),bd).multiply(rel(B.spine_01)));}
-function animGround(g,ck){const An=animSetup(g),R=g.userData.rig,B=R.B;if(An.gnd[ck]!==undefined)return;An.gnd[ck]=0;animApply(g,ck,ANIM.clips[ck].keys.addr);
-  An.gnd[ck]=R.J_ankY-Math.min(gpG(g,B.foot_l).y,gpG(g,B.foot_r).y);}
-function gripPt(g,s){const B=g.userData.rig.B;return gpG(g,B['hand_'+s]).lerp(gpG(g,B['middle_01_'+s]),.62);}
+function soleH(g){const R=g.userData.rig;if(R.soleH!==undefined)return R.soleH;const T=R.tpl;let mn=1e9;if(T&&T.cls){for(let v=0;v<T.cls.length;v++)if(T.cls[v]===6&&T.pos[v*3+1]<mn)mn=T.pos[v*3+1];}
+  const fy=R.footRestY!==undefined?R.footRestY:R.J_ankY;R.soleH=mn<1e8?Math.max(.03,fy-mn):R.J_ankY;return R.soleH;}
+function animGround(g,ck){const An=animSetup(g),R=g.userData.rig,B=R.B;if(An.gnd[ck]!==undefined)return;An.gnd[ck]=0;const C=ANIM.clips[ck];animApply(g,ck,ck==='putt'?C.keys.imp:C.keys.addr);R.calib=0;flatFeet(g,1);
+  An.gnd[ck]=soleH(g)-Math.min(gpG(g,B.foot_l).y,gpG(g,B.foot_r).y);}
+function gripPt(g,s){const B=g.userData.rig.B;return gpG(g,B['hand_'+s]).lerp(gpG(g,B['middle_01_'+s]),.8);}
 function clubFaceBall(g,cg,faceH){/* ball centre = middle of the head, pushed out to the leading edge of the face along the swing direction */
   const hg=cg.userData.hb||cg.userData.hg||cg,v=new THREE.Vector3();let mx=-1e9,sx=0,sy=0,sz=0,n=0;cg.updateMatrixWorld(true);
   hg.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i+=Math.max(1,Math.floor(P.count/400))){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);g.worldToLocal(v);const d=v.x*faceH.x+v.z*faceH.z;if(d>mx)mx=d;sx+=v.x;sy+=v.y;sz+=v.z;n++;}});
@@ -882,11 +909,11 @@ function animCal(g,ck,type){const An=animSetup(g),key=ck+':'+type;if(An.cal[key]
 function animClub(g,ck,type,wA){const R=g.userData.rig,cal=animCal(g,ck,type),hq=relQ(g,R.B.hand_l),grip=gripPt(g,'l');
   const sh=cal.dL.clone().applyQuaternion(hq).normalize(),fc=cal.fL.clone().applyQuaternion(hq);
   /* at address the club is soled right behind the ball, square to the target; it hands over to the captured hands during the takeaway */
-  if(wA>0&&!R.calib){const tgt=new THREE.Vector3(cal.bx-.034,type==='driver'?.034:.013,cal.bz-.047),dA=tgt.sub(grip).normalize();sh.lerp(dA,wA).normalize();fc.lerp(new THREE.Vector3(1,0,0),wA);}
-  let xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();
-  if(!R.calib){const L=cal.len||CLUB_LEN[type]||1,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(H(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(type==='putter'?.004:.01);
+  if(wA>0&&!R.calib){const tgt=new THREE.Vector3(cal.bx-.034,type==='driver'?.034:.013,cal.bz-.047);g.updateMatrixWorld(true);{const bw=g.localToWorld(new THREE.Vector3(cal.bx,0,cal.bz));tgt.y+=(H(bw.x,-bw.z)-g.position.y)/(g.scale.y||1);}const L0=cal.len||CLUB_LEN[type]||1,Lt=Math.max(L0*.85,Math.min(L0*1.15,tgt.distanceTo(grip)));R._lenA=L0+(Lt-L0)*wA;const dA=tgt.sub(grip).normalize();sh.lerp(dA,wA).normalize();fc.lerp(new THREE.Vector3(1,0,0),wA);}
+  if(!(wA>0)||R.calib)R._lenA=0;let xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();
+  if(!R.calib){const L=R._lenA||cal.len||CLUB_LEN[type]||1,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(H(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(type==='putter'?.004:.01);
     if(head.y<gy){const c=new THREE.Vector3().crossVectors(xa,sh),k=(gy-grip.y)/L,Rr=Math.hypot(sh.y,c.y);if(Rr>1e-4&&Math.abs(k)<=Rr){const ph=Math.atan2(c.y,sh.y),ac=Math.acos(k/Rr),t1=ph+ac,t2=ph-ac,th=Math.abs(t1)<Math.abs(t2)?t1:t2;sh.multiplyScalar(Math.cos(th)).addScaledVector(c,Math.sin(th)).normalize();xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();}}}
-  const ya=sh.clone().negate(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();{const cgs=R.clubs[type];if(cgs&&cal.len)cgs.scale.set(1,cal.len/(CLUB_LEN[type]||cal.len),1);}
+  const ya=sh.clone().negate(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();{const cgs=R.clubs[type],Lu=R._lenA||cal.len;if(cgs&&Lu)cgs.scale.set(1,Lu/(CLUB_LEN[type]||Lu),1);}
   _m4.makeBasis(xa,ya,za);for(const kk in R.clubs){const cg=R.clubs[kk];cg.visible=kk===type;if(kk===type){cg.position.copy(grip);cg.quaternion.setFromRotationMatrix(_m4);}}}
 
 function setRelG(g,b,q){const gi=g.getWorldQuaternion(new THREE.Quaternion()).invert(),pr=gi.multiply(b.parent.getWorldQuaternion(new THREE.Quaternion()));b.quaternion.copy(pr.invert().multiply(q));b.updateMatrixWorld(true);}
@@ -896,24 +923,55 @@ function headLift(g,w){if(w<=.01)return;const R=g.userData.rig,B=R.B,An=R.anim;i
   setRelG(g,B.neck_01,new THREE.Quaternion().slerp(part,.45).multiply(nq));setRelG(g,B.Head,part.clone().multiply(hq));}
 
 /* golf grip: the trail hand is placed on the shaft just below the lead hand, palm facing the lead palm (overlap-style), every frame of the swing */
-function gripFix(g,type){const R=g.userData.rig,B=R.B,cg=R.clubs&&R.clubs[type];if(!cg||!cg.visible||!B.hand_r||typeof armTo!=='function')return;
-  const down=new THREE.Vector3(0,-1,0).applyQuaternion(cg.quaternion).normalize(),palmT=cg.position.clone().addScaledVector(down,type==='putter'?.085:.072);
-  const flip=new THREE.Quaternion().setFromAxisAngle(down,Math.PI),pole=gpG(g,B.lowerarm_r).add(new THREE.Vector3(0,-.25,-.12));
-  for(let it=0;it<3;it++){setRelG(g,B.hand_r,flip.clone().multiply(relQ(g,B.hand_l)));const wr=gpG(g,B.hand_r),off=gripPt(g,'r').sub(wr);armTo(g,'r',palmT.clone().sub(off),pole);}
-  setRelG(g,B.hand_r,flip.clone().multiply(relQ(g,B.hand_l)));}
-
-/* address frame: the moment before the takeaway where this club's head sits closest to the ball (mocap clips start with waggles) */
+const LEAD_COCK=-.3;/* ~10 degrees more lead-wrist cock at address */
+function gripFix(g,type){/* golf grip: in each hand the shaft runs from the "V" between thumb and index finger back out under the heel of the palm;
+  lead palm faces away from the target, trail palm faces the target, and the trail hand sits just below the lead hand, its palm covering the lead thumb */
+  const R=g.userData.rig,B=R.B,cg=R.clubs&&R.clubs[type];if(!cg||!cg.visible||!B.hand_r||!B.hand_l||typeof armTo!=='function'||!R.arms)return;
+  const q=cg.quaternion,xa=new THREE.Vector3(1,0,0).applyQuaternion(q),ya=new THREE.Vector3(0,1,0).applyQuaternion(q);const put=type==='putter';
+  const handQ=(s,n)=>{const A=R.arms[s],hb=B['hand_'+s];if(!A||!A.u0||!hb.userData.r0)return relQ(g,hb);const u=ya.clone();if(s==='l'){const ck=LEAD_COCK;if(ck)u.applyAxisAngle(n.clone().normalize(),ck);}const _u=u,nn=n.clone().addScaledVector(u,-n.dot(u)).normalize(),u0=A.u0.clone().normalize(),n0=A.n0.clone().addScaledVector(u0,-A.n0.dot(u0)).normalize();
+    const Mt=new THREE.Matrix4().makeBasis(u,nn,new THREE.Vector3().crossVectors(u,nn)),M0=new THREE.Matrix4().makeBasis(u0,n0,new THREE.Vector3().crossVectors(u0,n0));
+    return new THREE.Quaternion().setFromRotationMatrix(Mt).multiply(new THREE.Quaternion().setFromRotationMatrix(M0).invert()).multiply(hb.userData.r0);};
+  const lineP=s=>{const hb=B['hand_'+s],t=B['thumb_01_'+s],ix=B['index_01_'+s],pk=B['pinky_01_'+s];if(!t||!ix)return gripPt(g,s);const w=gpG(g,hb),heel=pk?w.clone().lerp(gpG(g,pk),.22):w;return gpG(g,t).add(gpG(g,ix)).multiplyScalar(.5).add(heel).multiplyScalar(.5);};
+  const place=(s,pt0,n,pole)=>{const hb=B['hand_'+s],cl=B['clavicle_'+s],pt=pt0.clone().addScaledVector(n,-.03);/* the grip sits in the palm, so the hand's bone line is half a hand behind the shaft */
+    const reach=()=>{const S0=gpG(g,B['upperarm_'+s]),E0=gpG(g,B['lowerarm_'+s]),H0=gpG(g,hb);return{S0,short:S0.distanceTo(pt)-(S0.distanceTo(E0)+E0.distanceTo(H0)+lineP(s).distanceTo(H0)*.9)*.985};};
+    if(cl){for(let it=0;it<2;it++){const r=reach();if(r.short<=0)break;const C=gpG(g,cl),v1=r.S0.clone().sub(C),L=v1.length();v1.normalize();const v2=pt.clone().sub(C).normalize(),tot=v1.angleTo(v2);if(tot<1e-3)break;
+      const ang=Math.min(.55,tot,r.short/L*1.15);setRelG(g,cl,new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(v1,v2),ang/tot).multiply(relQ(g,cl)));}}
+    for(let it=0;it<3;it++){setRelG(g,hb,handQ(s,n));const off=lineP(s).sub(gpG(g,hb));armTo(g,s,pt.clone().sub(off),pole);}setRelG(g,hb,handQ(s,n));};
+  const top=cg.position.clone(),low=top.clone().addScaledVector(ya,put?-.075:-.062);
+  place('l',top,xa.clone().negate(),(B.thigh_l?gpG(g,B.thigh_l):gpG(g,B.pelvis)).add(new THREE.Vector3(.05,-.15,.12)));
+  place('r',low,xa.clone(),(B.thigh_r?gpG(g,B.thigh_r):gpG(g,B.pelvis)).add(new THREE.Vector3(-.05,-.15,.12)));
+  /* thumbs sit on the grip pointing down the shaft (lead thumb under the trail palm, trail thumb just left of centre), each joint curled onto the grip */
+  for(const [s,n] of [['l',xa.clone().negate()],['r',xa.clone()]]){const t1=B['thumb_01_'+s],t2=B['thumb_02_'+s],t3=B['thumb_03_'+s];if(!t1||!t2||!t3||typeof aimBoneG!=='function')continue;
+    const p1=gpG(g,t1),l1=p1.distanceTo(gpG(g,t2)),d1=ya.clone().multiplyScalar(-.95).addScaledVector(n,.16).normalize();aimBoneG(g,t1,t2,p1.clone().addScaledVector(d1,l1));
+    const p2=gpG(g,t2),l2=p2.distanceTo(gpG(g,t3)),d2=ya.clone().multiplyScalar(-.8).addScaledVector(n,.42).normalize();aimBoneG(g,t2,t3,p2.clone().addScaledVector(d2,l2));}}
 function animAddr(g,ck,type){const An=animSetup(g),key='A:'+ck+':'+type;if(An.cal[key]!==undefined)return An.cal[key];const C=ANIM.clips[ck],K=C.keys,cal=animCal(g,ck,type),R=g.userData.rig,cg=R.clubs[type];
   if(!cg){An.cal[key]=ck==='putt'?K.imp:K.addr;return An.cal[key];}const tgt=new THREE.Vector3(cal.bx,type==='driver'?.034:.012,cal.bz),end=ck==='putt'?K.imp:K.addr+(K.top-K.addr)*.35;let best=K.addr,bd=1e9;R.calib=1;
   for(let f=Math.max(0,K.addr-2);f<=end;f+=1){animApply(g,ck,f,undefined,0,type);animClub(g,ck,type);cg.updateMatrixWorld(true);const hd=g.worldToLocal(cg.localToWorld(new THREE.Vector3(0,-(cg.userData.L||1),0)));
     const face=new THREE.Vector3(1,0,0),d=Math.hypot(hd.x+.03-tgt.x,hd.z+.045-tgt.z)+Math.abs(hd.y-tgt.y)*.5;if(d<bd){bd=d;best=f;}}
   R.calib=0;An.cal[key]=best;return best;}
+
+
+function flatFeet(g,w){const R=g.userData.rig,B=R.B;if(!(w>0))return;for(const s of['l','r']){const ft=B['foot_'+s],bl=B['ball_'+s];if(!ft||!bl)continue;const a=gpG(g,ft),b=gpG(g,bl),v=b.clone().sub(a),hz=Math.hypot(v.x,v.z);if(hz<1e-4)continue;const pr=(R.footPitch&&R.footPitch[s])||0,hd=new THREE.Vector3(v.x,0,v.z).normalize();
+    const want=hd.multiplyScalar(Math.cos(pr)).add(new THREE.Vector3(0,Math.sin(pr),0)),q=new THREE.Quaternion().setFromUnitVectors(v.clone().normalize(),want.normalize());const full=q,part=new THREE.Quaternion().slerp(full,w);setRelG(g,ft,part.multiply(relQ(g,ft)));}}
+/* trail hand shaped onto the grip: hand continues the forearm (bent slightly toward the shaft), palm facing the target like the clubface */
+function trailHandQ(g,cg){const R=g.userData.rig,B=R.B,AL=R.arms&&R.arms.l,AR=R.arms&&R.arms.r;if(!AL||!AR||!B.hand_r.userData.r0||!B.hand_l.userData.r0)return relQ(g,B.hand_r);
+  const xa=new THREE.Vector3(1,0,0).applyQuaternion(cg.quaternion).normalize(),mir=v=>v.clone().addScaledVector(xa,-2*v.dot(xa));
+  const dl=relQ(g,B.hand_l).multiply(B.hand_l.userData.r0.clone().invert()),fl=AL.f0.clone().applyQuaternion(dl).normalize(),nl=AL.n0.clone().applyQuaternion(dl).normalize();
+  let f=mir(fl).normalize(),n=mir(nl);n.addScaledVector(f,-n.dot(f)).normalize();
+  const f0=AR.f0.clone().normalize(),n0=AR.n0.clone().addScaledVector(f0,-AR.n0.dot(f0)).normalize();
+  const Mt=new THREE.Matrix4().makeBasis(f,n,new THREE.Vector3().crossVectors(f,n)),M0=new THREE.Matrix4().makeBasis(f0,n0,new THREE.Vector3().crossVectors(f0,n0));
+  return new THREE.Quaternion().setFromRotationMatrix(Mt).multiply(new THREE.Quaternion().setFromRotationMatrix(M0).invert()).multiply(B.hand_r.userData.r0);}
+function feetToGround(g){const R=g.userData.rig,B=R.B;if(!B.thigh_l||!B.calf_l||!B.foot_l)return;const sc=g.scale.y||1;g.updateMatrixWorld(true);
+  for(const s of['l','r']){const th=B['thigh_'+s],ca=B['calf_'+s],ft=B['foot_'+s],fq=relQ(g,ft),a=gpG(g,ft),w=g.localToWorld(a.clone()),d=(H(w.x,-w.z)-g.position.y)/sc,gy=a.y+d;
+    if(Math.abs(d)<.004||Math.abs(d)>.25)continue;const S0=gpG(g,th),E0=gpG(g,ca),l1=S0.distanceTo(E0),l2=E0.distanceTo(a),T=a.clone();T.y=gy;const v=T.clone().sub(S0),D=Math.min(v.length(),l1+l2-.002);v.setLength(D);
+    const dn=v.clone().normalize(),aa=(l1*l1-l2*l2+D*D)/(2*D),hh=Math.sqrt(Math.max(0,l1*l1-aa*aa)),pole=E0.clone().add(new THREE.Vector3(0,0,.4)).sub(S0);pole.addScaledVector(dn,-pole.dot(dn)).normalize();
+    const E=S0.clone().addScaledVector(dn,aa).addScaledVector(pole,hh);aimBoneG(g,th,ca,E);aimBoneG(g,ca,ft,S0.clone().add(v));setRelG(g,ft,fq);}}
 function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(type),C=ANIM.clips[ck];if(!C)return false;
   try{animSetup(g);animGround(g,ck);animCal(g,ck,type);const K=C.keys,p=Math.max(0,Math.min(1,S._pw||0)),ph=S._ph,u=S._u||0,A0=animAddr(g,ck,type);let f=A0,f2,w=0;
     if(ph==='back')f=A0+(K.top-A0)*p;
     else if(ph==='down'){const uu=Math.min(1,u);f=K.top+(K.imp-K.top)*uu;if(p<.98){f2=A0+(K.top-A0)*p;w=1-Math.min(1,uu/.5);w*=w;}}
     else if(ph==='thru'){f=u<=1?K.imp+(K.fin-K.imp)*u:Math.min(K.end,K.fin+(u-1)*(K.fin-K.imp)*.5);}
-    animApply(g,ck,f,f2,w,type);animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
+    animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
@@ -1039,7 +1097,7 @@ function scaleBalls(){for(const p of players){const d=camera.position.distanceTo
 
 /* ---------- game flow ---------- */
 let ROUND=null;
-function setHole(i){computeHole(i);FXC.grp.clear();FXC.list.length=0;const z=H(PIN.x,PIN.y);flagG.position.copy(V(PIN.x,PIN.y,z));pinMark.position.copy(V(PIN.x,PIN.y,z+2.6));placeTeeDeco();
+function setHole(i){computeHole(i);FXC.grp.clear();FXC.list.length=0;const z=H(PIN.x,PIN.y);flagG.position.copy(V(PIN.x,PIN.y,z));try{drawFlag(HOLE.ref);}catch(e){}pinMark.position.copy(V(PIN.x,PIN.y,z+2.6));placeTeeDeco();
   $('hN').textContent=HOLE.ref;$('hC').textContent=D.short;$('holeMeta').textContent='Par '+PAR+'   '+Math.round(HOLE_LEN*TOYD)+' yds'+(HOLE.hcp?'   Hcp '+HOLE.hcp:'');}
 function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.b,p.ball.sh,p.av);}
   const n=HOLES.length,idx=[...Array(n).keys()],list=len==='f9'?idx.slice(0,9):len==='b9'?idx.slice(9):idx;ROUND={list:list.length?list:idx,k:0,len};
@@ -1137,7 +1195,7 @@ function startTurn(){for(const p of players)p.av.visible=false;cur=nextPlayer();
   buildTufts(cur.x,cur.y);try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
 function seatBag(p){const bg=p.av&&p.av.userData.bag;if(!bg)return;p.av.updateMatrixWorld(true);const w=p.av.localToWorld(v3(1.25,0,2.55));bg.position.y=(H(w.x,-w.z)-p.av.position.y)/(p.av.scale.x||1);}
 function posGolfer(p,rot){const a=p.aim,pt=CLUBS[p.club].putt,off=(p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1;gx=p.x-(ab.bx*Math.cos(a)+ab.bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+ab.bz*Math.cos(a))*s;}
-  p.av.position.copy(V(gx,gy,ab?H(p.x,p.y):H(gx,gy)));p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
+  {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
 
@@ -1475,7 +1533,7 @@ function frameInner(){const now=performance.now()/1000,rawDt=now-last,dt=Math.mi
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
-  const fl=flagG.userData.fl;fl.parent.rotation.y=wind.a;const pa=fl.geometry.attributes.position;for(let i=0;i<pa.count;i++){const x=pa.getX(i);pa.setZ(i,Math.sin(x*6-now*(2+wind.sp))*.05*x);}pa.needsUpdate=true;
+  flagG.rotation.y=wind.a;try{animFlag(now);}catch(e){}
   sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
 {const L=c=>new THREE.MeshLambertMaterial({color:c});
  for(const c of CLUBH){const sh=new THREE.Shape(c.p.map(q=>new THREE.Vector2(q[0],q[1])));const base=Math.min(...c.p.map(q=>H(q[0],q[1])))-.5;
