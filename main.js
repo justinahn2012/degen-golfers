@@ -3,7 +3,7 @@ setTimeout(function(){
 "use strict";
 const D=window.COURSE;
 let GFX="ultra";try{GFX=localStorage.getItem("dg-gfx2")||"ultra";}catch(e){}
-const LINQ={value:0};let COMP=null,GRADE=null;const MOBILE=matchMedia("(pointer:coarse)").matches;let DRS=1,FT=16,DRSnext=0;function basePR(){return Math.min(GFX==="ultra"?(MOBILE?1.35:2):(MOBILE?1.15:1.25),window.devicePixelRatio||1);}
+const LINQ={value:0};let COMP=null,GRADE=null;const MOBILE=matchMedia("(pointer:coarse)").matches;let DRS=1,FT=16,DRSnext=0;function basePR(){return Math.min(GFX==="ultra"?(MOBILE?1.25:2):(MOBILE?1.15:1.25),window.devicePixelRatio||1);}
 const YD=0.9144, TOYD=1.0936, TOFT=3.2808;
 const $=id=>document.getElementById(id);
 
@@ -242,7 +242,7 @@ const TUFT={rough:{p:.34,h:[.14,.22],c:0xcfe0b6,v:[2,3]},fairway:{p:.2,h:[.07,.1
 const PGRID=new Uint8Array(WW*HH);for(const p of PATHS)for(let i=1;i<p.length;i++){const ax=p[i-1][0],ay=p[i-1][1],L=Math.hypot(p[i][0]-ax,p[i][1]-ay);for(let t=0;t<=L;t+=.5){const x=ax+(p[i][0]-ax)*t/(L||1),y=ay+(p[i][1]-ay)*t/(L||1);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const gx=Math.floor(x-X0)+dx,gy=Math.floor(y-Y0)+dy;if(gx>=0&&gy>=0&&gx<WW&&gy<HH)PGRID[gy*WW+gx]=1;}}}
 function onPath(x,y){const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
- for(let i=0;i<20000;i++){const r=(i<7000?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
+ for(let i=0,NT=MOBILE?13000:20000,NN=MOBILE?5000:7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
  const M=new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
  const tv=new Float32Array(Math.max(1,list.length));list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));M.setMatrixAt(i,m);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);M.setColorAt(i,c);});M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(tv,1));
  M.count=list.length;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
@@ -1031,7 +1031,7 @@ function setHole(i){computeHole(i);FXC.grp.clear();FXC.list.length=0;const z=H(P
 function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.b,p.ball.sh,p.av);}
   const n=HOLES.length,idx=[...Array(n).keys()],list=len==='f9'?idx.slice(0,9):len==='b9'?idx.slice(9):idx;ROUND={list:list.length?list:idx,k:0,len};
   players=ROSTER.filter(r=>picked.has(r.id)).map((r,i)=>{const p=Object.assign({},r,{x:0,y:0,strokes:0,done:false,abUsed:false,boost:null,lie:'tee',beers:0,buzz:0,over:0,drankTurn:false,card:{}});const br=r.beerRange||[2,5];p.limit=br[0]+Math.floor(Math.random()*(br[1]-br[0]+1));p.ball=makeBall(p);p.av=makeGolfer(p);linearize(p.ball.b);linearize(p.ball.sh);linearize(p.av);return p;});
-  $('menu').hidden=true;$('card').hidden=true;$('courses').hidden=true;try{for(const p of players)p.av.visible=true;renderer.compile(scene,camera);for(const p of players)p.av.visible=false;}catch(e){}startHole();}
+  $('menu').hidden=true;$('card').hidden=true;$('courses').hidden=true;try{for(const p of players)p.av.visible=true;renderer.compile(scene,camera);try{const seen=new Set();scene.traverse(o=>{const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];for(const m of ms)for(const t of[m.map,m.normalMap,m.bumpMap,m.alphaMap,m.emissiveMap,m.roughnessMap])if(t&&!seen.has(t)&&t.image){seen.add(t);renderer.initTexture&&renderer.initTexture(t);}});}catch(e){}for(const p of players)p.av.visible=false;}catch(e){}startHole();}
 function startHole(){setHole(ROUND.list[ROUND.k]);
   const wa=Math.random()*Math.PI*2,sp=Math.random()*6;wind={a:wa,sp,x:Math.cos(wa)*sp,y:Math.sin(wa)*sp};
   const t=H1[0],q=plAt(H1,15);
