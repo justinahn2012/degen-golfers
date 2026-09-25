@@ -1,0 +1,97 @@
+{
+"erik": {
+"tex": "face_erik_tex.jpg",
+"por": "face_erik_por.jpg",
+"skin": "#6a4230"
+},
+"grey-snap": {
+"tex": "face_grey-snap_tex.jpg",
+"por": "face_grey-snap_por.jpg",
+"skin": "#815f56"
+},
+"red-brim": {
+"tex": "face_red-brim_tex.jpg",
+"por": "face_red-brim_por.jpg",
+"skin": "#ad7d6a"
+},
+"ramble-on": {
+"tex": "face_ramble-on_tex.jpg",
+"por": "face_ramble-on_por.jpg",
+"skin": "#9e746c"
+},
+"flag-holder": {
+"tex": "face_flag-holder_tex.jpg",
+"por": "face_flag-holder_por.jpg",
+"skin": "#a2715e"
+},
+"white-snap": {
+"tex": "face_white-snap_tex.jpg",
+"por": "face_white-snap_por.jpg",
+"skin": "#836152"
+},
+"the-bay": {
+"tex": "face_the-bay_tex.jpg",
+"por": "face_the-bay_por.jpg",
+"skin": "#a57e68"
+},
+"photobomber": {
+"tex": "face_photobomber_tex.jpg",
+"por": "face_photobomber_por.jpg",
+"skin": "#5f4238"
+},
+"back-row": {
+"tex": "face_back-row_tex.jpg",
+"por": "face_back-row_por.jpg",
+"skin": "#c99c82"
+},
+"green-fleece": {
+"tex": "face_green-fleece_tex.jpg",
+"por": "face_green-fleece_por.jpg",
+"skin": "#c49578"
+},
+"shaka": {
+"tex": "face_shaka_tex.jpg",
+"por": "face_shaka_por.jpg",
+"skin": "#c18b7a"
+},
+"white-cap": {
+"tex": "face_white-cap_tex.jpg",
+"por": "face_white-cap_por.jpg",
+"skin": "#7e5948"
+},
+"selfie-cam": {
+"tex": "face_selfie-cam_tex.jpg",
+"por": "face_selfie-cam_por.jpg",
+"skin": "#cd907b"
+},
+"navy-cap": {
+"tex": "face_navy-cap_tex.jpg",
+"por": "face_navy-cap_por.jpg",
+"skin": "#b58a6c"
+},
+"jarrett": {
+"tex": "face_jarrett_tex.jpg",
+"por": "face_jarrett_por.jpg",
+"skin": "#b98a6c"
+},
+"keegan": {
+"tex": "face_keegan_tex.jpg",
+"por": "face_keegan_por.jpg",
+"skin": "#c9977c"
+},
+"brendan-ws": {
+"tex": "face_brendan-ws_tex.jpg",
+"por": "face_brendan-ws_por.jpg",
+"skin": "#d0a08a"
+},
+"andrea": {
+"tex": "face_andrea_tex.jpg",
+"por": "face_andrea_por.jpg",
+"skin": "#d9a58f"
+},
+"sheldon": {
+"tex": "face_sheldon_tex.jpg",
+"por": "face_sheldon_por.jpg",
+"skin": "#c48d6c"
+}
+}
