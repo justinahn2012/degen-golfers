@@ -656,6 +656,27 @@ function makeShell(body,geo,mat,rg,region,T,J,opt){const idx=geo.index.array,n=g
 function dressBody(body,geo,mat,RG,T,J,lk){const sh=makeShell(body,geo,mat,RG,1,T,J,{smooth:6,off:(y,b)=>.011+.012*sstepJ(J.waistY+.28,J.waistY,y)+(b?.002:0)});
   const pa=makeShell(body,geo,mat,RG,2,T,J,{smooth:5,off:(y,b)=>.013+.008*sstepJ(J.kneeY,J.kneeY-.3,y)});
   if(!sh&&!pa)return false;const idx=geo.index.array,keep=[];for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2],r=RG[a];if(r&&RG[b]===r&&RG[c]===r&&((r===1&&sh)||(r===2&&pa)))continue;keep.push(a,b,c);}geo.setIndex(keep);return{shirt:!!sh,pants:!!pa};}
+
+/* ---------- 3D faces: each golfer's photo reconstructed into a 468-point face surface (MediaPipe landmarks), textured from the photo ---------- */
+function buildFace3D(p,T,B){const FD=window.FACE3D&&FACE3D.faces&&FACE3D.faces[p.id];if(!FD||!T.cls)return false;
+  try{const n=468,tri=FACE3D.tri,g=(i,k)=>FD[i*3+k];
+    const lx=(g(33,0)+g(133,0))/2,ly=(g(33,1)+g(133,1))/2,rx=(g(362,0)+g(263,0))/2,ry=(g(362,1)+g(263,1))/2,cx=(lx+rx)/2,cy=(ly+ry)/2,dn=Math.hypot(rx-lx,ry-ly),s=2*T.eyeX*1.07/dn,zE=(g(33,2)+g(133,2)+g(362,2)+g(263,2))/4;
+    const P=new Float32Array(n*3),UV=new Float32Array(n*2),A=new Float32Array(n);
+    for(let i=0;i<n;i++){P[i*3]=(g(i,0)-cx)*s;P[i*3+1]=T.eyeY-(g(i,1)-cy)*s;P[i*3+2]=-(g(i,2)-zE)*s;UV[i*2]=g(i,0);UV[i*2+1]=1-g(i,1);}
+    /* rings in from the face outline: fade and tuck the edge back into the head */
+    const nb=Array.from({length:n},()=>new Set());for(let t=0;t<tri.length;t+=3){const a=tri[t],b=tri[t+1],c=tri[t+2];nb[a].add(b).add(c);nb[b].add(a).add(c);nb[c].add(a).add(b);}
+    const d=new Int16Array(n).fill(99);let fr=[];for(const i of FACE3D.oval){d[i]=0;fr.push(i);}for(let k=1;k<4;k++){const nx=[];for(const i of fr)for(const j of nb[i])if(d[j]>k){d[j]=k;nx.push(j);}fr=nx;}
+    for(let i=0;i<n;i++){A[i]=d[i]===0?0:d[i]===1?.45:d[i]===2?.85:1;P[i*3+2]-=d[i]===0?.014:d[i]===1?.006:d[i]===2?.002:0;}
+    /* sit the surface just in front of the sculpted face: eyes at the eye line, then push forward until nothing pokes through */
+    const z0=T.eyeZ+.012;let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;for(let i=0;i<n;i++){P[i*3+2]+=z0;if(d[i]>=2){mnx=Math.min(mnx,P[i*3]);mxx=Math.max(mxx,P[i*3]);mny=Math.min(mny,P[i*3+1]);mxy=Math.max(mxy,P[i*3+1]);}}
+    let pen=0;const pos=T.pos,cls=T.cls,N=cls.length;for(let v=0;v<N;v++){if(cls[v]!==1)continue;const x=pos[v*3],y=pos[v*3+1],z=pos[v*3+2];if(x<mnx||x>mxx||y<mny||y>mxy||z<T.eyeZ-.035)continue;
+      let bi=-1,bd=1e9;for(let i=0;i<n;i++){if(d[i]<2)continue;const dx=P[i*3]-x,dy=P[i*3+1]-y,q=dx*dx+dy*dy;if(q<bd){bd=q;bi=i;}}if(bi>=0&&bd<.0001){const pz=z-P[bi*3+2];if(pz>pen)pen=pz;}}
+    const sh=Math.min(.03,pen+.003);for(let i=0;i<n;i++)P[i*3+2]+=sh;
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(P,3));geo.setAttribute('uv',new THREE.BufferAttribute(UV,2));geo.setAttribute('aA',new THREE.BufferAttribute(A,1));geo.setIndex(tri.slice());geo.computeVertexNormals();
+    const tx=faceTex(p.id);tx.encoding=THREE.sRGBEncoding;const m=new THREE.MeshStandardMaterial({map:tx,emissive:0xffffff,emissiveMap:tx,emissiveIntensity:.2,roughness:.6,metalness:0,transparent:true,envMapIntensity:.3});m.userData.lin=1;
+    m.onBeforeCompile=sh2=>{sh2.vertexShader=sh2.vertexShader.replace('#include <common>','#include <common>\nattribute float aA;varying float vA;').replace('#include <begin_vertex>','#include <begin_vertex>\nvA=aA;');
+      sh2.fragmentShader=sh2.fragmentShader.replace('#include <common>','#include <common>\nvarying float vA;').replace('#include <alphamap_fragment>','#include <alphamap_fragment>\ndiffuseColor.a*=vA;');};m.customProgramCacheKey=()=>'face3d';
+    const mesh=new THREE.Mesh(geo,m);mesh.renderOrder=2;attachRest(mesh,B.Head,v3(0,0,0));return true;}catch(e){console.warn('face3d',e);return false;}}
 function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look,F?F.skin:p.look.skin),T=TPL[FEMALE.has(p.id)?'F':'M'];
   const g=new THREE.Group(),root=THREE.SkeletonUtils.clone(T.scene);g.add(root);root.updateMatrixWorld(true);
   let body=null;root.traverse(o=>{if(o.isMesh){if(o.isSkinnedMesh&&o.name===T.bodyName)body=o;else o.visible=false;}});
@@ -705,7 +726,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
   const kx=T.halfW*1.04/.104,ky=(T.top-T.eyeY)/.093,kz=(T.zFront-T.zBack)*1.02/2/.114,hd=new THREE.Group();headwear(hd,lk,cloth,hair,.112,true);if(lk.cap&&lk.cap.style&&lk.cap.style!=='none')hd.children.forEach(o=>{if(o.material!==hair)o.position.y+=.02;});hd.scale.multiplyScalar(1.1);
   const want=new THREE.Matrix4().compose(v3(0,T.top-.123*ky-.006,(T.zFront+T.zBack)/2),new THREE.Quaternion(),v3(kx*1.05,ky*1.03,kz*1.05));
   const loc=new THREE.Matrix4().copy(B.Head.matrixWorld).invert().multiply(want);loc.decompose(hd.position,hd.quaternion,hd.scale);B.Head.add(hd);
-  if(F){const mpp=2*T.eyeX/66,Sz=256*mpp,pg=new THREE.PlaneGeometry(Sz,Sz,24,24),pp=pg.attributes.position;
+  if(F&&!buildFace3D(p,T,B)){const mpp=2*T.eyeX/66,Sz=256*mpp,pg=new THREE.PlaneGeometry(Sz,Sz,24,24),pp=pg.attributes.position;
     for(let i=0;i<pp.count;i++){const x=pp.getX(i),y=pp.getY(i);pp.setZ(i,-(x*x/(2*.075)+y*y/(2*.2)));}pg.computeVertexNormals();
     if(!window._plateA){window._plateA=new THREE.TextureLoader().load(ASSETS.plateA);}
     const fm=new THREE.MeshLambertMaterial({map:faceTex(p.id),alphaMap:window._plateA,transparent:true,depthWrite:true,alphaTest:.02});fm.map.encoding=THREE.sRGBEncoding;fm.userData.lin=1;
