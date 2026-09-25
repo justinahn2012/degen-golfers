@@ -2,7 +2,7 @@
 setTimeout(function(){
 "use strict";
 const D=window.COURSE;
-let GFX="smooth";try{GFX=localStorage.getItem("dg-gfx")||"smooth";}catch(e){}
+let GFX="ultra";try{GFX=localStorage.getItem("dg-gfx2")||"ultra";}catch(e){}
 const LINQ={value:0};let COMP=null,GRADE=null;const MOBILE=matchMedia("(pointer:coarse)").matches;let DRS=1,FT=16,DRSnext=0;function basePR(){return Math.min(GFX==="ultra"?(MOBILE?1.35:2):(MOBILE?1.15:1.25),window.devicePixelRatio||1);}
 const YD=0.9144, TOYD=1.0936, TOFT=3.2808;
 const $=id=>document.getElementById(id);
@@ -1253,7 +1253,7 @@ function openEdit(r){editing=r;$('eImg').src=PORT[r.id]||'';$('eTitle').textCont
   $('edit').hidden=false;$('menu').hidden=true;}
 $('eCancel').onclick=()=>{$('edit').hidden=true;$('menu').hidden=false;};
 $('eSave').onclick=()=>{const r=editing;r.name=($('eName').value.trim()||r.name).slice(0,18);$('eStats').querySelectorAll('input').forEach(i=>r[i.dataset.k]=+i.value);r.ab=$('eAb').value;r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;saveRoster();$('edit').hidden=true;$('menu').hidden=false;buildMenu();};
-function modeLbl(){$('modeBtn').textContent=MODE==='swipe'?'Swing: swipe (Pure Strike style)':'Swing: classic 3-click';}{const gb=$('gfxBtn'),gl=()=>{if(gb)gb.textContent=GFX==='ultra'?'Graphics: Ultra (glow, film grade, sharper)':'Graphics: Smooth (faster on older phones)';};gl();if(gb)gb.onclick=()=>{GFX=GFX==='ultra'?'smooth':'ultra';try{localStorage.setItem('dg-gfx',GFX);}catch(e){}renderer.setPixelRatio(basePR()*DRS);setupFX();resize();gl();};}
+function modeLbl(){$('modeBtn').textContent=MODE==='swipe'?'Swing: swipe (Pure Strike style)':'Swing: classic 3-click';}{const gb=$('gfxBtn'),gl=()=>{if(gb)gb.textContent=GFX==='ultra'?'Graphics: Ultra (glow, film grade, sharper)':'Graphics: Smooth (faster on older phones)';};gl();if(gb)gb.onclick=()=>{GFX=GFX==='ultra'?'smooth':'ultra';try{localStorage.setItem('dg-gfx2',GFX);}catch(e){}renderer.setPixelRatio(basePR()*DRS);setupFX();resize();gl();};}
 modeLbl();$('modeBtn').onclick=()=>{MODE=MODE==='swipe'?'click':'swipe';try{localStorage.setItem('jp-swing-mode2',MODE);}catch(e){}modeLbl();};
 buildMenu();
 $('againBtn').onclick=()=>{if(ROUND&&state==='done'&&ROUND.k<ROUND.list.length-1){ROUND.k++;$('card').hidden=true;startHole();}else toRoster();};
