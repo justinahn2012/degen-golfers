@@ -98,5 +98,10 @@
 "tex": "face_kanishka_tex.jpg",
 "por": "face_kanishka_por.jpg",
 "skin": "#af6f53"
+},
+"peter": {
+"tex": "face_peter_tex.jpg",
+"por": "face_peter_por.jpg",
+"skin": "#d9a089"
 }
 }

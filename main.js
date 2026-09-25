@@ -533,25 +533,27 @@ function fabricTex(){if(window._fabT)return window._fabT;const c=document.create
   const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(3,6);return window._fabT=t;}
 const SHOE_SCHEMES=[['#f4f4f2','#ffffff','#1b1d22'],['#1b1d22','#f4f4f2','#e9e9e6'],['#f4f4f2','#2a2c31','#f4f4f2'],['#9aa3ad','#f4f4f2','#1b1d22'],['#2d3748','#f4f4f2','#e9e9e6'],['#f4f4f2','#c9b28a','#3b3326']];
 function hashId(s){let h=7;for(const ch of s)h=(h*31+ch.charCodeAt(0))>>>0;return h;}
-function makeShoe(len,wid,up,sole,acc,lace){const G=new THREE.Group(),Mu=new THREE.MeshStandardMaterial({color:up,roughness:.42,metalness:.05}),Ms=new THREE.MeshStandardMaterial({color:sole,roughness:.55}),Ma=new THREE.MeshStandardMaterial({color:acc,roughness:.35,metalness:.1}),Ml=new THREE.MeshStandardMaterial({color:lace,roughness:.6});
-  const s=new THREE.Shape(),L=len/2,W=wid/2;s.moveTo(0,-L);s.bezierCurveTo(W*.95,-L,W*.9,-L*.55,W*.82,-L*.2);s.bezierCurveTo(W*.8,L*.05,W,L*.25,W*.98,L*.45);s.bezierCurveTo(W*.94,L*.85,W*.5,L,0,L);
-  s.bezierCurveTo(-W*.55,L,-W*.95,L*.8,-W,L*.4);s.bezierCurveTo(-W*1.02,L*.1,-W*.74,-L*.05,-W*.78,-L*.3);s.bezierCurveTo(-W*.85,-L*.7,-W*.9,-L,0,-L);
-  const sg=new THREE.ExtrudeGeometry(s,{depth:.024,bevelEnabled:true,bevelThickness:.004,bevelSize:.004,bevelSegments:2,curveSegments:14});sg.rotateX(Math.PI/2);sg.translate(0,.028,0);
-  const sp=sg.attributes.position;for(let i=0;i<sp.count;i++){const z=sp.getZ(i);if(z>L*.35)sp.setY(i,sp.getY(i)+(z-L*.35)*.2);}sg.computeVertexNormals();G.add(new THREE.Mesh(sg,Ms));
-  const ug=new THREE.SphereGeometry(1,36,18,0,Math.PI*2,0,Math.PI/2),upp=ug.attributes.position;
-  for(let i=0;i<upp.count;i++){const x=upp.getX(i),y=upp.getY(i),z=upp.getZ(i);let yy=y*(z<-.2?1.25:1)*(z>.55?.72:1);upp.setXYZ(i,x*W*.97,yy*.082,z*L*.99);}ug.computeVertexNormals();
-  const upper=new THREE.Mesh(ug,Mu);upper.position.y=.026;G.add(upper);
-  const tc=new THREE.Mesh(new THREE.SphereGeometry(1,28,12,0,Math.PI*2,0,Math.PI/2),Ma);tc.scale.set(W*.9,.05,L*.34);tc.position.set(0,.027,L*.63);G.add(tc);
-  const hc=new THREE.Mesh(new THREE.CylinderGeometry(W*.86,W*.9,.045,24,1,true,Math.PI*.6,Math.PI*.8),Ma);hc.scale.z=1.15;hc.position.set(0,.05,-L*.6);G.add(hc);
-  const col=new THREE.Mesh(new THREE.TorusGeometry(1,.16,10,28),Mu);col.scale.set(W*.66,L*.3,W*.5);col.rotation.x=Math.PI/2-.3;col.position.set(0,.1,-L*.34);G.add(col);
-  const tongue=new THREE.Mesh(new THREE.BoxGeometry(W*.62,.012,L*.42),Mu);tongue.position.set(0,.108,-L*.02);tongue.rotation.x=.42;G.add(tongue);
-  for(let k=0;k<5;k++){const lc=new THREE.Mesh(new THREE.BoxGeometry(W*.66,.005,.007),Ml);lc.position.set(0,.1-k*.0085,-L*.08+k*L*.1);lc.rotation.x=.42;G.add(lc);}
-  for(const sd of[-1,1]){const cv=new THREE.CatmullRomCurve3([new THREE.Vector3(sd*W*.93,.045,-L*.55),new THREE.Vector3(sd*W*.98,.06,-L*.05),new THREE.Vector3(sd*W*.9,.085,L*.2)]);const st=new THREE.Mesh(new THREE.TubeGeometry(cv,16,.0045,6),Ma);G.add(st);}
+function makeShoe(len,wid,up,sad,sole,lace){const G=new THREE.Group(),L=len/2,W=wid/2,SS=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
+  const Mu=new THREE.MeshStandardMaterial({color:up,roughness:.38,metalness:0,envMapIntensity:.7}),Ms=new THREE.MeshStandardMaterial({color:sad,roughness:.4,metalness:0,envMapIntensity:.7}),
+    Mo=new THREE.MeshStandardMaterial({color:sole,roughness:.6}),Mw=new THREE.MeshStandardMaterial({color:0x2a2420,roughness:.55}),Mi=new THREE.MeshStandardMaterial({color:0x2b2622,roughness:.9}),Ml=new THREE.MeshStandardMaterial({color:lace,roughness:.6});
+  const hw=t=>W*(.8+.2*Math.sin(Math.PI*Math.min(1,t*1.15)))*(t<.1?Math.sqrt(t/.1):1)*(t>.84?Math.sqrt(Math.max(0,1-((t-.84)/.16)**2)):1),st=t=>.02-.008*SS(.2,.34,t),
+    ht=t=>(.066-.036*SS(.42,1,t)+.012*Math.exp(-(((t-.42)/.13)**2)))*(t<.06?.9:1);
+  const surf=(t0,t1,off,mat)=>{const nt=30,na=20,P=[],I=[];for(let i=0;i<=nt;i++){const t=t0+(t1-t0)*i/nt,z=-L+t*2*L,w=hw(t)+off,h=ht(t)+off,b=st(t);for(let k=0;k<=na;k++){const a=Math.PI*k/na,s=Math.sin(a);P.push(w*Math.cos(a),b+h*Math.pow(s,.75),z);}}
+    for(let i=0;i<nt;i++)for(let k=0;k<na;k++){const a=i*(na+1)+k,b=a+na+1;I.push(a,a+1,b,a+1,b+1,b);}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setIndex(I);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);G.add(m);return m;};
+  surf(0,1,0,Mu);surf(.34,.62,.0016,Ms);
+  /* the opening at the back and the lacing over the instep */
+  const op=new THREE.Mesh(new THREE.CircleGeometry(1,28),Mi);op.rotation.x=-Math.PI/2;op.scale.set(W*.62,L*.26,1);op.position.set(0,st(.2)+ht(.2)+.003,-L+.2*2*L);op.rotation.x=-Math.PI/2+.12;G.add(op);
+  for(let k=0;k<4;k++){const t=.38+k*.05,z=-L+t*2*L,y=st(t)+ht(t)+.0028;const lc=new THREE.Mesh(new THREE.BoxGeometry(W*.62,.0022,.0034),Ml);lc.position.set(0,y,z);lc.rotation.x=-.25;G.add(lc);}
+  /* welted sole: thin at the toe, stacked heel */
+  const fp=new THREE.Shape();const N=40;for(let i=0;i<=N;i++){const t=i/N;const z=-L+t*2*L,x=hw(t)*1.05+.002;i?fp.lineTo(x,z):fp.moveTo(x,z);}for(let i=N;i>=0;i--){const t=i/N;fp.lineTo(-(hw(t)*1.05+.002),-L+t*2*L);}
+  const mk=(d,y,mat)=>{const g=new THREE.ExtrudeGeometry(fp,{depth:d,bevelEnabled:true,bevelThickness:.0015,bevelSize:.0012,bevelSegments:2,curveSegments:4});g.rotateX(Math.PI/2);g.translate(0,y+d,0);const m=new THREE.Mesh(g,mat);G.add(m);return m;};
+  mk(.0105,0,Mo);mk(.0035,.0105,Mw);
+  const hs=new THREE.Shape();for(let i=0;i<=16;i++){const t=.3*i/16;const z=-L+t*2*L,x=hw(Math.max(.02,t))*1.02;i?hs.lineTo(x,z):hs.moveTo(x,z);}for(let i=16;i>=0;i--){const t=.3*i/16;hs.lineTo(-hw(Math.max(.02,t))*1.02,-L+t*2*L);}
+  const hg=new THREE.ExtrudeGeometry(hs,{depth:.008,bevelEnabled:false});hg.rotateX(Math.PI/2);hg.translate(0,.014,0);G.add(new THREE.Mesh(hg,Mo));
   G.traverse(o=>{if(o.isMesh)o.castShadow=true;});return G;}
-function wp2(b){return b.getWorldPosition(new THREE.Vector3());}
-function buildAttire(p,lk,T,B,g,R){const M=T.MEAS,sc=SHOE_SCHEMES[hashId(p.id)%SHOE_SCHEMES.length];const up=lk.shoes?lk.shoes:sc[0],dark=new THREE.Color(up).getHSL({}).l<.4;
-  const sole=dark?'#f1f1ee':sc[1],acc=p.color||sc[2],lace=dark?'#e9e9e6':sc[2];
-  for(const s of[1,-1]){const b=M.foot[s],sd=s>0?'l':'r';if(!(b[1]>b[0]))continue;const len=(b[5]-b[4])*1.12,wid=(b[1]-b[0])*1.25,sh=makeShoe(len,wid,up,sole,acc,lace);
+const SHOE_CLASSIC=[['#f3f2ee','#1c1c1e','#ebe7dd','#1c1c1e'],['#f3f2ee','#6b4226','#e4dccb','#6b4226'],['#f4f4f1','#1f2a44','#f4f4f1','#1f2a44'],['#c9a57b','#5a3a22','#3a2a1c','#3a2a1c'],['#f4f4f1','#f4f4f1','#f4f4f1','#d8d8d4'],['#9aa1a8','#f3f2ee','#f3f2ee','#3b3f44']];
+function buildAttire(p,lk,T,B,g,R){const M=T.MEAS,dk=lk.shoes&&new THREE.Color(lk.shoes).getHSL({}).l<.4,sc=dk?(hashId(p.id)%2?['#1d1d1f','#1d1d1f','#1d1d1f','#1d1d1f']:['#f3f2ee','#1c1c1e','#1d1d1f','#1c1c1e']):SHOE_CLASSIC[hashId(p.id)%SHOE_CLASSIC.length];
+  for(const s of[1,-1]){const b=M.foot[s],sd=s>0?'l':'r';if(!(b[1]>b[0]))continue;const len=(b[5]-b[4])*1.12,wid=(b[1]-b[0])*1.22,sh=makeShoe(len,wid,sc[0],sc[1],sc[2],sc[3]);
     const ctr=v3((b[0]+b[1])/2,b[2]-.012,(b[4]+b[5])/2+len*.02),holder=new THREE.Group();holder.add(sh);attachRest(holder,B['foot_'+sd],ctr);}
   /* trousers or golf shorts: loose segments that ride the leg joints */
   const pm=new THREE.MeshLambertMaterial({color:lk.legs.color,map:fabricTex(),side:THREE.DoubleSide}),shorts=!!lk.legs.shorts;R.pants=[];
@@ -668,7 +670,7 @@ function makeShell(body,geo,mat,rg,region,T,J,opt){const idx=geo.index.array,n=g
   const sm=new THREE.SkinnedMesh(sg,mat);sm.position.copy(body.position);sm.quaternion.copy(body.quaternion);sm.scale.copy(body.scale);body.parent.add(sm);sm.bind(body.skeleton,body.bindMatrix);sm.frustumCulled=false;sm.castShadow=true;sm.receiveShadow=true;return sm;}
 function dressBody(body,geo,mat,RG,T,J,lk){const sh=makeShell(body,geo,mat,RG,1,T,J,{smooth:6,off:(y,b)=>.011+.012*sstepJ(J.waistY+.28,J.waistY,y)+(b?.002:0)});
   const pa=makeShell(body,geo,mat,RG,2,T,J,{smooth:5,off:(y,b)=>.013+.008*sstepJ(J.kneeY,J.kneeY-.3,y)});
-  if(!sh&&!pa)return false;const idx=geo.index.array,keep=[];for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2],r=RG[a];if(r&&RG[b]===r&&RG[c]===r&&((r===1&&sh)||(r===2&&pa)))continue;keep.push(a,b,c);}geo.setIndex(keep);return{shirt:!!sh,pants:!!pa};}
+  if(!sh&&!pa)return false;const idx=geo.index.array,keep=[],foot=v=>T.cls[v]===6&&T.pos[v*3+1]<J.shoeY+.02;for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2],r=RG[a];if(r&&RG[b]===r&&RG[c]===r&&((r===1&&sh)||(r===2&&pa)))continue;if(foot(a)&&foot(b)&&foot(c))continue;keep.push(a,b,c);}geo.setIndex(keep);return{shirt:!!sh,pants:!!pa};}
 
 /* ---------- 3D faces: each golfer's photo reconstructed into a 468-point face surface (MediaPipe landmarks), textured from the photo ---------- */
 function buildFace3D(p,T,B){const FD=window.FACE3D&&FACE3D.faces&&FACE3D.faces[p.id];if(!FD||!T.cls)return false;
@@ -703,8 +705,8 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     if(c===1){}
     else if(c===9){if(lk.glove&&x>0)C=cGl;}
     else if(c===7||c===8||(c===2&&ax>J.shoulderX)){if(ax<slEnd&&!armsBare)C=(vest&&ax<J.shoulderX+.03)?cTop:cSl;if(bare&&ax<J.shoulderX+.03)C=null;}
-    else if(y<J.shoeY||c===6)C=cSock;
-    else if(y<J.sockY+.03)C=cSock;
+    else if(y<J.shoeY||(c===6&&(shorts||lk.legs.skirt||y<J.shoeY+.035)))C=cSock;
+    else if(y<J.sockY+.03)C=(shorts||lk.legs.skirt)?cSock:cP;
     else if(y>J.waistY-(hawaii?.07:0))C=bare?null:cTop;
     else if(y>J.waistY-.035)C=cBelt;
     else if(shorts&&y<J.kneeY+.1)C=null;
@@ -869,6 +871,7 @@ const BASE=[
  {id:'navy-cap',name:'Mo Reda',hcp:36,st:[47,46,46,46,46],ab:'dial',color:'#fdcb6e',look:{skin:'#b58a6c',cap:{style:'back',color:'#27324f'},top:{type:'tee',color:'#2a3350'},legs:{color:'#2b2f36'}}},
  {id:'jarrett',name:'Jarrett Arakawa',hcp:28,st:[77,46,53,53,54],ab:'rip',color:'#e17055',look:{skin:'#b98a6c',cap:{style:'band',color:'#c8342f'},top:{type:'hawaiian',color:'#f2c230',pat:'pineapple'},legs:{color:'#4b4a3a',shorts:true},shoes:'#f2f2f2'}},
  {id:'kanishka',name:'Kanishka Tiwari',hcp:36,st:[56,40,42,55,38],ab:'rip',color:'#20bf6b',look:{skin:'#af6f53',hairMesh:'parted',hair:'#221a16',top:{type:'polo',color:'#cfc3a8'},legs:{color:'#2b2f36'}}},
+ {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
  {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[62,69,63,63,65],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'visor',color:'#f4f4f1',brim:'#f4f4f1'},top:{type:'polo',color:'#e8336f'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
