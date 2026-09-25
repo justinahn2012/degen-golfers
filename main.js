@@ -158,6 +158,7 @@ const outer=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),worldGrass(new THR
 
 const WT={value:0};
 function swayMat(mt,amp){mt.onBeforeCompile=sh=>{sh.uniforms.uTime=WT;sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat ph=instanceMatrix[3].x*.21+instanceMatrix[3].z*.17;float yy=max(position.y,0.);transformed.x+=sin(uTime*1.3+ph)*'+amp.toFixed(3)+'*yy*yy;transformed.z+=cos(uTime*1.05+ph*1.3)*'+(amp*.7).toFixed(3)+'*yy*yy;\n#endif');};mt.customProgramCacheKey=()=>'sway'+amp;}
+const IMPS=[];let NEAR=null;
 /* trees: Pacific Northwest mix, kept out of every hole's playing corridor */
 const TREES=[],THASH=new Map();
 {const lines=D.holes.filter(h=>h.main||!PAR3).map(h=>({p:h.p,w:+h.par>=4?27:19}));const obst=GREENS.concat(TEES,BUNKERS);
@@ -184,7 +185,7 @@ const TREES=[],THASH=new Map();
  const ldT=k=>{const t=TL0.load(ASSETS[k]);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
  const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length)),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
    list.forEach((t,i)=>{const v=rows>1?t.v:0,hh=t.h*ratio[v];av[i]=v;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
-   iq.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.geometry=iq.clone();M.geometry.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.count=list.length;M.frustumCulled=false;M.userData.lin=1;return M;};
+   iq.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.geometry=iq.clone();M.geometry.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.count=list.length;M.frustumCulled=false;M.userData.lin=1;M.userData.imp={list,tex,frames,rows,ratio,aspect,av,mats:M.instanceMatrix.array.slice(),cols:M.instanceColor?M.instanceColor.array.slice():null};IMPS.push(M);return M;};
  if(HASA){scene.add(mkImp(firs,ldT('firAtlas'),8,3,[1.267,1.161,1.546],.68),mkImp(decs,ldT('broadAtlas'),4,1,[1.03],1));}
  const SD=[.8,.6],SA=Math.atan2(SD[1],SD[0]);
  for(const t of TREES){if(t.x<X0-30||t.x>X1+30||t.y<Y0-30||t.y>Y1+30)continue;const len=t.h*.83;
@@ -956,9 +957,26 @@ function updPuttGrid(dt){if(!PG)return;const on=!!(cur&&(state==='aim'||state===
   PG.seed.forEach((s,i)=>{const g0=grad(s.x,s.y),m=Math.hypot(g0[0],g0[1])||1e-6;s.x-=g0[0]/m*dt*(.2+m*16);s.y-=g0[1]/m*dt*(.2+m*16);s.a+=dt*.45;
     if(s.a>1||Math.hypot(s.x-PG.cx,s.y-PG.cy)>PG.R||!PG.onG(s.x,s.y)){s.x=PG.cx+(Math.random()*2-1)*PG.R;s.y=PG.cy+(Math.random()*2-1)*PG.R;s.a=0;}
     const v=V(s.x,s.y,H(s.x,s.y)+.02);a[i*3]=v.x;a[i*3+1]=v.y;a[i*3+2]=v.z;});PG.dots.geometry.attributes.position.needsUpdate=true;}
+
+/* crossed-plane trees: 4 planes (conifers) or 2 (broadleaf), each showing the atlas frame for its own facing */
+function crossTreeMesh(imp,cap){const P=imp.frames===8?4:2,pos=[],uv=[],fr=[],idx=[];for(let k=0;k<P;k++){const a=k/imp.frames*Math.PI*2,rx=Math.sin(a),rz=-Math.cos(a),b=k*4;
+    pos.push(-.5*rx,0,-.5*rz,.5*rx,0,.5*rz,.5*rx,1,.5*rz,-.5*rx,1,-.5*rz);uv.push(0,0,1,0,1,1,0,1);fr.push(k,k,k,k);idx.push(b,b+1,b+2,b,b+2,b+3);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('aF',new THREE.Float32BufferAttribute(fr,1));g.setIndex(idx);
+  g.setAttribute('aVar',new THREE.InstancedBufferAttribute(new Float32Array(cap),1));
+  const m=new THREE.MeshBasicMaterial({map:imp.tex,alphaTest:.42,side:THREE.DoubleSide,toneMapped:false});m.userData.lin=1;
+  m.onBeforeCompile=sh=>{sh.uniforms.uF={value:imp.frames};sh.uniforms.uR={value:imp.rows};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aVar;attribute float aF;uniform float uF,uR;varying vec2 vA2;varying float vY2;').replace('#include <uv_vertex>','#include <uv_vertex>\nvA2=vec2((aF+uv.x)/uF,(uR-1.-aVar+uv.y)/uR);vY2=uv.y;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA2;varying float vY2;').replace('#include <map_fragment>','vec4 texelColor=texture2D(map,vA2);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.78+.22*smoothstep(0.,.45,vY2);');};
+  m.customProgramCacheKey=()=>'impx'+imp.frames+'x'+imp.rows;const M=new THREE.InstancedMesh(g,m,cap);M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(cap*3).fill(1),3);M.count=0;M.frustumCulled=false;M.userData.lin=1;scene.add(M);return M;}
+function updNearTrees(x,y){if(!IMPS.length)return;if(!NEAR)NEAR=IMPS.map(M=>({M,X:crossTreeMesh(M.userData.imp,260),hid:[]}));
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),R=58;
+  for(const N of NEAR){const I=N.M.userData.imp,arr=N.M.instanceMatrix.array;for(const i of N.hid)arr.set(I.mats.subarray(i*16,i*16+16),i*16);N.hid=[];let n=0;const av=N.X.geometry.attributes.aVar.array;
+    I.list.forEach((t,i)=>{if(n>=260||Math.abs(t.x-x)>R||Math.abs(t.y-y)>R||Math.hypot(t.x-x,t.y-y)>R)return;const v=I.rows>1?t.v:0,hh=t.h*I.ratio[v];m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*I.aspect,hh,hh*I.aspect));N.X.setMatrixAt(n,m);av[n]=v;
+      if(I.cols)N.X.setColorAt(n,c.fromArray(I.cols,i*3));arr.fill(0,i*16,i*16+16);N.hid.push(i);n++;});
+    N.X.count=n;N.X.instanceMatrix.needsUpdate=true;if(N.X.instanceColor)N.X.instanceColor.needsUpdate=true;N.X.geometry.attributes.aVar.needsUpdate=true;N.M.instanceMatrix.needsUpdate=true;}}
 function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)return null;const fresh=live.find(p=>p.strokes===0);if(fresh)return fresh;return live.reduce((a,b)=>dist(b)>dist(a)?b:a);}
 function startTurn(){for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
-  buildTufts(cur.x,cur.y);setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
+  buildTufts(cur.x,cur.y);try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
 function seatBag(p){const bg=p.av&&p.av.userData.bag;if(!bg)return;p.av.updateMatrixWorld(true);const w=p.av.localToWorld(v3(1.25,0,2.55));bg.position.y=(H(w.x,-w.z)-p.av.position.y)/(p.av.scale.x||1);}
 function posGolfer(p,rot){const a=p.aim,pt=CLUBS[p.club].putt,off=(p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1;gx=p.x-(ab.bx*Math.cos(a)+ab.bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+ab.bz*Math.cos(a))*s;}
   p.av.position.copy(V(gx,gy,H(gx,gy)));p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
@@ -977,6 +995,16 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
   state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;swingAnim={t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(_K.fin-_K.imp)/ANIM.fps:0,type:clubType(p.club)};
   ring.visible=false;aimLine.visible=false;readLine.visible=false;trailPts=[];setRibbon([]);refresh();}
 function contactWord(e){const a=Math.abs(e);if(a<.35)return'Pure';const s=e>0?'draw':'fade';if(a<1)return'Slight '+s;if(a<2)return s[0].toUpperCase()+s.slice(1);return e>0?'Hook':'Slice';}
+
+let RP=null;
+function worthReplay(r,p){if(r.oob)return false;const dp=Math.hypot(r.x-PIN.x,r.y-PIN.y),from=Math.hypot(r.startX-PIN.x,r.startY-PIN.y);
+  if(r.holed)return r.putt?from>4:true;if(r.putt)return false;if(dp<2.4&&from>22)return true;if(r.spin&&dp<5)return true;return Math.hypot(r.x-r.startX,r.y-r.startY)*TOYD>=285&&Math.abs(p.lastErr||0)<.35;}
+function replayBadge(on){let el=$('replayBadge');if(!el){el=document.createElement('div');el.id='replayBadge';el.innerHTML='<span class="rd"></span><b>REPLAY</b><i>Tap to skip</i>';document.body.appendChild(el);const st=document.createElement('style');
+    st.textContent='#replayBadge{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:40;display:none;align-items:center;gap:8px;background:rgba(9,22,18,.85);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:7px 14px;color:#fff;font:700 15px "Barlow Condensed",sans-serif;letter-spacing:.08em}#replayBadge.on{display:flex}#replayBadge i{font:500 12px Barlow,sans-serif;letter-spacing:0;color:#b8c9bf;font-style:normal}#replayBadge .rd{width:9px;height:9px;border-radius:50%;background:#e8412c;animation:rpb 1s infinite}@keyframes rpb{50%{opacity:.25}}';document.head.appendChild(st);}
+  el.classList.toggle('on',on);}
+function startReplay(r,p,then){RP={r,p,then,t0:performance.now()/1000,sp:r.putt?.55:.42,trail:[]};state='replay';replayBadge(true);setRibbon([]);const pn=$('panel');if(pn)pn.style.visibility='hidden';}
+function endReplay(){if(!RP)return;const R0=RP;RP=null;replayBadge(false);const pn=$('panel');if(pn)pn.style.visibility='';placeBall(R0.p,R0.p.x,R0.p.y,R0.r.holed?H(R0.p.x,R0.p.y)-.06:H(R0.p.x,R0.p.y)+.021);state='result';setRibbon(trailPts);setTimeout(()=>{if(state==='result')R0.then();},650);}
+document.addEventListener('pointerdown',()=>{if(state==='replay')endReplay();});
 function finishShot(){const p=cur,r=plan;let big='',small='';
   if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;}
   else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?'In the water':'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
@@ -985,7 +1013,7 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.tree?'Clipped a tree. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
     if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';}}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
-  setTimeout(()=>{if(state==='result')startTurn();},r.holed?2600:2100);}
+  if(worthReplay(r,p)){setTimeout(()=>{if(state==='result')startReplay(r,p,()=>startTurn());},1300);}else setTimeout(()=>{if(state==='result')startTurn();},r.holed?2600:2100);}
 function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of players)p.card[hi]=p.strokes;const last=ROUND.k>=ROUND.list.length-1;
@@ -1256,6 +1284,11 @@ function frame(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05
           if(appr){const gx=PIN.x-dx*7-dy*15,gy=PIN.y-dy*7+dx*15;plan.cam.p=V(gx,gy,H(gx,gy)+1.7);}else{const lx=land.x+dx*24-dy*12,ly=land.y+dy*24+dx*12;plan.cam.p=V(lx,ly,H(lx,ly)+5.5);}}
         want=plan.cam.p.clone();look=V(pos.x,pos.y,pos.z);}}
     if(state==='flight'&&t>lastT+.25)finishShot();}
+  if(state==='replay'&&RP){const R0=RP,r=R0.r,t=(now-R0.t0)*R0.sp,pos=interp(r.pts,t),lastT=r.pts[r.pts.length-1].t,dx=Math.cos(r.dir),dy=Math.sin(r.dir);placeBall(R0.p,pos.x,pos.y,pos.z);
+    R0.trail.push(V(pos.x,pos.y,pos.z));if(R0.trail.length>690)R0.trail.shift();if(!r.putt)setRibbon(R0.trail);
+    if(r.putt){const bx=PIN.x-dx*1.8-dy*1.6,by=PIN.y-dy*1.8+dx*1.6;want=V(bx,by,H(bx,by)+.45);look=V(pos.x,pos.y,pos.z);}
+    else{const u=Math.min(1,t/Math.max(.1,r.club?r.club.T*TS:2));const side=10+Math.min(26,r.carry*.09);want=V(pos.x-dx*(9-7*u)-dy*side,pos.y-dy*(9-7*u)+dx*side,pos.z+2.2+2*u);look=V(pos.x+dx*2,pos.y+dy*2,pos.z);}
+    if(t>lastT+.9)endReplay();}
   if(swingAnim&&p){const A=swingAnim,t=now-A.t0,ft=A.ft||(A.putt?.7:.8);if(!A.hit&&t>=A.ds){A.hit=1;try{strikeFX();SND.strike(A.type,A.pw,plan&&plan.lie);}catch(e){console.warn(e);}}const S=t<A.ds?swingPose('down',t/A.ds,A.pw,A.putt):swingPose('thru',(t-A.ds)/ft,A.pw,A.putt);applyPose(p.av,S,A.type);if(t>A.ds+ft+2.5)swingAnim=null;}
   const wob=p&&p.over?1+Math.min(.9,p.over*.35)*Math.sin(now*9.3)*Math.sin(now*3.1+1):1;
   if(state==='s1'){swingU+=dt*(p&&CLUBS[p.club].putt?.75:1.0)*wob;if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';}updMeter();}
@@ -1263,7 +1296,7 @@ function frame(){const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05
   else if(state==='flight')updMeter();
   if(fly){const u=Math.min(1,(now-flyStart)/(flyUntil-flyStart)),e=u*u*(3-2*u),L=HOLE_LEN,a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
-  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
+  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
