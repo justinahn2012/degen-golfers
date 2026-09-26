@@ -1207,7 +1207,8 @@ const BASE=[
  {id:'jarrett',name:'Jarrett Arakawa',hcp:28,st:[77,46,53,53,54],ab:'rip',color:'#e17055',look:{skin:'#b98a6c',cap:{style:'band',color:'#c8342f'},top:{type:'hawaiian',color:'#f2c230',pat:'pineapple'},legs:{color:'#4b4a3a',shorts:true},shoes:'#f2f2f2'}},
  {id:'kanishka',name:'Kanishka Tiwari',hcp:36,st:[56,40,42,55,38],ab:'rip',color:'#20bf6b',look:{skin:'#af6f53',hairMesh:'parted',hair:'#221a16',top:{type:'polo',color:'#cfc3a8'},legs:{color:'#2b2f36'}}},
  {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
- {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
+ {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
+{id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[62,69,63,63,65],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'visor',color:'#f4f4f1',brim:'#f4f4f1'},top:{type:'polo',color:'#e8336f'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
@@ -1490,11 +1491,21 @@ function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove
   if(!R.mouthL){animReset(g);const ey=gpG(g,hd);R.mouthL=hd.worldToLocal(g.localToWorld(V3(0,ey.y+.03,ey.z+.12)));const T0=g.userData.tpl;}
   const mouth=g.worldToLocal(hd.localToWorld(R.mouthL.clone())),shR=gpG(g,B.upperarm_r),shL=gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis);
   const sideR=pel.clone().add(V3(-.26,-.05,.06)),sideL=pel.clone().add(V3(.26,-.05,.06)),hold=shR.clone().add(V3(.06,-.2,.4)),atMouth=mouth.clone().add(V3(-.02,-.07,.07));
-  let tR=sideR.clone().lerp(hold,out).lerp(atMouth,up);tR.lerp(sideR,down);
-  let tL=sideL.clone();if(A.shot){tL.lerp(atMouth.clone().add(V3(.07,-.02,.02)),up*(1-down));}
-  armTo(g,'r',tR,shR.clone().add(V3(-.45,-.35,-.25)));armTo(g,'l',tL,shL.clone().add(V3(.45,-.35,-.3)));
-  /* the can sits in the right palm: upright when held out, tipping bottom-up while glugging */
-  const palm=gripPt(g,'r'),tilt=A.shot?1.45*up:(.35*up+1.25*drink),ax=V3(0,Math.cos(tilt),-Math.sin(tilt));A.can.position.copy(palm).addScaledVector(ax,.01).add(V3(.035,0,0));A.can.quaternion.setFromUnitVectors(V3(0,1,0),ax);
+  /* lead arm stays relaxed at the side the whole time */
+  armTo(g,'l',sideL,shL.clone().add(V3(.45,-.35,-.3)));
+  /* the can: held out upright, then brought up with its top at the mouth and tipped bottom-up while glugging */
+  const tilt=A.shot?1.45*up:(.35*up+1.25*drink),ax=V3(0,Math.cos(tilt),-Math.sin(tilt));
+  const cHold=hold.clone(),cSide=sideR.clone().add(V3(.03,.06,.05)),cMouth=mouth.clone().addScaledVector(ax,-.065).add(V3(-.01,-.01,.03));
+  const cc=cSide.clone().lerp(cHold,out).lerp(cMouth,up);cc.lerp(cSide,down);
+  /* the right hand wraps the can: index side toward the top, palm against it, fingers curled round */
+  const nT=V3(1,0,0).addScaledVector(ax,-ax.x).normalize();
+  const orientHand=()=>{const i1=B.index_01_r,p1=B.pinky_01_r,m1=B.middle_01_r,m3=B.middle_03_r;if(!i1||!p1||!m1)return;const W=gpG(g,B.hand_r),K=gpG(g,m1),ca=gpG(g,i1).sub(gpG(g,p1)).normalize(),toW=W.clone().sub(K).normalize();let cn=new THREE.Vector3().crossVectors(ca,toW.clone().negate()).normalize();
+    if(m3&&gpG(g,m3).sub(W.clone().lerp(K,.5)).dot(cn)<0)cn.negate();const mk=(a,n)=>{const nn=n.clone().addScaledVector(a,-n.dot(a)).normalize();return new THREE.Matrix4().makeBasis(a,nn,new THREE.Vector3().crossVectors(a,nn));};
+    const q=new THREE.Quaternion().setFromRotationMatrix(mk(ax,nT).multiply(mk(ca,cn).invert()));setRelG(g,B.hand_r,q.multiply(relQ(g,B.hand_r)));};
+  const palmPt=()=>gpG(g,B.hand_r).lerp(gpG(g,B.middle_01_r||B.hand_r),.55);
+  for(let it=0;it<3;it++){orientHand();const off=palmPt().sub(gpG(g,B.hand_r)),pt=cc.clone().addScaledVector(nT,-.038);armTo(g,'r',pt.sub(off),shR.clone().add(V3(-.45,-.35,-.25)));}orientHand();
+  try{fistThumbs(g);}catch(e){}
+  A.can.position.copy(cc);A.can.quaternion.setFromUnitVectors(V3(0,1,0),ax);const palm=cc;
   if(!A.cracked&&u>.12){A.cracked=true;SND.crack&&SND.crack(A.shot);const w=g.localToWorld(palm.clone().addScaledVector(ax,.07));for(let i=0;i<(A.shot?40:14);i++){const R2=Math.random;emit('n',part(w.x,w.y,w.z,(R2()-.5)*.6,R2()*1.0,(R2()-.5)*.6,.5+R2()*.5,.008+R2()*.01,[.96,.94,.86],6,1.5,true));}}
   if(drink>.5&&t>A.gulp){A.gulp=t+(A.shot?.22:.36);SND.gulp&&SND.gulp();}}
 function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)return null;const fresh=live.find(p=>p.strokes===0);if(fresh)return fresh;return live.reduce((a,b)=>dist(b)>dist(a)?b:a);}
@@ -1580,14 +1591,16 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
     const crouch=ss(0,.1,u)*(1-ss(.1,.24,u)),pose=ss(.12,.26,u)*(1-ss(.9,1,u)),pump=u>.3&&u<.86?Math.sin((u-.3)/.56*Math.PI*4):0;
     const fl0=gpG(g,B.foot_l),fr0=gpG(g,B.foot_r),yaw=.55*pose,cy=Math.cos(yaw),sy=Math.sin(yaw);
     const pel=B.pelvis;if(pel){const pw=gpG(g,pel).add(V3(0,-.06*crouch-.085*pose+.012*Math.max(0,pump)*pose,0));g.updateMatrixWorld(true);const wpt=g.localToWorld(pw);pel.parent.updateMatrixWorld(true);pel.position.copy(pel.parent.worldToLocal(wpt));pel.updateMatrixWorld(true);setRelG(g,pel,Ry(yaw*.55).multiply(relQ(g,pel)));}
-    rot(B.spine_01,Rx(.22*crouch-.1*pose).multiply(Ry(yaw*.45)));rot(B.spine_03,new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),.1*pose));rot(B.neck_01,Ry(.2*pose));rot(B.Head,Rx(-.3*pose).multiply(Ry(.35*pose)));
+    rot(B.spine_01,Rx(.22*crouch-.1*pose).multiply(Ry(yaw*.45)));rot(B.spine_03,new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),.1*pose));rot(B.neck_01,Ry(.4*pose).multiply(Rx(-.12*pose)));rot(B.Head,Ry(.55*pose).multiply(Rx(-.38*pose)));/* head turned hard toward the hole and thrown back in the roar */
     /* wide stance: left foot out and a touch forward, right foot out and back */
     const ground=(q)=>{const w=g.localToWorld(q.clone());return q.y+(H(w.x,-w.z)-g.position.y)/(g.scale.y||1)-(H(g.localToWorld(fl0.clone()).x,-g.localToWorld(fl0.clone()).z)-g.position.y)/(g.scale.y||1);};
     const fl=fl0.clone().add(V3(.27*pose,0,.1*pose)),fr=fr0.clone().add(V3(-.24*pose,0,-.08*pose));fl.y=ground(fl);fr.y=ground(fr);legTo(g,'l',fl);legTo(g,'r',fr);
     const side=V3(-cy,0,sy),fwd=V3(sy,0,cy),up=V3(0,1,0),sideL=side.clone().negate();
     const load=gpG(g,B.pelvis).addScaledVector(side,.22).addScaledVector(fwd,.12);
     const flex=shR().addScaledVector(side,.27).addScaledVector(up,.29+.05*pump).addScaledVector(fwd,.03);/* upper arm out level with the shoulder, forearm straight up: the flex */
-    const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(flex,pose);
+    const mid=shR().addScaledVector(fwd,.38).addScaledVector(up,-.12).addScaledVector(side,.02),pk=ss(.12,.3,u),b0=(1-pk)*(1-pk),b1=2*pk*(1-pk),b2=pk*pk;/* the uppercut: hip -> in front of the chest -> punched up high */
+    const arc=load.clone().multiplyScalar(b0).addScaledVector(mid,b1).addScaledVector(flex,b2);
+    const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(arc,ss(.1,.14,u)).lerp(flex,ss(.3,.34,u));tR.lerp(gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)),ss(.9,1,u));
     armTo(g,'r',tR,shR().addScaledVector(side,.7).addScaledVector(up,-.1).addScaledVector(fwd,-.04));
     const tL=gpG(g,B.pelvis).addScaledVector(sideL,.26).add(V3(0,-.05,.06)).lerp(shL().addScaledVector(sideL,.5).addScaledVector(up,-.34).addScaledVector(fwd,.1),pose);
     armTo(g,'l',tL,shL().addScaledVector(sideL,.3).addScaledVector(up,-.5).addScaledVector(fwd,-.25));fistThumbs(g);}

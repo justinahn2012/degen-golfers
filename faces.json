@@ -103,5 +103,10 @@
 "tex": "face_peter_tex.jpg",
 "por": "face_peter_por.jpg",
 "skin": "#d9a089"
+},
+"dillon": {
+"tex": "face_dillon_tex.jpg",
+"por": "face_dillon_por.jpg",
+"skin": "#c08a72"
 }
 }
