@@ -1552,7 +1552,7 @@ function armTo(g,s,tgt,pole){const B=g.userData.rig.B,up=B['upperarm_'+s],lo=B['
   const d=tgt.clone().sub(S0),D=Math.min(d.length(),l1+l2-.002);d.setLength(D);const dn=d.clone().normalize(),a=(l1*l1-l2*l2+D*D)/(2*D),h=Math.sqrt(Math.max(0,l1*l1-a*a)),pl=pole.clone().sub(S0);pl.addScaledVector(dn,-pl.dot(dn)).normalize();
   const E=S0.clone().addScaledVector(dn,a).addScaledVector(pl,h);aimBoneG(g,up,lo,E);aimBoneG(g,lo,ha,S0.clone().add(d));}
 function startBeer(p){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel)return;if(BEERA&&BEERA.can)BEERA.can.parent&&BEERA.can.parent.remove(BEERA.can);const shot=Math.random()<.5,can=beerCan();if(p.look&&p.look.lefty)can.scale.x*=-1;/* keep the label readable on a mirrored lefty */p.av.add(can);
-  BEERA={p,t0:performance.now()/1000,shot,dur:shot?3.6:4.4,can,gulp:0,cracked:false};for(const k in p.av.userData.rig.clubs)p.av.userData.rig.clubs[k].visible=false;p.intro=performance.now()/1000+(shot?3.8:4.6);return shot;}
+  BEERA={p,t0:performance.now()/1000,shot,dur:shot?3.6:4.4,can,gulp:0,cracked:false};for(const k in p.av.userData.rig.clubs)p.av.userData.rig.clubs[k].visible=false;p.intro=performance.now()/1000+(shot?4.8:5.6);return shot;}/* camera stays on the golfer a beat after the last sip */
 function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove(A.can);BEERA=null;return;}
   const p=A.p,g=p.av,R=g.userData.rig,B=R.B,t=now-A.t0,u=t/A.dur;if(u>=1||!g.visible){g.remove(A.can);BEERA=null;if(cur===p&&state==='aim')posGolfer(p,0);return;}
   const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},V3=(x,y,z)=>new THREE.Vector3(x,y,z);
