@@ -270,7 +270,7 @@ const bladeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=1
 const tuftGeo=(()=>{const g=new THREE.BufferGeometry(),P=[],U=[],N=[],I=[];for(let k=0;k<2;k++){const a=k*Math.PI/2,cx=Math.cos(a)*.5,cz=Math.sin(a)*.5,b=k*4;P.push(-cx,0,-cz,cx,0,cz,cx,1,cz,-cx,1,-cz);U.push(k*.5,0,k*.5+.5,0,k*.5+.5,.25,k*.5,.25);N.push(0,1,0,0,1,0,0,1,0,0,1,0);I.push(b,b+1,b+2,b,b+2,b+3);}
  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setIndex(I);return g;})();
 const grassAt=HASA?(()=>{const t=TL0.load(ASSETS.grassAtlas);t.anisotropy=4;return t;})():bladeTex;const tuftMat=new THREE.MeshLambertMaterial({map:grassAt,alphaTest:.4,side:THREE.DoubleSide});swayMat(tuftMat,.09);{const ob=tuftMat.onBeforeCompile;tuftMat.onBeforeCompile=sh=>{ob(sh);sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aTV;').replace('#include <uv_vertex>','#include <uv_vertex>\nvUv.y+=aTV*.25;');sh.fragmentShader=sh.fragmentShader.replace(/gl_FrontFacing/g,'true');};tuftMat.customProgramCacheKey=()=>'tuft2';}let tufts=null;
-const TUFT={rough:{p:.34,h:[.14,.22],c:0xcfe0b6,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xd6e6c0,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xd3e4bc,v:[0,1]},tee:{p:.1,h:[.06,.09],c:0xd6e6c0,v:[0,1]}};
+const TUFT={rough:{p:.42,h:[.15,.25],c:0xa7bd8b,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xb4c89c,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xb0c597,v:[0,1]},tee:{p:.1,h:[.06,.09],c:0xb4c89c,v:[0,1]}};/* clumps tinted into the turf instead of pale blotches; rough a touch thicker and taller */
 const PGRID=new Uint8Array(WW*HH);for(const p of PATHS)for(let i=1;i<p.length;i++){const ax=p[i-1][0],ay=p[i-1][1],L=Math.hypot(p[i][0]-ax,p[i][1]-ay);for(let t=0;t<=L;t+=.5){const x=ax+(p[i][0]-ax)*t/(L||1),y=ay+(p[i][1]-ay)*t/(L||1);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const gx=Math.floor(x-X0)+dx,gy=Math.floor(y-Y0)+dy;if(gx>=0&&gy>=0&&gx<WW&&gy<HH)PGRID[gy*WW+gx]=1;}}}
 function onPath(x,y){const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
@@ -1349,17 +1349,37 @@ window.addEventListener('error',ev=>dgErr(ev.error||ev.message,'error'));window.
 const safe=(fn,where)=>()=>{try{fn();}catch(e){dgErr(e,where);}};
 function watchdog(now){if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;return;}const age=now-STATE_T0;
   try{if(state==='flight'&&age>30){dgErr(new Error('flight never finished'),'watchdog');STATE_T0=now;finishShot();}
-    else if(state==='result'&&age>9){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
+    else if(state==='result'&&age>12){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
     else if(state==='replay'&&age>25){STATE_T0=now;endReplay();}}catch(e){dgErr(e,'watchdog');}}
+
+/* ---------- celebrations: birdie or better = the fist-pump uppercut; double bogey or worse = hands on hips, head down, shaking ---------- */
+let CELEB=null;
+function startCeleb(p,kind){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel||typeof armTo!=='function')return false;CELEB={p,kind,t0:performance.now()/1000+.45,dur:kind==='pump'?2.7:3.1};return true;}
+function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=null;return;}const t=now-A.t0;if(t<0)return;const u=t/A.dur;
+  const p=A.p,g=p.av,R=g.userData.rig,B=R.B;if(u>=1){CELEB=null;return;}if(swingAnim&&swingAnim.p===p)swingAnim=null;for(const k in R.clubs)R.clubs[k].visible=false;
+  const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},V3=(x,y,z)=>new THREE.Vector3(x,y,z),Rx=a=>new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),a),Ry=a=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),a);
+  animReset(g);try{feetToGround(g);}catch(e){}
+  const rot=(b,q)=>{if(b)setRelG(g,b,q.multiply(relQ(g,b)));};
+  const shR=()=>gpG(g,B.upperarm_r),shL=()=>gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis),sideL=pel.clone().add(V3(.26,-.05,.06)),sideR=pel.clone().add(V3(-.26,-.05,.06));
+  if(A.kind==='pump'){
+    const coil=ss(0,.18,u)*(1-ss(.18,.3,u)),drive=ss(.18,.33,u)*(1-ss(.88,1,u)),pump=Math.sin(Math.max(0,Math.min(1,(u-.48)/.28))*Math.PI*2)*(u>.48&&u<.76?1:0);
+    rot(B.spine_01,Rx(.12*coil+.1*drive).multiply(Ry(-.18*coil+.14*drive)));rot(B.spine_03,Rx(-.08*drive));rot(B.Head,Rx(-.14*drive));
+    const load=pel.clone().add(V3(-.25,.04,.1)),up=shR().add(V3(.05,.07+.04*pump,.19)),down=shR().add(V3(.05,-.12,.22));/* fist up at chin height, elbow tucked down: an uppercut, not a point */
+    let tR=sideR.clone().lerp(load,ss(0,.18,u));tR.lerp(up,ss(.18,.33,u));if(pump<0)tR.lerp(down,-pump*.9);tR.lerp(sideR,ss(.88,1,u));
+    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sideL.clone().add(V3(0,.02*drive,.04*drive)),shL().add(V3(.35,-.35,-.3)));}
+  else{const on=ss(0,.2,u)*(1-ss(.9,1,u)),hang=ss(.12,.3,u)*(1-ss(.9,1,u)),shake=Math.sin(t*8.5)*.24*ss(.28,.4,u)*(1-ss(.78,.9,u));
+    rot(B.spine_02,Rx(.14*hang));rot(B.neck_01,Rx(.22*hang));rot(B.Head,Ry(shake).multiply(Rx(.34*hang)));
+    const hipL=pel.clone().add(V3(.2,.07,.02)),hipR=pel.clone().add(V3(-.2,.07,.02));
+    armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
-  if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;}
+  let cel=false;if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;const dd=p.strokes-PAR;if(dd<=-1)cel=startCeleb(p,'pump');else if(dd>=2)cel=startCeleb(p,'hips');}
   else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?'In the water':'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
     if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':LIE_NAME[p.lie];}
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
-    if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';}}
+    if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';cel=startCeleb(p,'hips');}}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
-  let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result')startReplay(r,p,safe(()=>startTurn(),'next turn'));},'replay'),1300);}else setTimeout(safe(()=>{if(state==='result')startTurn();},'next turn'),r.holed?2600:2100);}
+  let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result'){CELEB=null;startReplay(r,p,safe(()=>startTurn(),'next turn'));}},'replay'),cel?3700:1300);}else setTimeout(safe(()=>{if(state==='result'){CELEB=null;startTurn();}},'next turn'),cel?3900:r.holed?2600:2100);}
 function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of players)p.card[hi]=p.strokes;const last=ROUND.k>=ROUND.list.length-1;
@@ -1661,6 +1681,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
     else{const u=Math.min(1,t/Math.max(.1,r.club?r.club.T*TS:2));const side=10+Math.min(26,r.carry*.09);want=V(pos.x-dx*(9-7*u)-dy*side,pos.y-dy*(9-7*u)+dx*side,pos.z+2.2+2*u);look=V(pos.x+dx*2,pos.y+dy*2,pos.z);}
     if(t>lastT+.9)endReplay();}
   if(swingAnim&&(swingAnim.p||p)){const A=swingAnim,t=now-A.t0,ft=A.ft||(A.putt?.7:.8),p=A.p||cur;if(!A.hit&&t>=A.ds){A.hit=1;try{strikeFX();SND.strike(A.type,A.pw,plan&&plan.lie);}catch(e){console.warn(e);}}const S=t<A.ds?swingPose('down',t/A.ds,A.pw,A.putt):swingPose('thru',(t-A.ds)/ft,A.pw,A.putt);if(p&&p.av)applyPose(p.av,S,A.type);if(t>A.ds+ft+2.5){swingAnim=null;if(cur&&cur.av&&state==='aim')posGolfer(cur,0);}}
+  try{updCeleb(now);}catch(e){console.warn('celeb',e);CELEB=null;}
   const wob=p&&p.over?1+Math.min(.9,p.over*.35)*Math.sin(now*9.3)*Math.sin(now*3.1+1):1;
   if(state==='s1'){swingU+=dt*(p&&CLUBS[p.club].putt?.75:1.0)*wob;if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';}updMeter();}
   else if(state==='s2'){swingU-=dt*1.45*wob;if(swingU<-.15){swingU=-.15;fire(-.15);}updMeter();}
@@ -1671,6 +1692,8 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
       const v=Math.min(1,(tt-FLY_OUT)/FLY_BACK),e=v*v*(3-2*v),s0=L*.92,sg=p?Math.max(0,plProj(H1,p.x,p.y)-7.5):0,s=s0+(sg-s0)*e,a=plAt(H1,s),b=plAt(H1,Math.min(L,s+70+(s0-s)*.25));
       want=V(a.x-a.tx*25*(1-e),a.y-a.ty*25*(1-e),H(a.x,a.y)+22*(1-e)+2.1*e);look=V(b.x,b.y,H(b.x,b.y)+2*(1-e)+1.2*e);
       if(p){const w=Math.max(0,Math.min(1,(v-.62)/.38)),k2=w*w*(3-2*w),dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),aw=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),al=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);want.lerp(aw,k2);look.lerp(al,k2);}}}
+  if(CELEB&&state==='result'&&now>=CELEB.t0-.2&&CELEB.p.av){const g=CELEB.p.av,c=g.userData.rig.B.spine_03.getWorldPosition(new THREE.Vector3()),f=g.localToWorld(new THREE.Vector3(0,0,1)).sub(g.position).setY(0).normalize(),sd=new THREE.Vector3(-f.z,0,f.x);
+    want=c.clone().addScaledVector(f,2.9).addScaledVector(sd,.9).add(new THREE.Vector3(0,.15,0));look=c.clone().add(new THREE.Vector3(0,.05,0));}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
