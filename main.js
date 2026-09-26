@@ -1281,7 +1281,13 @@ const BLACKOUT=16;function ST(p,k){let v=Math.max(20,Math.min(99,p[k]-(p.over||0
 function driverTotal(pw){return pw<=65?180+(pw-32)*70/33:250+(pw-65)*70/34;}
 function powMult(p){return driverTotal(ST(p,'pow'))/(245*1.13)*(p.buzz>0?1.03:1);}
 function lieMult(p,lie,c){if(lie==='rough')return(c===CLUBS[1]||c===CLUBS[2]?.82:.88)+ST(p,'rec')*.0007;if(lie==='bunker')return c.sand?.88+ST(p,'rec')*.001:.6+ST(p,'rec')*.0015;return 1;}
-function carryOf(p,i){const c=CLUBS[i];return c.c*YD*powMult(p)*lieMult(p,p.lie,c);}
+/* bump & run: a low runner. Carry (the bump) tops out at 70 yds with the longest eligible club (4 hybrid) down to 40 yds with the lob wedge;
+   the run follows the Rule of 12 - roll : carry = 12 - club number (7 iron rolls 5x its carry, PW 2x ...), less on slower grass, capped at 90 yds of roll */
+const BUMP0=3,BUMP1=12,BUMPN=[4,5,6,7,8,9,10,10.5,11,11.5];
+function bumpOK(i){return i>=BUMP0&&i<=BUMP1;}
+function bumpCarry(p,i){return (70-(i-BUMP0)*30/(BUMP1-BUMP0))/TOYD*lieMult(p,p.lie,CLUBS[i]);}
+function bumpRatio(i){return Math.max(.3,12-BUMPN[i-BUMP0]);}
+function carryOf(p,i){const c=CLUBS[i];if(p.shape==='Bump & run'&&bumpOK(i))return bumpCarry(p,i);return c.c*YD*powMult(p)*lieMult(p,p.lie,c);}
 function clubsFor(p){const r=[];CLUBS.forEach((c,i)=>{if(c.putt)return;if(i===0&&p.lie!=='tee')return;r.push(i);});r.push(PUTTER);return r;}
 function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;if(p.buzz>0)t*=1.25;return t;}
 
@@ -1313,7 +1319,7 @@ function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;
 const TS=.72;
 function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;if(p.boost==='hl')carry*=1.10;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
-  let mh=!c.putt?p.mishit:null;const drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
+  let mh=!c.putt?p.mishit:null;const drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const bump=shp==='Bump & run'&&bumpOK(p.club);if(bump){carry=bumpCarry(p,p.club)*Math.min(power,1.05);MHA=2/Math.max(3,c.apex*(.3+.7*Math.min(power,1.05)));MHT=.55;}const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
   /* greenside bunker: an explosion shot - low, weak and blunted. Full power just reaches the far edge of the green; running the bar all the way through the red (110%) blades it ~70 yds over */
   let sandX=false,sandRoll=1,skull=false;
   if(sandShot&&Math.hypot(PIN.x-p.x,PIN.y-p.y)<55){sandX=true;const ca=Math.cos(p.aim),sa=Math.sin(p.aim);let inG=false,far=-1;for(let s=0;s<90;s+=.5){const g=lieAt(p.x+ca*s,p.y+sa*s)==='green';if(g){inG=true;far=s;}else if(inG)break;}
@@ -1347,10 +1353,10 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
     Object.assign(res,{x:fx,y:fy,tree:true,holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   const land=lieAt(ex,ey);if(land==='oob'||land==='water'){Object.assign(res,{x:ex,y:ey,oob:true,holed:false});return res;}
   if(Math.hypot(ex-PIN.x,ey-PIN.y)<.09){pts.push({t:T*TS+.1,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});Object.assign(res,{x:PIN.x,y:PIN.y,holed:true});return res;}
-  const rd=sandX?carry*sandRoll*Math.min(1.3,(SURF[land]??.3)/(SURF.green||1)):carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
+  const rd=bump?Math.min(90/TOYD,carry*bumpRatio(p.club))*(land==='green'||land==='fringe'?1:(SURF[land]??.3)):sandX?carry*sandRoll*Math.min(1.3,(SURF[land]??.3)/(SURF.green||1)):carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
   if(rd<.05){Object.assign(res,{x:ex,y:ey,holed:false});return res;}
   const a=pts[pts.length-1],b=pts[pts.length-4],L=Math.hypot(a.x-b.x,a.y-b.y)||1,ux=(a.x-b.x)/L,uy=(a.y-b.y)/L;
-  const spin=((land==='green'||land==='fringe')&&carry>50&&(c.wedge||c.c<150))?(c.wedge?1:.5)*(Math.abs(err)<.6?1:.5)*(shp==='Punch'?.3:1):0;
+  const spin=((land==='green'||land==='fringe')&&carry>50&&(c.wedge||c.c<150))?(c.wedge?1:.5)*(Math.abs(err)<.6?1:.5)*(shp==='Punch'?.3:1)*(bump?0:1):0;
   if(spin>.2){const hop=.5+.6*(1-spin),hx=ex+ux*hop,hy=ey+uy*hop,cx2=hx+ux*.25,cy2=hy+uy*.25;pts.push({t:a.t+.2,x:(ex+hx)/2,y:(ey+hy)/2,z:H((ex+hx)/2,(ey+hy)/2)+.021+.09*(1-spin*.5)},{t:a.t+.36,x:hx,y:hy,z:H(hx,hy)+.021},{t:a.t+.6,x:cx2,y:cy2,z:H(cx2,cy2)+.021});
     const back=spin*(carry>95?3.4:2.3)*(power>.95?1:.7),v0b=Math.sqrt(2*FR[land]*back),r=simRoll(cx2,cy2,-ux*v0b,-uy*v0b,a.t+.6,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob,spin:true});return res;}
   let sx=ex,sy=ey,st0=a.t,rd2=rd;if(land!=='rough'&&land!=='bunker'&&rd>1.2){const hl=Math.min(rd*.35,7),hh=land==='green'?.1:Math.min(.7,carry*.0045),hx=ex+ux*hl,hy=ey+uy*hl,dt2=.2+hl*.045;
@@ -1718,7 +1724,8 @@ function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p
   const bd=$('board');bd.innerHTML='';for(const q of players){const s=document.createElement('span');s.style.setProperty('--pc',q.color);const fn=q.name.split(' ')[0],dup=players.filter(o=>o.name.split(' ')[0]===fn).length>1;s.textContent=(dup?fn+' '+q.name.split(' ').slice(-1)[0][0]+'.':fn)+' '+q.strokes+(q.done?' ✓':'');bd.appendChild(s);}
   $('wSpd').textContent=Math.round(wind.sp*2.237);
   if(c.putt){$('cName').innerHTML='Putter<small>Full power '+Math.round(p.pmax*TOFT)+' ft</small>';}
-  else{$('cName').innerHTML=c.n+'<small>Carry '+Math.round(carryOf(p,p.club)*(p.boost==='rip'?1.12:p.boost==='hl'?1.1:1)*TOYD)+' yds</small>';}
+  else if(p.shape==='Bump & run'&&bumpOK(p.club)){const b=bumpCarry(p,p.club);$('cName').innerHTML=c.n+'<small>Bump '+Math.round(b*TOYD)+' + run '+Math.round(Math.min(b*bumpRatio(p.club),90/TOYD)*TOYD)+' yds</small>';}
+  else{if(p.shape==='Bump & run')p.shape='Straight';$('cName').innerHTML=c.n+'<small>Carry '+Math.round(carryOf(p,p.club)*(p.boost==='rip'?1.12:p.boost==='hl'?1.1:1)*TOYD)+' yds</small>';}
   const ab=$('abBtn'),pas=ABIL[p.ab].passive;ab.textContent=p.abName;ab.disabled=pas||p.abUsed||state!=='aim';ab.setAttribute('aria-pressed',String(!!p.boost||(p.ab==='read'&&readOn)||(pas&&Math.abs(p.lastErr||0)>1.2)));
   $('swing').disabled=!(state==='aim'||state==='s1'||state==='s2'||state==='sw');const sb=$('shapeBtn');sb.textContent=p.shape||'Straight';sb.disabled=state!=='aim'||!!c.putt;sb.setAttribute('aria-pressed',String((p.shape||'Straight')!=='Straight'));
   let L='',R='';if(c.putt){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),mx=p.x+dx*d/2,my=p.y+dy*d/2,g=grad(mx,my),up=g[0]*dx+g[1]*dy,side=g[0]*-dy+g[1]*dx;
@@ -1759,7 +1766,7 @@ function finishSwipe(x,y,now){trace=[];setTimeout(drawG,0);const p=cur,c=CLUBS[p
 $('cPrev').onclick=()=>cycleClub(-1);$('cNext').onclick=()=>cycleClub(1);
 function holdBtn(el,k){let iv;const stop=()=>clearInterval(iv);el.addEventListener('pointerdown',e=>{e.preventDefault();nudgeAim(k);clearInterval(iv);iv=setInterval(()=>nudgeAim(k),45);});['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,stop));}
 holdBtn($('aimL'),1);holdBtn($('aimR'),-1);
-const SHAPES=['Straight','Draw','Fade','Punch'];$('shapeBtn').onclick=()=>{if(!cur||state!=='aim'||CLUBS[cur.club].putt)return;cur.shape=SHAPES[(SHAPES.indexOf(cur.shape||'Straight')+1)%4];refresh();};
+const SHAPES=['Straight','Draw','Fade','Punch','Bump & run'];$('shapeBtn').onclick=()=>{if(!cur||state!=='aim'||CLUBS[cur.club].putt)return;let k=SHAPES.indexOf(cur.shape||'Straight');do{k=(k+1)%SHAPES.length;}while(SHAPES[k]==='Bump & run'&&!bumpOK(cur.club));cur.shape=SHAPES[k];refresh();};
 $('viewBtn').onclick=()=>{if(state!=='aim')return;overhead=!overhead;$('viewBtn').setAttribute('aria-pressed',String(overhead));};
 $('beerBtn').onclick=()=>{const p=cur;if(!p||state!=='aim'||p.drankTurn)return;p.drankTurn=true;p.beers++;try{startBeer(p);}catch(e){console.warn(e);}
   if(p.beers>=BLACKOUT){p.over=p.beers-p.limit;p.buzz=0;toast(p.beers===BLACKOUT?'BLACKOUT':'Still blacked out','Sixteen beers deep. Every stat is cut in half.');}
