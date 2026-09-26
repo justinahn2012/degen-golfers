@@ -270,12 +270,12 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
    if(WATER.some(w=>inP(w,tx,ty)))continue;
   if(RANGE.some(g=>inP(g,tx,ty))||CLUBH.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+10))continue;
   if(CAN){const cv=canAt(tx,ty);if(cv>=0){if(FAIRWAYS.some(f=>inP(f,tx,ty))||obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+4)||PATHS.some(p=>dPL(tx,ty,p)<2.5)||lines.some(l=>dPL(tx,ty,l.p)<(l.w>20?11:8)))continue;if(!(r<cv*1.08))continue;
-    const fir=rnd()<.62,t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?13+rnd()*11:11+rnd()*9,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}continue;}}
+    const fir=rnd()<.62,t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?13+rnd()*11:11+rnd()*9,r:0,v:Math.floor(rnd()*12)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}continue;}}
   if(inP(MAIN,tx,ty)){if(lines.some(l=>dPL(tx,ty,l.p)<l.w))continue;if(FAIRWAYS.some(f=>inP(f,tx,ty)))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+8))continue;if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<.55;}
   else if(PAR3&&inP(PAR3,tx,ty)){if(P3HOLES.some(l=>dPL(tx,ty,l.p)<12))continue;if(obst.some(g=>Math.hypot(tx-g.cx,ty-g.cy)<g.R+5))continue;ok=r<.2;}
   else{if(PATHS.some(p=>dPL(tx,ty,p)<3))continue;ok=r<(WOODS.some(w=>inP(w,tx,ty))?.62:.26);}
   if(!ok)continue;const fir=rnd()<.68;
-  const t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?12+rnd()*13:10+rnd()*8,r:fir?2.6+rnd()*1.8:3.4+rnd()*2.4,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);
+  const t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?12+rnd()*13:10+rnd()*8,r:fir?2.6+rnd()*1.8:3.4+rnd()*2.4,v:Math.floor(rnd()*12)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);
   const R=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);
   for(let i=-R;i<=R;i++)for(let j=-R;j<=R;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
  /* tee corridor: nothing may hang into the line of play for the first ~90 m (the corridor widens from 7 m to 15 m either side) */
@@ -292,7 +292,7 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
    const tall=/Jefferson/i.test(D.name||'')?1.18:1;let added=0;
    for(let j=0;j<c.ny;j++)for(let i=0;i<c.nx;i++){const cv=CAN[j*c.nx+i]/255;if(cv<.45)continue;const x=c.x0+i*c.sx+(rnd()-.5)*c.sx,y=c.y0+j*c.sy+(rnd()-.5)*c.sy;if(!near(x,y))continue;if(rnd()>(cv-.3)*.55)continue;
      if(WATER.some(w=>inP(w,x,y))||FAIRWAYS.some(f=>inP(f,x,y))||obst.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||PATHS.some(p=>dPL(x,y,p)<2.5)||lines.some(l=>dPL(x,y,l.p)<(l.w>20?11:8))||tooClose(x,y,4.2))continue;
-     const fir=rnd()<.7,t={x,y,gz:H(x,y),fir,h:(fir?15+rnd()*12:12+rnd()*8)*tall,r:0,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);added++;const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
+     const fir=rnd()<.7,t={x,y,gz:H(x,y),fir,h:(fir?15+rnd()*12:12+rnd()*8)*tall,r:0,v:Math.floor(rnd()*12)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);added++;const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
    console.log('tree-line fill',added,'total',TREES.length);}
  /* each tree is a camera-facing card cut from an 8-angle (fir) / 4-angle (broadleaf) atlas, blended between neighbouring angles */
  const firs=TREES.filter(t=>t.fir),decs=TREES.filter(t=>!t.fir);
@@ -306,9 +306,9 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
    m.customProgramCacheKey=()=>'imp'+frames+'x'+rows;return m;};
  const ldT=k=>{const t=TL0.load(ASSETS[k]);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
  const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length)),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
-   list.forEach((t,i)=>{const v=rows>1?t.v:0,hh=t.h*ratio[v];av[i]=v;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
+   list.forEach((t,i)=>{const v=rows>1?t.v%rows:0,hh=t.h*ratio[v];av[i]=v;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
    iq.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.geometry=iq.clone();M.geometry.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.count=list.length;M.frustumCulled=false;M.userData.lin=1;M.userData.imp={list,tex,frames,rows,ratio,aspect,av,mats:M.instanceMatrix.array.slice(),cols:M.instanceColor?M.instanceColor.array.slice():null};IMPS.push(M);return M;};
- if(HASA){scene.add(mkImp(firs,ldT('firAtlas'),8,3,[1.277,1.301,1.284],.5),mkImp(decs,ldT('broadAtlas'),4,1,[1.216],1));}
+ if(HASA){scene.add(mkImp(firs,ldT('firAtlas'),8,4,[1.03,1.03,1.03,1.301],.5),mkImp(decs,ldT('broadAtlas'),4,2,[1.216,1.03],1));}
  const SD=[.8,.6],SA=Math.atan2(SD[1],SD[0]);
  for(const t of TREES){if(t.x<X0-30||t.x>X1+30||t.y<Y0-30||t.y>Y1+30)continue;const len=t.h*.83;
    ctx.save();ctx.translate(t.x+SD[0]*len*.5,t.y+SD[1]*len*.5);ctx.rotate(SA);ctx.scale(len*.55+t.r*.7,t.r*.95);
@@ -1447,7 +1447,7 @@ function crossTreeMesh(imp,cap){const P=imp.frames===8?4:2,pos=[],uv=[],fr=[],id
 function updNearTrees(x,y){if(!IMPS.length)return;if(!NEAR)NEAR=IMPS.map(M=>({M,X:crossTreeMesh(M.userData.imp,260),hid:[]}));
   const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),R=58;
   for(const N of NEAR){const I=N.M.userData.imp,arr=N.M.instanceMatrix.array;for(const i of N.hid)arr.set(I.mats.subarray(i*16,i*16+16),i*16);N.hid=[];let n=0;const av=N.X.geometry.attributes.aVar.array;
-    I.list.forEach((t,i)=>{if(n>=260||Math.abs(t.x-x)>R||Math.abs(t.y-y)>R||Math.hypot(t.x-x,t.y-y)>R)return;const v=I.rows>1?t.v:0,hh=t.h*I.ratio[v];m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*I.aspect,hh,hh*I.aspect));N.X.setMatrixAt(n,m);av[n]=v;
+    I.list.forEach((t,i)=>{if(n>=260||Math.abs(t.x-x)>R||Math.abs(t.y-y)>R||Math.hypot(t.x-x,t.y-y)>R)return;const v=I.rows>1?t.v%I.rows:0,hh=t.h*I.ratio[v];m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*I.aspect,hh,hh*I.aspect));N.X.setMatrixAt(n,m);av[n]=v;
       if(I.cols)N.X.setColorAt(n,c.fromArray(I.cols,i*3));arr.fill(0,i*16,i*16+16);N.hid.push(i);n++;});
     N.X.count=n;N.X.instanceMatrix.needsUpdate=true;if(N.X.instanceColor)N.X.instanceColor.needsUpdate=true;N.X.geometry.attributes.aVar.needsUpdate=true;N.M.instanceMatrix.needsUpdate=true;}}
 
