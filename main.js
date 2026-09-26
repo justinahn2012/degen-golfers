@@ -1328,10 +1328,22 @@ function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of playe
   players.slice().sort((a,c)=>tally(a).tp-tally(c).tp||tally(a).s-tally(c).s).forEach(p=>{const T=tally(p),tr=document.createElement('tr');tr.innerHTML='<td></td><td class="t"></td><td style="text-align:right"></td><td class="s"></td><td class="t"></td>';
     tr.children[0].textContent=p.name;tr.children[1].textContent=(p.strokes>=10?'Picked up':scoreName(p))+' ('+p.strokes+')';tr.children[2].textContent=p.beers+(p.over?' (over)':'');tr.children[3].textContent=T.s;tr.children[4].textContent=toPar(T.tp);b.appendChild(tr);});
   const G=$('cGrid'),done=ROUND.list.slice(0,ROUND.k+1);let h='<tr><th>Hole</th>'+done.map(i=>'<th>'+HOLES[i].ref+'</th>').join('')+'</tr><tr><td>Par</td>'+done.map(i=>'<td>'+HOLES[i].par+'</td>').join('')+'</tr>';
-  for(const p of players)h+='<tr><td>'+esc(p.name.split(' ')[0])+'</td>'+done.map(i=>{const s=p.card[i],d=s-(+HOLES[i].par);return'<td style="color:'+(d<0?'#9be07a':d>1?'#ff9d8a':'inherit')+'">'+s+'</td>';}).join('')+'</tr>';G.innerHTML=h;
+  for(const p of players)h+='<tr><td>'+esc(p.name.split(' ')[0])+'</td>'+done.map(i=>{const s=p.card[i],d=s-(+HOLES[i].par);return'<td style="color:'+(d<0?'#9be07a':d>1?'#ff9d8a':'inherit')+'">'+scoreMark(s,d)+'</td>';}).join('')+'</tr>';
+  G.innerHTML=h+'<caption class="scLegend"><span class="scm e">3</span> eagle or better <span class="scm b">4</span> birdie <span class="scm">5</span> par <span class="scm bo">6</span> bogey <span class="scm db">7</span> double or worse</caption>';
   $('cSub').textContent=last?'Round complete at '+D.short:'Hole '+HOLE.ref+' complete';$('cTitle').textContent=last?'Final card':'Scorecard';
   $('againBtn').textContent=last?'Back to the roster':'Next: hole '+HOLES[ROUND.list[ROUND.k+1]].ref;$('quitBtn').hidden=last;
   setTimeout(()=>{$('card').hidden=false;},1200);}
+
+/* scorecard marks, the way golfers write them: circle = birdie, double circle = eagle or better, square = bogey, double square = double bogey or worse */
+(function(){const st=document.createElement('style');st.textContent=`
+.scm{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:1.5em;height:1.5em;box-sizing:border-box;line-height:1;font-variant-numeric:tabular-nums}
+.scm.b,.scm.e{border:1.5px solid currentColor;border-radius:50%}
+.scm.bo,.scm.db{border:1.5px solid currentColor;border-radius:2px}
+.scm.e::after,.scm.db::after{content:'';position:absolute;inset:-4px;border:1.5px solid currentColor;border-radius:inherit;pointer-events:none}
+#cGrid td{padding-top:6px;padding-bottom:6px}
+.scLegend{caption-side:bottom;padding-top:12px;font-size:12px;opacity:.75;text-align:left;line-height:2.2}
+.scLegend .scm{margin:0 4px 0 10px;font-size:11px}.scLegend .scm:first-child{margin-left:4px}`;document.head.appendChild(st);})();
+function scoreMark(s,d){const c=d<=-2?'e':d===-1?'b':d===1?'bo':d>=2?'db':'';return'<span class="scm'+(c?' '+c:'')+'">'+s+'</span>';}
 function toRoster(){state='menu';$('card').hidden=true;$('courses').hidden=true;$('menu').hidden=false;for(const p of players){p.av.visible=false;p.done=true;}cur=null;ROUND=null;setRibbon([]);buildMenu();}
 let toastTimer;function toast(b,s){$('tB').textContent=b;$('tS').textContent=s;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),1900);}
 
