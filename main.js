@@ -998,8 +998,9 @@ function gripFix(g,type){/* golf grip: in each hand the shaft runs from the "V" 
     for(let it=0;it<3;it++){setRelG(g,hb,handQ(s,n));const wr=gpG(g,hb),off=lineP(s).sub(wr),W=pt.clone().sub(off),hd=gpG(g,B['middle_01_'+s]).sub(wr).normalize(),l2=gpG(g,B['lowerarm_'+s]).distanceTo(wr);
       const pl=W.clone().addScaledVector(hd,-l2).add(new THREE.Vector3(0,-.08,0)).lerp(pole,R._gp!==undefined?R._gp:.6);armTo(g,s,W,pl);}setRelG(g,hb,handQ(s,n));};
   const top=cg.position.clone(),low=top.clone().addScaledVector(ya,put?-.075:-.062);
-  const both=(tp,lw)=>{place('l',tp,xa.clone().negate(),(B.thigh_l?gpG(g,B.thigh_l):gpG(g,B.pelvis)).add(new THREE.Vector3(.05,-.15,.12)));
-    place('r',lw,xa.clone(),(B.thigh_r?gpG(g,B.thigh_r):gpG(g,B.pelvis)).add(new THREE.Vector3(-.05,-.15,.12)));};
+  const pp=put?(s)=>gpG(g,B.pelvis).add(new THREE.Vector3(s*.07,.12,-.12)):null;/* putting: elbows tucked in toward the ribs */
+  const both=(tp,lw)=>{place('l',tp,xa.clone().negate(),put?pp(1):(B.thigh_l?gpG(g,B.thigh_l):gpG(g,B.pelvis)).add(new THREE.Vector3(.05,-.15,.12)));
+    place('r',lw,xa.clone(),put?pp(-1):(B.thigh_r?gpG(g,B.thigh_r):gpG(g,B.pelvis)).add(new THREE.Vector3(-.05,-.15,.12)));};
   both(top,low);
   /* if the trail hand fell short of its spot (arms fully extended through the finish), slide the club toward it and set both hands again, so the order on the grip never flips */
   {const pr=lineP('r').addScaledVector(xa,-.03),miss=pr.clone().sub(low);miss.addScaledVector(ya,0);if(miss.length()>.015){const mv=miss.clone();if(mv.length()>.16)mv.setLength(.16);cg.position.add(mv);top.add(mv);low.add(mv);both(top,low);}}
@@ -1034,7 +1035,7 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
     if(ph==='back')f=A0+(K.top-A0)*(type==='putter'?Math.pow(p,.85):p);
     else if(ph==='down'){const uu=Math.min(1,u);f=K.top+(K.imp-K.top)*uu;if(p<.98){f2=A0+(K.top-A0)*p;w=1-Math.min(1,uu/.5);w*=w;}}
     else if(ph==='thru'){const put=type==='putter',pc=Math.min(1,p),fs=put?.35+.65*pc:type==='wedge'?.4+.6*pc:.6+.4*pc,fin=put?K.imp+(Math.min(K.fin,K.imp+3.2)-K.imp)*fs:K.imp+(K.fin-K.imp)*fs;const e=u<=1?1-(1-u)*(1-u):1;f=u<=1?K.imp+(fin-K.imp)*(put?e:u):(!put&&fs>=.97)?Math.min(K.end,K.fin+(u-1)*(K.fin-K.imp)*.5):fin;}
-    g.userData.rig._gp=(ph==='addr'||ph==='back')?.6:ph==='down'?.6-.45*u:.15;animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,type==='putter'?1:ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}/* putting: feet stay flat for the whole stroke */}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
+    g.userData.rig._gp=type==='putter'?.92:(ph==='addr'||ph==='back')?.6:ph==='down'?.6-.45*u:.15;animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,type==='putter'?1:ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}/* putting: feet stay flat for the whole stroke */}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
@@ -1118,18 +1119,18 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   const T=c.T*(.5+.5*Math.min(power,1.05))*(shp==='Punch'?.8:1),apex=c.apex*(.3+.7*Math.min(power,1.05))*(p.lie==='rough'?.85:1)*(shp==='Punch'?.5:1),wk=shp==='Punch'?.45:1;
   const hs=p.look&&p.look.lefty?-1:1,a0=p.aim+hs*(err*.01-(shp==='Draw'?.035:shp==='Fade'?-.035:0)),dx=Math.cos(a0),dy=Math.sin(a0),lx=-dy,ly=dx,curve=hs*(err*carry*.085+(shp==='Draw'?carry*.06:shp==='Fade'?-carry*.06:0)),wx=wind.x*T*.3*wk,wy=wind.y*T*.3*wk;
   const x0=p.x,y0=p.y,h0=H(x0,y0)+.021;let ex=x0+dx*carry+lx*curve+wx,ey=y0+dy*carry+ly*curve+wy,h1=H(ex,ey);
-  const baseXY=s=>[x0+dx*carry*s+lx*curve*s*s+wx*Math.pow(s,1.6),y0+dy*carry*s+ly*curve*s*s+wy*Math.pow(s,1.6)];
+  const C0=carry,H10=h1,baseXY=s=>[x0+dx*C0*s+lx*curve*s*s+wx*Math.pow(s,1.6),y0+dy*C0*s+ly*curve*s*s+wy*Math.pow(s,1.6)];
   /* after passing through foliage the rest of the flight is shortened (and nudged) by how much tree it went through */
-  let cmp=null,leaf=0,inLeaf=false,lat=0;const pathAt=s=>{if(!cmp){const q=baseXY(s);return[q[0],q[1],h0+(h1-h0)*s+4*apex*s*(1-s)];}
-    if(s<=cmp.se){const q=baseXY(s);return[q[0],q[1],h0+(h1-h0)*s+4*apex*s*(1-s)];}const u=Math.min(1,(s-cmp.se)/(1-cmp.se)),s2=cmp.se+(s-cmp.se)*cmp.f,q=baseXY(s2);
-    return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+(cmp.hl-cmp.ze)*u+4*cmp.a2*u*(1-u)];};
+  let cmp=null,leaf=0,inLeaf=false,lat=0;const pathAt=s=>{if(!cmp){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}
+    if(s<=cmp.se){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}const u=Math.min(1,(s-cmp.se)/(1-cmp.se)),s2=cmp.se+(s-cmp.se)*cmp.f,q=baseXY(s2);
+    return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+cmp.b*u+cmp.c*u*u];};
   const pts=[],N=110;let hit=null,prev=null;
   for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS;
     if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};break;}const tp=treePart(px,py,pz);
       if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};break;}
       if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};break;}}
       else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){const f=Math.max(.3,1-.055*leaf),se=s,sL=se+(1-se)*f,q=baseXY(sL);lat=(Math.random()-.5)*Math.min(4,leaf*.5);
-        const hl=H(q[0]+lx*lat,q[1]+ly*lat);cmp={se,f,ze:pz,hl,a2:Math.max(0,apex*(1-se)*.9)*f*f,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
+        const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
   const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit};
   if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
@@ -1237,11 +1238,11 @@ let PG=null;
 function buildPuttGrid(p){if(PG){scene.remove(PG.g);PG.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});PG=null;}if(!p||!(p.lie==='green'||p.lie==='fringe'))return;
   const GG=GREENS.reduce((a,b)=>Math.hypot(b.cx-PIN.x,b.cy-PIN.y)<Math.hypot(a.cx-PIN.x,a.cy-PIN.y)?b:a),onG=(x,y)=>inP(GG,x,y)||Math.hypot(x-p.x,y-p.y)<1.5;
   const cx=(p.x+PIN.x)/2,cy=(p.y+PIN.y)/2,R=Math.max(5,Math.hypot(p.x-PIN.x,p.y-PIN.y)/2+3.5),st=.7,P=[],C=[];
-  const col=(gx,gy)=>{const t=Math.min(1,Math.hypot(gx,gy)/.035);return t<.5?[.2+t*1.4,.85,1-t*1.6]:[1,1.6-t*1.3,.15];};
+  const col=(gx,gy)=>{const t=Math.min(1,Math.hypot(gx,gy)/.035);return[1,.92-.8*t,.12-.04*t];};/* yellow (gentle) -> orange -> red (steep) */
   for(let gx=-R;gx<=R;gx+=st)for(let gy=-R;gy<=R;gy+=st){if(Math.hypot(gx,gy)>R)continue;const x=cx+gx,y=cy+gy;if(!onG(x,y))continue;const g0=grad(x,y),c=col(g0[0],g0[1]);
     for(const [ax,ay] of [[st,0],[0,st]]){const x2=x+ax,y2=y+ay;if(!onG(x2,y2))continue;const A=V(x,y,H(x,y)+.014),B2=V(x2,y2,H(x2,y2)+.014);P.push(A.x,A.y,A.z,B2.x,B2.y,B2.z);C.push(...c,...c);}}
   const g=new THREE.Group(),lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(P,3));lg.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
-  g.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.5,depthWrite:false,toneMapped:false})));
+  g.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.62,depthWrite:false,toneMapped:false})));
   const N=150,dp=new Float32Array(N*3),seed=[];for(let i=0;i<N;i++)seed.push({x:cx+(Math.random()*2-1)*R,y:cy+(Math.random()*2-1)*R,a:Math.random()});
   const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dp,3));const dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0xffffff,size:.055,transparent:true,opacity:.85,depthWrite:false,toneMapped:false}));dots.frustumCulled=false;g.add(dots);
   scene.add(g);PG={g,dots,seed,cx,cy,R,onG};}
