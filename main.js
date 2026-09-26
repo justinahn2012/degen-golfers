@@ -1306,7 +1306,13 @@ function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;
 const TS=.72;
 function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;if(p.boost==='hl')carry*=1.10;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
-  const mh=!c.putt?p.mishit:null,drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
+  let mh=!c.putt?p.mishit:null;const drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
+  /* greenside bunker: an explosion shot - low, weak and blunted. Full power just reaches the far edge of the green; running the bar all the way through the red (110%) blades it ~70 yds over */
+  let sandX=false,sandRoll=1,skull=false;
+  if(sandShot&&Math.hypot(PIN.x-p.x,PIN.y-p.y)<55){sandX=true;const ca=Math.cos(p.aim),sa=Math.sin(p.aim);let inG=false,far=-1;for(let s=0;s<90;s+=.5){const g=lieAt(p.x+ca*s,p.y+sa*s)==='green';if(g){inG=true;far=s;}else if(inG)break;}
+    if(far<0)far=Math.hypot(PIN.x-p.x,PIN.y-p.y)+6;const pw=Math.min(1,power);
+    if(swingPow>=1.099){skull=true;mh=null;carry=(46+Math.random()*16)/TOYD;MHA=.07;MHT=.5;sandRoll=.5;}
+    else{carry=far*.64*pw*(.92+Math.random()*.16);MHA=.15;MHT=.55;sandRoll=.55;}}
   if(mh==='top'){carry*=.16+Math.random()*.16;MHA=.06;MHT=.35;}                                   /* topped: a low skimmer that runs */
   else if(mh==='chunk'&&drv){carry=Math.min(carry,(88+Math.random()*22)/TOYD*YD/YD);MHA=2.6;MHT=1.35;} /* driver under it: sky ball, ~90-110 yds */
   else if(mh==='chunk'){carry*=.1+Math.random()*.16;MHA=.5;MHT=.6;}                              /* fat: turf first, dribbles forward */
@@ -1327,14 +1333,14 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
       else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){const f=Math.max(.3,1-.055*leaf),se=s,sL=se+(1-se)*f,q=baseXY(sL);lat=(Math.random()-.5)*Math.min(4,leaf*.5);
         const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
-  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv};
+  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX};
   if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
     Object.assign(res,{x:fx,y:fy,tree:true,treeKind:'limb',holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   if(hit){res.treeKind='trunk';const fx=hit.x-dx*.8,fy=hit.y-dy*.8,gz=H(fx,fy)+.021;pts.push({t:hit.t+.05,x:fx,y:fy,z:hit.z});pts.push({t:hit.t+.35,x:fx,y:fy,z:(hit.z+gz)/2});pts.push({t:hit.t+.6,x:fx,y:fy,z:gz});
     Object.assign(res,{x:fx,y:fy,tree:true,holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   const land=lieAt(ex,ey);if(land==='oob'||land==='water'){Object.assign(res,{x:ex,y:ey,oob:true,holed:false});return res;}
   if(Math.hypot(ex-PIN.x,ey-PIN.y)<.09){pts.push({t:T*TS+.1,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});Object.assign(res,{x:PIN.x,y:PIN.y,holed:true});return res;}
-  const rd=carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
+  const rd=sandX?carry*sandRoll*Math.min(1.3,(SURF[land]??.3)/(SURF.green||1)):carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
   if(rd<.05){Object.assign(res,{x:ex,y:ey,holed:false});return res;}
   const a=pts[pts.length-1],b=pts[pts.length-4],L=Math.hypot(a.x-b.x,a.y-b.y)||1,ux=(a.x-b.x)/L,uy=(a.y-b.y)/L;
   const spin=((land==='green'||land==='fringe')&&carry>50&&(c.wedge||c.c<150))?(c.wedge?1:.5)*(Math.abs(err)<.6?1:.5)*(shp==='Punch'?.3:1):0;
@@ -1666,7 +1672,7 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
       let dx=PIN.x+Math.cos(a)*6,dy=PIN.y+Math.sin(a)*6;if(lieAt(dx,dy)!=='green'){dx=g.cx;dy=g.cy;}p.x=dx;p.y=dy;p.lie='green';small='Penalty stroke. Two in the lake: the boat takes you to the drop zone on the green.';}else small='Penalty stroke. One more try to land it on the island.';}}
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
     if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':LIE_NAME[p.lie];}
-    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
+    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
     if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';cel=startCeleb(p,'hips');}}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
   let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result'){CELEB=null;startReplay(r,p,safe(()=>startTurn(),'next turn'));}},'replay'),cel?3700:1300);}else setTimeout(safe(()=>{if(state==='result'){CELEB=null;startTurn();}},'next turn'),cel?3900:r.holed?2600:2100);}
