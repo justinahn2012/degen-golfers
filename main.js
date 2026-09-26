@@ -1553,6 +1553,10 @@ function boneTipLocal(g,bone){if(bone.userData.tipL!==undefined)return bone.user
   if(pts.length<3)return null;pts.sort((a,b)=>b.lengthSq()-a.lengthSq());const far=pts.slice(0,Math.max(3,Math.floor(pts.length*.3))),c=new THREE.Vector3();far.forEach(q=>c.add(q));c.multiplyScalar(1/far.length);bone.userData.tipL=c;return c;}
 function aimTip(g,bone,target){const tl=boneTipLocal(g,bone);if(!tl)return;bone.updateWorldMatrix(true,false);const o=gpG(g,bone),tip=g.worldToLocal(bone.localToWorld(tl.clone())),cur=tip.sub(o).normalize(),des=target.clone().sub(o).normalize();if(cur.lengthSq()<.5||des.lengthSq()<.5)return;
   setRelG(g,bone,new THREE.Quaternion().setFromUnitVectors(cur,des).multiply(relQ(g,bone)));}
+/* two-bone leg IK: put the ankle at a g-space target, knee pointing forward */
+function legTo(g,s,T){const B=g.userData.rig.B,th=B['thigh_'+s],ca=B['calf_'+s],ft=B['foot_'+s];if(!th||!ca||!ft)return;const fq=relQ(g,ft),S0=gpG(g,th),E0=gpG(g,ca),a=gpG(g,ft),l1=S0.distanceTo(E0),l2=E0.distanceTo(a);
+  const v=T.clone().sub(S0),D=Math.min(v.length(),l1+l2-.002);v.setLength(D);const dn=v.clone().normalize(),aa=(l1*l1-l2*l2+D*D)/(2*D),hh=Math.sqrt(Math.max(0,l1*l1-aa*aa)),pole=E0.clone().add(new THREE.Vector3(0,0,.4)).sub(S0);pole.addScaledVector(dn,-pole.dot(dn)).normalize();
+  const E=S0.clone().addScaledVector(dn,aa).addScaledVector(pole,hh);aimBoneG(g,th,ca,E);aimBoneG(g,ca,ft,S0.clone().add(v));setRelG(g,ft,fq);}
 function fistThumbs(g){/* a real closed fist: every finger folds into the palm, thumb wraps across the front of the fingers */
   const B=g.userData.rig.B;if(typeof aimBoneG!=='function')return;
   for(const s of['l','r']){const hd=B['hand_'+s],m1=B['middle_01_'+s],i1=B['index_01_'+s],p1=B['pinky_01_'+s];if(!hd||!m1||!i1||!p1)continue;
@@ -1572,16 +1576,21 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
   animReset(g);try{feetToGround(g);}catch(e){}
   const rot=(b,q)=>{if(b)setRelG(g,b,q.multiply(relQ(g,b)));};
   const shR=()=>gpG(g,B.upperarm_r),shL=()=>gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis),sideL=pel.clone().add(V3(.26,-.05,.06)),sideR=pel.clone().add(V3(-.26,-.05,.06));
-  if(A.kind==='pump'){
-    const coil=ss(0,.2,u)*(1-ss(.2,.34,u)),fire=ss(.2,.34,u)*(1-ss(.86,1,u)),pump=u>.46&&u<.8?Math.sin((u-.46)/.34*Math.PI*2):0,crouch=Math.max(coil*.8,fire*(.55+.25*Math.max(0,-pump)));
-    const pel=B.pelvis;if(pel){const pw=gpG(g,pel).add(V3(0,-.075*crouch,0));g.updateMatrixWorld(true);const wpt=g.localToWorld(pw);pel.parent.updateMatrixWorld(true);pel.position.copy(pel.parent.worldToLocal(wpt));pel.updateMatrixWorld(true);setRelG(g,pel,Ry(-.28*coil+.42*fire).multiply(relQ(g,pel)));}
-    rot(B.spine_01,Rx(.2*coil+.16*fire).multiply(Ry(-.2*coil+.3*fire)));rot(B.spine_03,Rx(-.1*fire).multiply(Ry(.1*fire)));rot(B.neck_01,Ry(.18*fire));rot(B.Head,Rx(-.22*fire).multiply(Ry(.15*fire)));
-    try{feetToGround(g);}catch(e){}
-    const P2=gpG(g,B.pelvis),sL2=P2.clone().add(V3(.26,-.05,.06)),sR2=P2.clone().add(V3(-.26,-.05,.06));
-    const load=P2.clone().add(V3(-.24,.02,.12)),up=shR().add(V3(.05,.08+.05*pump,.2)),down=shR().add(V3(.05,-.13,.22));
-    let tR=sR2.clone().lerp(load,ss(0,.2,u));tR.lerp(up,ss(.2,.34,u));if(pump<0)tR.lerp(down,-pump*.9);tR.lerp(sR2,ss(.86,1,u));
-    const backL=P2.clone().add(V3(.24,.05,-.12));
-    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sL2.clone().lerp(backL,fire),shL().add(V3(.4,-.4,-.35)));fistThumbs(g);}
+  if(A.kind==='pump'){/* Tiger's roar: quick load, then a wide stance, body opened toward the hole, right arm in a bicep-flex with the fist punched high, left arm out low to the side, head back and turned */
+    const crouch=ss(0,.1,u)*(1-ss(.1,.24,u)),pose=ss(.12,.26,u)*(1-ss(.9,1,u)),pump=u>.3&&u<.86?Math.sin((u-.3)/.56*Math.PI*4):0;
+    const fl0=gpG(g,B.foot_l),fr0=gpG(g,B.foot_r),yaw=.55*pose,cy=Math.cos(yaw),sy=Math.sin(yaw);
+    const pel=B.pelvis;if(pel){const pw=gpG(g,pel).add(V3(0,-.06*crouch-.085*pose+.012*Math.max(0,pump)*pose,0));g.updateMatrixWorld(true);const wpt=g.localToWorld(pw);pel.parent.updateMatrixWorld(true);pel.position.copy(pel.parent.worldToLocal(wpt));pel.updateMatrixWorld(true);setRelG(g,pel,Ry(yaw*.55).multiply(relQ(g,pel)));}
+    rot(B.spine_01,Rx(.22*crouch-.1*pose).multiply(Ry(yaw*.45)));rot(B.spine_03,new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),.1*pose));rot(B.neck_01,Ry(.2*pose));rot(B.Head,Rx(-.3*pose).multiply(Ry(.35*pose)));
+    /* wide stance: left foot out and a touch forward, right foot out and back */
+    const ground=(q)=>{const w=g.localToWorld(q.clone());return q.y+(H(w.x,-w.z)-g.position.y)/(g.scale.y||1)-(H(g.localToWorld(fl0.clone()).x,-g.localToWorld(fl0.clone()).z)-g.position.y)/(g.scale.y||1);};
+    const fl=fl0.clone().add(V3(.27*pose,0,.1*pose)),fr=fr0.clone().add(V3(-.24*pose,0,-.08*pose));fl.y=ground(fl);fr.y=ground(fr);legTo(g,'l',fl);legTo(g,'r',fr);
+    const side=V3(-cy,0,sy),fwd=V3(sy,0,cy),up=V3(0,1,0),sideL=side.clone().negate();
+    const load=gpG(g,B.pelvis).addScaledVector(side,.22).addScaledVector(fwd,.12);
+    const flex=shR().addScaledVector(side,.27).addScaledVector(up,.29+.05*pump).addScaledVector(fwd,.03);/* upper arm out level with the shoulder, forearm straight up: the flex */
+    const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(flex,pose);
+    armTo(g,'r',tR,shR().addScaledVector(side,.7).addScaledVector(up,-.1).addScaledVector(fwd,-.04));
+    const tL=gpG(g,B.pelvis).addScaledVector(sideL,.26).add(V3(0,-.05,.06)).lerp(shL().addScaledVector(sideL,.5).addScaledVector(up,-.34).addScaledVector(fwd,.1),pose);
+    armTo(g,'l',tL,shL().addScaledVector(sideL,.3).addScaledVector(up,-.5).addScaledVector(fwd,-.25));fistThumbs(g);}
   else{const on=ss(0,.2,u)*(1-ss(.9,1,u)),hang=ss(.12,.3,u)*(1-ss(.9,1,u)),shake=Math.sin(t*8.5)*.24*ss(.28,.4,u)*(1-ss(.78,.9,u));
     rot(B.spine_02,Rx(.14*hang));rot(B.neck_01,Rx(.22*hang));rot(B.Head,Ry(shake).multiply(Rx(.34*hang)));
     const hipL=pel.clone().add(V3(.2,.07,.02)),hipR=pel.clone().add(V3(-.2,.07,.02));
@@ -1908,7 +1917,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
       want=V(a.x-a.tx*25*(1-e),a.y-a.ty*25*(1-e),H(a.x,a.y)+22*(1-e)+2.1*e);look=V(b.x,b.y,H(b.x,b.y)+2*(1-e)+1.2*e);
       if(p){const w=Math.max(0,Math.min(1,(v-.62)/.38)),k2=w*w*(3-2*w),dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),aw=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),al=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);want.lerp(aw,k2);look.lerp(al,k2);}}}
   if(CELEB&&state==='result'&&now>=CELEB.t0-.2&&CELEB.p.av){const g=CELEB.p.av,c=g.userData.rig.B.spine_03.getWorldPosition(new THREE.Vector3()),f=g.localToWorld(new THREE.Vector3(0,0,1)).sub(g.position).setY(0).normalize(),sd=new THREE.Vector3(-f.z,0,f.x);
-    want=c.clone().addScaledVector(f,2.9).addScaledVector(sd,.9).add(new THREE.Vector3(0,.15,0));look=c.clone().add(new THREE.Vector3(0,.05,0));}
+    want=c.clone().addScaledVector(f,3.1).addScaledVector(sd,CELEB.kind==='pump'?-1.6:.9).add(new THREE.Vector3(0,CELEB.kind==='pump'?.05:.15,0));look=c.clone().add(new THREE.Vector3(0,CELEB.kind==='pump'?.15:.05,0));}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
