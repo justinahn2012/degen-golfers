@@ -1192,12 +1192,12 @@ function updCurtain(now){const C=CURT;if(!C)return;const bar=C.el.querySelector(
     try{C.el.querySelector('.hl').textContent=D.short;C.el.querySelector('.hn').textContent=HOLE.ref;C.el.querySelector('.cn').textContent='Par '+PAR;C.el.querySelector('.mt').textContent=Math.round(HOLE_LEN*TOYD)+' yds'+(HOLE.hcp?'  ·  Hcp '+HOLE.hcp:'');drawHoleMap(C.el.querySelector('canvas'));}catch(e){}
     try{for(const u of[0,.2,.4,.6,.8,1])C.poses.push(flyPose(u));const p=cur;if(p){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y);C.poses.push([V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2)]);C.poses.push([V(PIN.x+dx*18,PIN.y+dy*18,H(PIN.x,PIN.y)+6),V(PIN.x,PIN.y,H(PIN.x,PIN.y))]);}}catch(e){}
     if(bar)bar.style.width='12%';return;}
-  if(C.phase===2){if(C.lt)C.fts.push(now-C.lt);C.lt=now;const el=now-C.t0,last=C.fts.slice(-8),calm=last.length>=8&&last.every(d=>d<.024);if(bar)bar.style.width=Math.min(100,55+45*Math.min(1,el/1.6))+'%';
-    if((el>1.5&&calm)||el>3.8){C.phase=3;C.el.classList.add('out');const E=C.el;setTimeout(()=>{if(E.classList.contains('out'))E.style.display='none';},700);
+  if(C.phase===2){if(C.lt)C.fts.push(now-C.lt);C.lt=now;const el=now-C.t0,last=C.fts.slice(-8),calm=last.length>=10&&last.every(d=>d<.024);if(bar)bar.style.width=Math.min(100,55+45*Math.min(1,el/1.6))+'%';
+    if((el>1.5&&calm)||el>3.8||(el>2.2&&C.fts.length>=14)){const f=C.fts.slice(2).sort((a,b)=>a-b),med=f.length?f[Math.floor(f.length*.6)]:0;PAN_PACE=MOBILE&&med>.0185?2:1;C.phase=3;C.el.classList.add('out');const E=C.el;setTimeout(()=>{if(E.classList.contains('out'))E.style.display='none';},700);
       flyStart=now;flyUntil=now+5.5;if(cur)cur.intro=flyUntil+2;CURT=null;}}}
 function curtainCam(){const C=CURT;if(!C||C.phase<1)return;const bar=C.el.querySelector('.bar i');
   if(C.phase===1){const P=C.poses[Math.min(C.i,C.poses.length-1)];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}C.i++;if(bar)bar.style.width=(12+43*C.i/Math.max(1,C.poses.length))+'%';if(C.i>=C.poses.length){C.phase=2;C.lt=0;}}
-  else if(C.phase===2){const P=C.poses[0];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}}}
+  else if(C.phase===2){const n=Math.min(6,C.poses.length),k=C.j=(C.j||0)+1,P=C.poses[k%n];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}if(C.fts.length>=12&&k%n!==0){}}}
 function startHoleNow(quiet){setHole(ROUND.list[ROUND.k]);
   const wa=Math.random()*Math.PI*2,sp=Math.random()*6;wind={a:wa,sp,x:Math.cos(wa)*sp,y:Math.sin(wa)*sp};
   const t=H1[0],q=plAt(H1,15);
@@ -1610,9 +1610,10 @@ function setupFX(){let vg=document.getElementById('vig');if(!vg){vg=document.cre
         'vec2 q=vUv-.5;q.x*=uAsp;c*=1.-.24*smoothstep(.4,1.05,length(q));c+=(hs(vUv*vec2(1733.,977.)+uT)-.5)*.016;gl_FragColor=vec4(clamp(c,0.,1.),1.);}'});
     COMP.addPass(GRADE);LINQ.value=1;}catch(e){console.warn('fx',e);COMP=null;GRADE=null;LINQ.value=0;}}
 addEventListener('resize',resize);resize();
-let PACE=1,paceSkip=false,paceT=0,paceN=0,paceAcc=0,paceSlow=0,paceHole=-1;
+let PACE=1,paceSkip=false,paceT=0,paceN=0,paceAcc=0,paceSlow=0,paceHole=-1,PAN_PACE=0;
 function pacing(ts){/* measure only while running every frame; decide over ~2.5 s windows */
-  if(!MOBILE)return true;if(CURT){paceN=0;paceAcc=0;paceSlow=0;paceT=0;return true;}if(ROUND&&ROUND.k!==paceHole){paceHole=ROUND.k;PACE=1;paceN=0;paceAcc=0;paceSlow=0;}
+  if(!MOBILE)return true;if(CURT){paceN=0;paceAcc=0;paceSlow=0;paceT=0;return true;}
+  if(PAN_PACE){if(ts/1000<flyUntil||performance.now()/1000<flyUntil){if(PAN_PACE===2){paceSkip=!paceSkip;return !paceSkip;}return true;}PAN_PACE=0;PACE=1;paceN=0;paceAcc=0;paceSlow=0;paceT=0;}if(ROUND&&ROUND.k!==paceHole){paceHole=ROUND.k;PACE=1;paceN=0;paceAcc=0;paceSlow=0;}
   if(PACE===2){paceSkip=!paceSkip;return !paceSkip;}
   if(paceT){const d=ts-paceT;if(d<200){paceN++;paceAcc+=d;if(d>20.5)paceSlow++;}}paceT=ts;
   if(paceN>=150){const avg=paceAcc/paceN,slow=paceSlow/paceN;if(avg>18.5||slow>.22)PACE=2;paceN=0;paceAcc=0;paceSlow=0;}return true;}
@@ -1620,8 +1621,8 @@ function frame(ts){requestAnimationFrame(frame);if(!pacing(ts||performance.now()
 
 let OVH_ON=false;
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
-  renderer.setPixelRatio(basePR()*DRS*(on?(MOBILE?.78:.88):1));resize();}catch(e){}}
-function frameInner(){overheadMode(!!(overhead&&state==='aim'));try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
+  const pr=basePR()*DRS*(on&&overhead?(MOBILE?.78:.88):1);if(Math.abs(renderer.getPixelRatio()-pr)>.01){renderer.setPixelRatio(pr);resize();}}catch(e){}}
+function frameInner(){overheadMode(!!(overhead&&state==='aim')||performance.now()/1000<flyUntil,true);try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000*.08;if(now>DRSnext){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
@@ -1656,7 +1657,7 @@ function frameInner(){overheadMode(!!(overhead&&state==='aim'));try{updCurtain(p
   else if(state==='flight')updMeter();
   if(fly){const u=Math.min(1,(now-flyStart)/(flyUntil-flyStart)),e=u*u*(3-2*u),L=HOLE_LEN,a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
-  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
+  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
