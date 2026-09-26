@@ -1,4 +1,14 @@
 
+/* ---------- Safari: no pinch or double-tap zoom (it can't be undone mid-game), and snap back if the page ever ends up zoomed ---------- */
+(function(){const stop=e=>{e.preventDefault();};
+  ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,stop,{passive:false}));
+  document.addEventListener('touchmove',e=>{if(e.touches&&e.touches.length>1)e.preventDefault();},{passive:false});
+  /* double-tap zoom is switched off by touch-action:manipulation on every element (so fast taps on buttons still register) */
+  document.addEventListener('dblclick',stop,{passive:false});
+  const vv=window.visualViewport,meta=document.querySelector('meta[name=viewport]');
+  if(vv&&meta){let busy=false;vv.addEventListener('resize',()=>{if(vv.scale>1.01&&!busy){busy=true;const c=meta.getAttribute('content');meta.setAttribute('content','width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+    setTimeout(()=>{meta.setAttribute('content',c);busy=false;window.scrollTo(0,0);},60);}});}})();
+
 setTimeout(function(){
 "use strict";
 const D=window.COURSE;
