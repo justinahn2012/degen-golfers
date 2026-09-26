@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#f3f5ef; --ink-2:rgba(243,245,239,.72); --glass:rgba(14,32,27,.80); --glass-2:rgba(14,32,27,.58);
+  --ink:#f3f5ef; --ink-2:rgba(243,245,239,.72); --glass:rgba(14,32,27,.86); --glass-2:rgba(14,32,27,.72);
   --line:rgba(243,245,239,.16); --moss:#8cc265; --flag:#d64533; --gold:#f2c230; --sky:#c3cdd1; --pine:#16302a;
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
@@ -150,7 +150,7 @@ td.t{text-align:right;color:var(--gold);font:600 18px 'Barlow Condensed',sans-se
 .load{position:fixed;inset:0;display:grid;place-items:center;z-index:6;background:var(--pine);font:600 22px 'Barlow Condensed',sans-serif}
 @media (max-width:420px){ .hole .n{font-size:28px;padding:0 10px} .ctrl{grid-template-columns:44px 1fr 44px 92px} .sheet h1{font-size:38px} }
 @media (prefers-reduced-motion: reduce){ .toast,.wind svg{transition:none} }
-</style>
+*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}</style>
 </head>
 <body>
 <canvas id="c" aria-label="3D view of Jefferson Park hole 1"></canvas>
