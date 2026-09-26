@@ -1047,10 +1047,13 @@ function autoSetup(p){const d=dist(p);let tx=PIN.x,ty=PIN.y;
   p.aim=Math.atan2(ty-p.y,tx-p.x);p.pmax=Math.max(2.5,Math.min(40,d*1.3+.8));}
 
 /* ---------- shot planning ---------- */
-function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;const pts=[];const dt=1/90;let holed=false,oob=false;
-  for(let i=0;i<90*30;i++){const lie=lieAt(x,y);if(lie==='oob'||lie==='water'){oob=true;break;}
-    const fr=FR[lie],g=grad(x,y),ax=-7*g[0]*slopeK,ay=-7*g[1]*slopeK;let sp=Math.hypot(vx,vy);
-    if(sp<.05&&Math.hypot(ax,ay)<fr*.8)break;
+function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;const pts=[];const dt=1/90;let holed=false,oob=false;const t0=t,hist=[];
+  for(let i=0;i<90*14;i++){const lie=lieAt(x,y);if(lie==='oob'||lie==='water'){oob=true;break;}
+    const rt=t-t0,fr=FR[lie]*(rt>5?1+(rt-5)*1.3:1),g=grad(x,y),ax=-7*g[0]*slopeK,ay=-7*g[1]*slopeK;let sp=Math.hypot(vx,vy);
+    /* at rest when slow and the turf can hold it on this slope (grass grips a stopped ball harder than a rolling one) */
+    if(sp<.07&&Math.hypot(ax,ay)<fr*1.5)break;
+    /* a ball rocking in a hollow or creeping in place is done */
+    if(i%45===0){hist.push([x,y]);if(hist.length>5){const o=hist[hist.length-6];if(Math.hypot(x-o[0],y-o[1])<.3)break;}}
     if(sp>1e-6){const dec=Math.min(fr*dt,sp);vx-=vx/sp*dec;vy-=vy/sp*dec;}
     vx+=ax*dt;vy+=ay*dt;x+=vx*dt;y+=vy*dt;t+=dt;
     if(cupOK){const d=Math.hypot(x-PIN.x,y-PIN.y);sp=Math.hypot(vx,vy);
