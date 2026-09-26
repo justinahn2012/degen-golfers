@@ -361,7 +361,7 @@ const bladeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=1
 const tuftGeo=(()=>{const g=new THREE.BufferGeometry(),P=[],U=[],N=[],I=[];for(let k=0;k<2;k++){const a=k*Math.PI/2,cx=Math.cos(a)*.5,cz=Math.sin(a)*.5,b=k*4;P.push(-cx,0,-cz,cx,0,cz,cx,1,cz,-cx,1,-cz);U.push(k*.5,0,k*.5+.5,0,k*.5+.5,.25,k*.5,.25);N.push(0,1,0,0,1,0,0,1,0,0,1,0);I.push(b,b+1,b+2,b,b+2,b+3);}
  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setIndex(I);return g;})();
 const grassAt=HASA?(()=>{const t=TL0.load(ASSETS.grassAtlas);t.anisotropy=4;return t;})():bladeTex;const tuftMat=new THREE.MeshLambertMaterial({map:grassAt,alphaTest:.4,side:THREE.DoubleSide});swayMat(tuftMat,.09);{const ob=tuftMat.onBeforeCompile;tuftMat.onBeforeCompile=sh=>{ob(sh);sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aTV;').replace('#include <uv_vertex>','#include <uv_vertex>\nvUv.y+=aTV*.25;');sh.fragmentShader=sh.fragmentShader.replace(/gl_FrontFacing/g,'true');};tuftMat.customProgramCacheKey=()=>'tuft2';}let tufts=null;
-const TUFT={rough:{p:.42,h:[.15,.25],c:0xa7bd8b,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xb4c89c,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xb0c597,v:[0,1]},tee:{p:.1,h:[.06,.09],c:0xb4c89c,v:[0,1]}};/* clumps tinted into the turf instead of pale blotches; rough a touch thicker and taller */
+const TUFT={rough:{p:.42,h:[.15,.25],c:0xa7bd8b,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xb4c89c,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xb0c597,v:[0,1]},tee:{p:.03,h:[.03,.045],c:0xb4c89c,v:[0,1]}};/* clumps tinted into the turf instead of pale blotches; rough a touch thicker and taller */
 const PGRID=new Uint8Array(WW*HH);for(const p of PATHS)for(let i=1;i<p.length;i++){const ax=p[i-1][0],ay=p[i-1][1],L=Math.hypot(p[i][0]-ax,p[i][1]-ay);for(let t=0;t<=L;t+=.5){const x=ax+(p[i][0]-ax)*t/(L||1),y=ay+(p[i][1]-ay)*t/(L||1);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const gx=Math.floor(x-X0)+dx,gy=Math.floor(y-Y0)+dy;if(gx>=0&&gy>=0&&gx<WW&&gy<HH)PGRID[gy*WW+gx]=1;}}}
 
 /* ---------- grass blades: tens of thousands of individually shaped blades in a patch around the golfer (all procedural, no files),
@@ -376,7 +376,7 @@ const bladeMat=(()=>{const m=new THREE.MeshLambertMaterial({color:0xffffff,side:
       .replace('#include <begin_vertex>','vec3 transformed=vec3(position);vH=position.y;\n vec3 ip=(instanceMatrix*vec4(0.,0.,0.,1.)).xyz;float ph=dot(ip.xz,vec2(.73,.41));\n float bend=position.y*position.y;transformed.z+=bend*(.18+.1*sin(ph*3.1));\n float sw=(.12+.1*sin(uT*2.3+ph))*.35*bend;transformed.x+=sw*uW.x*6.;transformed.z+=sw*uW.y*6.;');
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vH;').replace('#include <color_fragment>','#include <color_fragment>\n diffuseColor.rgb*=mix(.45,1.,smoothstep(0.,1.,vH));diffuseColor.rgb+=vec3(.03,.035,.005)*smoothstep(.75,1.,vH);');};
   m.customProgramCacheKey=()=>'blades1';return m;})();
-const BLADE_LIE={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.03,.055],w:.008,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.09,.17],w:.008,c:0x436b25}};
+const BLADE_LIE={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.09,.17],w:.008,c:0x436b25}};
 function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}
   const N=MOBILE?40000:70000,R=11,M=new THREE.InstancedMesh(bladeGeo,bladeMat,N),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();let n=0;
   for(let i=0;i<N*1.6&&n<N;i++){const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[lieAt(x,y)];if(!L||onPath(x,y))continue;
@@ -488,11 +488,22 @@ function makeClubs(){const env=getEnv(),S=o=>{const m=new THREE.MeshStandardMate
   const seg=(y0,y1,r0,r1,m,par,sg)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,Math.abs(y1-y0),sg||20),m);c.position.y=(y0+y1)/2;par.add(c);return c;};
   const mk=(type,build)=>{const L=CLUB_LEN[type],cg=new THREE.Group();
     const gp=seg(.11,-.165,.0132,.0104,gripM,cg,24);if(type==='putter')gp.scale.set(1.32,1,.95);const cap=new THREE.Mesh(new THREE.SphereGeometry(.0133,20,10,0,Math.PI*2,0,Math.PI/2),gripM);cap.position.y=.11;cg.add(cap);
-    const top=-.165,bot=-L+.075;seg(top,bot,.0064,.0045,type==='putter'?mirror:steel,cg,18);
-    if(type!=='putter')for(let k=0;k<5;k++){const y=bot+.12+k*.055;const rr=.0045+(.0064-.0045)*((y-bot)/(top-bot));const r=new THREE.Mesh(new THREE.TorusGeometry(rr+.0003,.00045,6,20),steel);r.rotation.x=Math.PI/2;r.position.y=y;cg.add(r);}
+    const top=-.165,bot=-L+.075,isWood=type==='driver'||type==='wood';
+    if(isWood){/* graphite: dark glossy body, a colour band and wordmark under the grip, tapering to the hosel */
+      if(!window._shaftTex){window._shaftTex=cv(64,1024,(x,W,H)=>{const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1a2233');g.addColorStop(.55,'#0f1522');g.addColorStop(1,'#1b2436');x.fillStyle=g;x.fillRect(0,0,W,H);
+        x.fillStyle='#2d6bd8';x.fillRect(0,40,W,120);x.fillStyle='#e9eef6';x.fillRect(0,60,W,6);x.fillRect(0,134,W,6);x.save();x.translate(W/2,100);x.rotate(Math.PI/2);x.font='800 34px "Barlow Condensed",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('DEGEN 6S',0,0);x.restore();
+        for(let y=0;y<H;y+=3){x.fillStyle='rgba(255,255,255,'+(Math.random()*.03)+')';x.fillRect(0,y,W,1);}});window._shaftTex.encoding=THREE.sRGBEncoding;}
+      const gph=S({map:window._shaftTex,color:0xffffff,metalness:.35,roughness:.22});const sh=new THREE.Mesh(new THREE.CylinderGeometry(.0068,.0043,top-bot,20,1,true),gph);sh.position.y=(top+bot)/2;cg.add(sh);}
+    else if(type==='putter'){/* slim chrome putter shaft with three step-downs near the grip */
+      seg(top,bot,.0056,.0042,mirror,cg,18);for(let k=0;k<3;k++){const y=top-.09-k*.05,rr=.0056-(.0014)*((top-y)/(top-bot));const r=new THREE.Mesh(new THREE.CylinderGeometry(rr+.00045,rr,.004,20),mirror);r.position.y=y;cg.add(r);}}
+    else{/* stepped steel: seven step-downs, each a small shoulder */
+      seg(top,bot,.0064,.0045,steel,cg,18);for(let k=0;k<7;k++){const y=bot+.1+k*.05;const rr=.0045+(.0064-.0045)*((y-bot)/(top-bot));const r=new THREE.Mesh(new THREE.CylinderGeometry(rr+.00055,rr,.0035,20),steel);r.position.y=y;cg.add(r);}}
     const hg=new THREE.Group(),hb=new THREE.Group();hg.position.y=-L;hb.rotation.x=type==='putter'?.3:.44;hg.add(hb);build(hg,hb);cg.add(hg);cg.userData.hb=hb;cg.userData.hg=hg;cg.visible=false;cg.userData.L=L;out[type]=cg;};
-  const wood=k=>(hg,hb)=>{const b=new THREE.Mesh(new THREE.SphereGeometry(.058*k,40,24),carbon);b.scale.set(1.02,.54,1.12);b.position.set(-.035*k,.028*k,.052*k);hb.add(b);
-    const sk=new THREE.Mesh(new THREE.SphereGeometry(.0585*k,40,12,0,Math.PI*2,Math.PI*.55,Math.PI*.45),satin);sk.scale.set(1.02,.54,1.12);sk.position.copy(b.position);hb.add(sk);
+  const shapeHead=(g,k)=>{const P=g.attributes.position,v=new THREE.Vector3();for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i);const r=.058*k,nx=v.x/r,nz=v.z/r,ny=v.y/r;
+      /* flatter crown, fuller rear corners (triangular top view), flattened face */let sx=1,sz=1,sy=1;if(ny>0)sy=.82+.18*(1-ny);sx*=1+.1*Math.max(0,-nx)*Math.abs(nz);if(nx>.72)sx*=(.72+(nx-.72)*.35)/nx;P.setXYZ(i,v.x*sx,v.y*sy,v.z*sz);}g.computeVertexNormals();return g;};
+  const wood=k=>(hg,hb)=>{const b=new THREE.Mesh(shapeHead(new THREE.SphereGeometry(.058*k,48,28),k),carbon);b.scale.set(1.02,.6,1.12);b.position.set(-.035*k,.028*k,.052*k);hb.add(b);
+    const chev=new THREE.Mesh(new THREE.ConeGeometry(.006*k,.012*k,3),S({color:0xe8ecf2,metalness:.2,roughness:.4}));chev.rotation.set(Math.PI/2,0,Math.PI/2);chev.scale.set(1,.15,1);chev.position.set(.012*k,.061*k,.052*k);hb.add(chev);
+    const sk=new THREE.Mesh(shapeHead(new THREE.SphereGeometry(.0585*k,48,14,0,Math.PI*2,Math.PI*.55,Math.PI*.45),k),S({color:0x2c3038,metalness:.85,roughness:.28}));sk.scale.set(1.02,.6,1.12);sk.position.copy(b.position);hb.add(sk);
     const f=new THREE.Mesh(new THREE.SphereGeometry(.0585*k,32,16,-Math.PI*.3,Math.PI*.6,Math.PI*.3,Math.PI*.42),faceM);f.scale.set(1.03,.55,1.13);f.rotation.y=Math.PI/2;f.position.set(-.035*k,.028*k,.052*k);hb.add(f);
     const st=new THREE.Mesh(new THREE.BoxGeometry(.05*k,.0025,.006),accent);st.position.set(-.03*k,.058*k,.052*k);hb.add(st);
     const dot=new THREE.Mesh(new THREE.CylinderGeometry(.0025,.0025,.001,12),white);dot.position.set(.005*k,.059*k,.052*k);hb.add(dot);
@@ -653,7 +664,7 @@ function prepTemplate(sc,k){sc.updateMatrixWorld(true);let body=null,eye=null,ca
     {const Pp=G.attributes.position,Mw=parts[0].matrixWorld,v=new THREE.Vector3(),ix=G.index.array,keep=[],ng=[];
       const hidden=(nm,a,b,c)=>{const pts=[a,b,c].map(k=>v.fromBufferAttribute(Pp,k).applyMatrix4(Mw).clone());
         if(/ARM/.test(nm))return pts.every(q=>Math.abs(q.x)<.325);            /* upper arms and shoulders under the sleeves */
-        if(/TSHIRT/.test(nm))return pts.every(q=>q.y<.985);                    /* shirt tail tucked inside the trousers */
+        if(/TSHIRT/.test(nm))return pts.every(q=>q.y<.95);                    /* shirt tail tucked inside the trousers */
         if(/HEAD/.test(nm))return pts.every(q=>q.y<1.385||(q.y<1.45&&Math.abs(q.x)>.072)||(q.y<1.47&&q.z<-.03));   /* neck base and the shoulder/trapezius skin under the collar and shoulders */
         return false;};
       for(const gr of G.groups){const nm=mats[gr.materialIndex].name||'',s0=keep.length;for(let t=gr.start;t<gr.start+gr.count;t+=3){const a=ix[t],b=ix[t+1],c=ix[t+2];if(hidden(nm,a,b,c))continue;keep.push(a,b,c);}ng.push([s0,keep.length-s0,gr.materialIndex]);}
@@ -1166,6 +1177,8 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
     else if(ph==='thru'){const put=type==='putter',pc=Math.min(1,p),fs=put?.35+.65*pc:type==='wedge'?.4+.6*pc:.6+.4*pc,fin=put?K.imp+(Math.min(K.fin,K.imp+3.2)-K.imp)*fs:K.imp+(K.fin-K.imp)*fs;const e=u<=1?1-(1-u)*(1-u):1;f=u<=1?K.imp+(fin-K.imp)*(put?e:u):(!put&&fs>=.97)?Math.min(K.end,K.fin+(u-1)*(K.fin-K.imp)*.5):fin;}
     {const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);};g.userData.rig._soleW=type==='putter'?(ph==='back'?.7:1):ph==='addr'?1:ph==='down'?ss(.72,1,u):ph==='thru'?1-ss(0,.28,u):0;}g.userData.rig._gp=type==='putter'?.92:(ph==='addr'||ph==='back')?.6:ph==='down'?.6-.45*u:.15;animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,type==='putter'?1:ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}/* putting: feet stay flat for the whole stroke */
       /* a real address: the upper body tilts slightly away from the target (trail shoulder lower), which lets the trail hand reach the grip with the shoulders square and up */
+      if(g.userData.rig.pro&&type==='putter'&&ph==='thru'){const B3=g.userData.rig.B,k=Math.max(0,Math.min(1,(u-.3)/.9)),w=k*k*(3-2*k);if(w>0&&B3.neck_01&&B3.Head&&B3.spine_03&&B3.spine_01){const up=gpG(g,B3.spine_03).sub(gpG(g,B3.spine_01)).normalize();
+        setRelG(g,B3.neck_01,new THREE.Quaternion().setFromAxisAngle(up,.5*w).multiply(relQ(g,B3.neck_01)));setRelG(g,B3.Head,new THREE.Quaternion().setFromAxisAngle(up,.62*w).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-.18*w)).multiply(relQ(g,B3.Head)));}}
       if(g.userData.rig.pro&&type==='putter'){const s1=g.userData.rig.B.spine_01;if(s1)setRelG(g,s1,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.26).multiply(relQ(g,s1)));}/* putting: bend a little more from the hips (eyes over the ball) so the hands reach the shorter putter with the shoulders square */
       if(g.userData.rig.pro){const B2=g.userData.rig.B,sp=B2.spine_02;if(sp&&B2.upperarm_l&&B2.upperarm_r&&B2.spine_03&&B2.spine_01){const want=type==='putter'?-1:.065;
         for(let it=0;it<2;it++){const L1=gpG(g,B2.upperarm_l),R1=gpG(g,B2.upperarm_r),up=gpG(g,B2.spine_03).sub(gpG(g,B2.spine_01)).normalize(),ax=new THREE.Vector3().crossVectors(up,L1.clone().sub(R1)).normalize(),drop=L1.y-R1.y;if(drop>=want-.004)break;
@@ -1250,11 +1263,12 @@ function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;
 const TS=.72;
 function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;if(p.boost==='hl')carry*=1.10;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
-  const mh=!c.putt?p.mishit:null,drv=clubType(p.club)==='driver';let MHA=1,MHT=1;
+  const mh=!c.putt?p.mishit:null,drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
   if(mh==='top'){carry*=.16+Math.random()*.16;MHA=.06;MHT=.35;}                                   /* topped: a low skimmer that runs */
   else if(mh==='chunk'&&drv){carry=Math.min(carry,(88+Math.random()*22)/TOYD*YD/YD);MHA=2.6;MHT=1.35;} /* driver under it: sky ball, ~90-110 yds */
   else if(mh==='chunk'){carry*=.1+Math.random()*.16;MHA=.5;MHT=.6;}                              /* fat: turf first, dribbles forward */
   const T=c.T*(.5+.5*Math.min(power,1.05))*(shp==='Punch'?.8:1)*MHT,apex=c.apex*(.3+.7*Math.min(power,1.05))*(p.lie==='rough'?.85:1)*(shp==='Punch'?.5:1)*MHA,wk=shp==='Punch'?.45:1;
+  if(p.lie==='rough'&&!c.putt){const q=Math.min(1,Math.abs(err)/1.2);carry*=1-.1*q;err*=1+.1*q;}
   const hs=p.look&&p.look.lefty?-1:1,a0=p.aim+hs*(err*.01-(shp==='Draw'?.035:shp==='Fade'?-.035:0)),dx=Math.cos(a0),dy=Math.sin(a0),lx=-dy,ly=dx,curve=hs*(err*carry*.085+(shp==='Draw'?carry*.06:shp==='Fade'?-carry*.06:0)),wx=wind.x*T*.3*wk,wy=wind.y*T*.3*wk;
   const x0=p.x,y0=p.y,h0=H(x0,y0)+.021;let ex=x0+dx*carry+lx*curve+wx,ey=y0+dy*carry+ly*curve+wy,h1=H(ex,ey);
   const C0=carry,H10=h1,baseXY=s=>[x0+dx*C0*s+lx*curve*s*s+wx*Math.pow(s,1.6),y0+dy*C0*s+ly*curve*s*s+wy*Math.pow(s,1.6)];
@@ -1277,7 +1291,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
     Object.assign(res,{x:fx,y:fy,tree:true,holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   const land=lieAt(ex,ey);if(land==='oob'||land==='water'){Object.assign(res,{x:ex,y:ey,oob:true,holed:false});return res;}
   if(Math.hypot(ex-PIN.x,ey-PIN.y)<.09){pts.push({t:T*TS+.1,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});Object.assign(res,{x:PIN.x,y:PIN.y,holed:true});return res;}
-  const rd=carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1);
+  const rd=carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
   if(rd<.05){Object.assign(res,{x:ex,y:ey,holed:false});return res;}
   const a=pts[pts.length-1],b=pts[pts.length-4],L=Math.hypot(a.x-b.x,a.y-b.y)||1,ux=(a.x-b.x)/L,uy=(a.y-b.y)/L;
   const spin=((land==='green'||land==='fringe')&&carry>50&&(c.wedge||c.c<150))?(c.wedge?1:.5)*(Math.abs(err)<.6?1:.5)*(shp==='Punch'?.3:1):0;
@@ -1559,11 +1573,15 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
   const rot=(b,q)=>{if(b)setRelG(g,b,q.multiply(relQ(g,b)));};
   const shR=()=>gpG(g,B.upperarm_r),shL=()=>gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis),sideL=pel.clone().add(V3(.26,-.05,.06)),sideR=pel.clone().add(V3(-.26,-.05,.06));
   if(A.kind==='pump'){
-    const coil=ss(0,.18,u)*(1-ss(.18,.3,u)),drive=ss(.18,.33,u)*(1-ss(.88,1,u)),pump=Math.sin(Math.max(0,Math.min(1,(u-.48)/.28))*Math.PI*2)*(u>.48&&u<.76?1:0);
-    rot(B.spine_01,Rx(.12*coil+.1*drive).multiply(Ry(-.18*coil+.14*drive)));rot(B.spine_03,Rx(-.08*drive));rot(B.Head,Rx(-.14*drive));
-    const load=pel.clone().add(V3(-.25,.04,.1)),up=shR().add(V3(.05,.07+.04*pump,.19)),down=shR().add(V3(.05,-.12,.22));/* fist up at chin height, elbow tucked down: an uppercut, not a point */
-    let tR=sideR.clone().lerp(load,ss(0,.18,u));tR.lerp(up,ss(.18,.33,u));if(pump<0)tR.lerp(down,-pump*.9);tR.lerp(sideR,ss(.88,1,u));
-    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sideL.clone().add(V3(0,.02*drive,.04*drive)),shL().add(V3(.35,-.35,-.3)));fistThumbs(g);}
+    const coil=ss(0,.2,u)*(1-ss(.2,.34,u)),fire=ss(.2,.34,u)*(1-ss(.86,1,u)),pump=u>.46&&u<.8?Math.sin((u-.46)/.34*Math.PI*2):0,crouch=Math.max(coil*.8,fire*(.55+.25*Math.max(0,-pump)));
+    const pel=B.pelvis;if(pel){const pw=gpG(g,pel).add(V3(0,-.075*crouch,0));g.updateMatrixWorld(true);const wpt=g.localToWorld(pw);pel.parent.updateMatrixWorld(true);pel.position.copy(pel.parent.worldToLocal(wpt));pel.updateMatrixWorld(true);setRelG(g,pel,Ry(-.28*coil+.42*fire).multiply(relQ(g,pel)));}
+    rot(B.spine_01,Rx(.2*coil+.16*fire).multiply(Ry(-.2*coil+.3*fire)));rot(B.spine_03,Rx(-.1*fire).multiply(Ry(.1*fire)));rot(B.neck_01,Ry(.18*fire));rot(B.Head,Rx(-.22*fire).multiply(Ry(.15*fire)));
+    try{feetToGround(g);}catch(e){}
+    const P2=gpG(g,B.pelvis),sL2=P2.clone().add(V3(.26,-.05,.06)),sR2=P2.clone().add(V3(-.26,-.05,.06));
+    const load=P2.clone().add(V3(-.24,.02,.12)),up=shR().add(V3(.05,.08+.05*pump,.2)),down=shR().add(V3(.05,-.13,.22));
+    let tR=sR2.clone().lerp(load,ss(0,.2,u));tR.lerp(up,ss(.2,.34,u));if(pump<0)tR.lerp(down,-pump*.9);tR.lerp(sR2,ss(.86,1,u));
+    const backL=P2.clone().add(V3(.24,.05,-.12));
+    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sL2.clone().lerp(backL,fire),shL().add(V3(.4,-.4,-.35)));fistThumbs(g);}
   else{const on=ss(0,.2,u)*(1-ss(.9,1,u)),hang=ss(.12,.3,u)*(1-ss(.9,1,u)),shake=Math.sin(t*8.5)*.24*ss(.28,.4,u)*(1-ss(.78,.9,u));
     rot(B.spine_02,Rx(.14*hang));rot(B.neck_01,Rx(.22*hang));rot(B.Head,Ry(shake).multiply(Rx(.34*hang)));
     const hipL=pel.clone().add(V3(.2,.07,.02)),hipR=pel.clone().add(V3(-.2,.07,.02));
