@@ -1494,7 +1494,7 @@ function press(){if(CURT)return;if(performance.now()/1000<flyUntil){flyUntil=0;i
   else if(state==='s2')fire(swingU);}
 function fire(u){const p=cur,c=CLUBS[p.club],tol=tolFor(p,c);fireErr(u/tol);}
 function fireErr(err){const p=cur,c=CLUBS[p.club];
-  p.mishit=null;if(swingPow>1&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
+  p.mishit=null;/* tops and chunks only when the bar runs all the way through the red zone (110%); inside the red zone it's just a wild one */if(swingPow>=1.099&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
   if(swingPow>1&&!p.mishit){err*=1+(swingPow-1)*8;err+=(Math.random()-.5)*(swingPow-1)*12;}else if(p.mishit){err=err*.5+(Math.random()-.5)*.8;}
   err=Math.max(-3,Math.min(3,err));p.lastErr=err;p.prev={x:p.x,y:p.y};
   plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
@@ -1529,6 +1529,26 @@ function watchdog(now){if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;retu
 /* ---------- celebrations: birdie or better = the fist-pump uppercut; double bogey or worse = hands on hips, head down, shaking ---------- */
 let CELEB=null;
 function startCeleb(p,kind){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel||typeof armTo!=='function')return false;CELEB={p,kind,t0:performance.now()/1000+.45,dur:kind==='pump'?2.7:3.1};return true;}
+/* where a bone's own skin points (for end joints like the thumb tip, which have no child bone to aim at) - measured once from the bind pose */
+function boneTipLocal(g,bone){if(bone.userData.tipL!==undefined)return bone.userData.tipL;bone.userData.tipL=null;let body=null;g.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton&&o.skeleton.bones.includes(bone))body=o;});if(!body)return null;
+  const sk=body.skeleton,bi=sk.bones.indexOf(bone),inv=sk.boneInverses[bi],G=body.geometry,SI=G.attributes.skinIndex.array,SW=G.attributes.skinWeight.array,P=G.attributes.position,v=new THREE.Vector3(),pts=[];
+  for(let i=0;i<P.count;i++){let b=-1,w=0;for(let k=0;k<4;k++)if(SW[i*4+k]>w){w=SW[i*4+k];b=SI[i*4+k];}if(b!==bi)continue;v.fromBufferAttribute(P,i).applyMatrix4(body.bindMatrix).applyMatrix4(inv);pts.push(v.clone());}
+  if(pts.length<3)return null;pts.sort((a,b)=>b.lengthSq()-a.lengthSq());const far=pts.slice(0,Math.max(3,Math.floor(pts.length*.3))),c=new THREE.Vector3();far.forEach(q=>c.add(q));c.multiplyScalar(1/far.length);bone.userData.tipL=c;return c;}
+function aimTip(g,bone,target){const tl=boneTipLocal(g,bone);if(!tl)return;bone.updateWorldMatrix(true,false);const o=gpG(g,bone),tip=g.worldToLocal(bone.localToWorld(tl.clone())),cur=tip.sub(o).normalize(),des=target.clone().sub(o).normalize();if(cur.lengthSq()<.5||des.lengthSq()<.5)return;
+  setRelG(g,bone,new THREE.Quaternion().setFromUnitVectors(cur,des).multiply(relQ(g,bone)));}
+function fistThumbs(g){/* a real closed fist: every finger folds into the palm, thumb wraps across the front of the fingers */
+  const B=g.userData.rig.B;if(typeof aimBoneG!=='function')return;
+  for(const s of['l','r']){const hd=B['hand_'+s],m1=B['middle_01_'+s],i1=B['index_01_'+s],p1=B['pinky_01_'+s];if(!hd||!m1||!i1||!p1)continue;
+    const W=gpG(g,hd),K=gpG(g,m1),toW=W.clone().sub(K).normalize(),across=gpG(g,i1).sub(gpG(g,p1)).normalize();let n=new THREE.Vector3().crossVectors(across,toW.clone().negate()).normalize();
+    const tipRef=B['middle_03_'+s]?gpG(g,B['middle_03_'+s]):null,pc=W.clone().lerp(K,.5);if(tipRef&&tipRef.clone().sub(pc).dot(n)<0)n.negate();
+    for(const f of['index','middle','ring','pinky']){const b1=B[f+'_01_'+s],b2=B[f+'_02_'+s],b3=B[f+'_03_'+s];if(!b1||!b2)continue;
+      const q1=gpG(g,b1),l1=q1.distanceTo(gpG(g,b2));aimBoneG(g,b1,b2,q1.clone().add(n.clone().multiplyScalar(.85).addScaledVector(toW,.35).normalize().multiplyScalar(l1)));
+      if(b3){const q2=gpG(g,b2),l2=q2.distanceTo(gpG(g,b3));aimBoneG(g,b2,b3,q2.clone().add(toW.clone().multiplyScalar(.9).addScaledVector(n,.25).normalize().multiplyScalar(l2)));}}
+    const t1=B['thumb_01_'+s],t2=B['thumb_02_'+s],t3=B['thumb_03_'+s],mm=B['middle_02_'+s]||m1;if(!t1||!t2||!t3)continue;
+    const a1=gpG(g,t1),L1=a1.distanceTo(gpG(g,t2)),A=gpG(g,B['index_02_'+s]||i1).addScaledVector(n,.012);aimBoneG(g,t1,t2,a1.clone().add(A.sub(a1).normalize().multiplyScalar(L1)));
+    const a2=gpG(g,t2),L2=a2.distanceTo(gpG(g,t3)),M=gpG(g,mm).addScaledVector(n,.015);aimBoneG(g,t2,t3,a2.clone().add(M.sub(a2).normalize().multiplyScalar(L2)));
+    /* the last thumb joint folds over the middle/ring fingers too */const r2=B['ring_02_'+s]||B['ring_01_'+s];aimTip(g,t3,gpG(g,mm).lerp(r2?gpG(g,r2):gpG(g,mm),.5).addScaledVector(n,.012));
+    for(const f of['index','middle','ring','pinky']){const b3=B[f+'_03_'+s];if(b3)aimTip(g,b3,W.clone().addScaledVector(n,.02));}}}
 function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=null;return;}const t=now-A.t0;if(t<0)return;const u=t/A.dur;
   const p=A.p,g=p.av,R=g.userData.rig,B=R.B;if(u>=1){CELEB=null;return;}if(swingAnim&&swingAnim.p===p)swingAnim=null;for(const k in R.clubs)R.clubs[k].visible=false;
   const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},V3=(x,y,z)=>new THREE.Vector3(x,y,z),Rx=a=>new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),a),Ry=a=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),a);
@@ -1540,11 +1560,11 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
     rot(B.spine_01,Rx(.12*coil+.1*drive).multiply(Ry(-.18*coil+.14*drive)));rot(B.spine_03,Rx(-.08*drive));rot(B.Head,Rx(-.14*drive));
     const load=pel.clone().add(V3(-.25,.04,.1)),up=shR().add(V3(.05,.07+.04*pump,.19)),down=shR().add(V3(.05,-.12,.22));/* fist up at chin height, elbow tucked down: an uppercut, not a point */
     let tR=sideR.clone().lerp(load,ss(0,.18,u));tR.lerp(up,ss(.18,.33,u));if(pump<0)tR.lerp(down,-pump*.9);tR.lerp(sideR,ss(.88,1,u));
-    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sideL.clone().add(V3(0,.02*drive,.04*drive)),shL().add(V3(.35,-.35,-.3)));}
+    armTo(g,'r',tR,shR().add(V3(-.12,-.65,.12)));armTo(g,'l',sideL.clone().add(V3(0,.02*drive,.04*drive)),shL().add(V3(.35,-.35,-.3)));fistThumbs(g);}
   else{const on=ss(0,.2,u)*(1-ss(.9,1,u)),hang=ss(.12,.3,u)*(1-ss(.9,1,u)),shake=Math.sin(t*8.5)*.24*ss(.28,.4,u)*(1-ss(.78,.9,u));
     rot(B.spine_02,Rx(.14*hang));rot(B.neck_01,Rx(.22*hang));rot(B.Head,Ry(shake).multiply(Rx(.34*hang)));
     const hipL=pel.clone().add(V3(.2,.07,.02)),hipR=pel.clone().add(V3(-.2,.07,.02));
-    armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));}}
+    armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));fistThumbs(g);}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
   let cel=false;if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;const dd=p.strokes-PAR;if(dd<=-1)cel=startCeleb(p,'pump');else if(dd>=2)cel=startCeleb(p,'hips');}
   else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?(inGulch(r.x,r.y)?'In the gulch':'In the water'):'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
