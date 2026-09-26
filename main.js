@@ -1087,7 +1087,7 @@ function carryOf(p,i){const c=CLUBS[i];return c.c*YD*powMult(p)*lieMult(p,p.lie,
 function clubsFor(p){const r=[];CLUBS.forEach((c,i)=>{if(c.putt)return;if(i===0&&p.lie!=='tee')return;r.push(i);});r.push(PUTTER);return r;}
 function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;if(p.buzz>0)t*=1.25;return t;}
 
-let MODE='click';try{MODE=localStorage.getItem('jp-swing-mode2')||'click';}catch(e){}let swipe=null;let flyStart=0,flyUntil=0,players=[],cur=null,state='menu',wind={x:0,y:0,sp:0,a:0},overhead=false,plan=null,flightT0=0,swingU=0,swingPow=0,swingAnim=null,readOn=false;
+let MODE='click';try{MODE=localStorage.getItem('jp-swing-mode2')||'click';}catch(e){}let swipe=null;const FLY_OUT=5.5,FLY_BACK=3.3;let flyStart=0,flyUntil=0,players=[],cur=null,state='menu',wind={x:0,y:0,sp:0,a:0},overhead=false,plan=null,flightT0=0,swingU=0,swingPow=0,swingAnim=null,readOn=false;
 const picked=new Set();const MAXP=4;
 
 function dist(p){return Math.hypot(PIN.x-p.x,PIN.y-p.y);}
@@ -1214,7 +1214,7 @@ function startHoleNow(quiet){setHole(ROUND.list[ROUND.k]);
   const wa=Math.random()*Math.PI*2,sp=Math.random()*6;wind={a:wa,sp,x:Math.cos(wa)*sp,y:Math.sin(wa)*sp};
   const t=H1[0],q=plAt(H1,15);
   players.forEach((p,i)=>{const o=(i-(players.length-1)/2)*.7;p.x=t[0]-q.ty*o;p.y=t[1]+q.tx*o;p.strokes=0;p.done=false;p.abUsed=false;p.boost=null;p.lie='tee';p.lastErr=0;p.av.visible=false;placeBall(p,p.x,p.y,H(p.x,p.y)+.05);});
-  readOn=false;setRibbon([]);startTurn();if(quiet){flyStart=0;flyUntil=0;}else{flyStart=performance.now()/1000;flyUntil=flyStart+5.5;if(cur)cur.intro=flyUntil+2;showHoleCard();}}
+  readOn=false;setRibbon([]);startTurn();if(quiet){flyStart=0;flyUntil=0;}else{flyStart=performance.now()/1000;flyUntil=flyStart+FLY_OUT+FLY_BACK;if(cur)cur.intro=flyUntil+2;showHoleCard();}}
 
 function drawHoleMap(cv){const x=cv.getContext('2d'),W=cv.width,Hh=cv.height,hp=HOLE.p,t=hp[0],gr=hp[hp.length-1],ang=Math.atan2(gr[1]-t[1],gr[0]-t[0]),len=Math.hypot(gr[0]-t[0],gr[1]-t[1])||1;
   const s=Math.min((Hh-44)/len,(W-20)/Math.max(60,len*.35)),cx=(t[0]+gr[0])/2,cy=(t[1]+gr[1])/2,rot=Math.PI/2-ang,co=Math.cos(rot),si=Math.sin(rot);
@@ -1665,7 +1665,12 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(state==='s1'){swingU+=dt*(p&&CLUBS[p.club].putt?.75:1.0)*wob;if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';}updMeter();}
   else if(state==='s2'){swingU-=dt*1.45*wob;if(swingU<-.15){swingU=-.15;fire(-.15);}updMeter();}
   else if(state==='flight')updMeter();
-  if(fly){const u=Math.min(1,(now-flyStart)/(flyUntil-flyStart)),e=u*u*(3-2*u),L=HOLE_LEN,a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
+  if(fly){const tt=now-flyStart,L=HOLE_LEN;
+    if(tt<FLY_OUT){const u=Math.min(1,tt/FLY_OUT),e=u*u*(3-2*u),a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
+    else{/* reverse dolly: glide back down the fairway still facing the green, sinking toward the golfer, and settle on the normal golfer camera */
+      const v=Math.min(1,(tt-FLY_OUT)/FLY_BACK),e=v*v*(3-2*v),s0=L*.92,sg=p?Math.max(0,plProj(H1,p.x,p.y)-7.5):0,s=s0+(sg-s0)*e,a=plAt(H1,s),b=plAt(H1,Math.min(L,s+70+(s0-s)*.25));
+      want=V(a.x-a.tx*25*(1-e),a.y-a.ty*25*(1-e),H(a.x,a.y)+22*(1-e)+2.1*e);look=V(b.x,b.y,H(b.x,b.y)+2*(1-e)+1.2*e);
+      if(p){const w=Math.max(0,Math.min(1,(v-.62)/.38)),k2=w*w*(3-2*w),dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),aw=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),al=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);want.lerp(aw,k2);look.lerp(al,k2);}}}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
