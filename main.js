@@ -88,6 +88,7 @@ function nearGreenEdge(x,y){for(const g of GREENS){if(x<g.x0-2||x>g.x1+2||y<g.y0
 function lieAt(x,y){
   if(!inP(MAIN,x,y))return'oob';
   if(inOBX(x,y))return'oob';
+  if(inGulch(x,y))return'water';
   for(const w of WATER)if(inP(w,x,y))return'water';
   for(const g of GREENS)if(inP(g,x,y))return'green';
   for(const b of BUNKERS)if(inP(b,x,y))return'bunker';
@@ -97,7 +98,7 @@ function lieAt(x,y){
   return'rough';}
 
 /* ---------- extra out-of-bounds lines (course-specific): Jefferson Park hole 2 - the tree line down the entire right side is OB ---------- */
-const OBX_DEF={jefferson:[{hole:'2',side:'right'}]};let OBX=null,OBX_BUILT=false;
+const OBX_DEF={jefferson:[{hole:'2',side:'right'}],'west seattle':[{hole:'2',side:'right'}]};let OBX=null,OBX_BUILT=false;
 function buildOBX(){OBX_BUILT=true;OBX=[];const key=Object.keys(OBX_DEF).find(k=>new RegExp(k,'i').test(D.name||''));if(!key)return;
   for(const d of OBX_DEF[key]){const h=HOLES.find(x=>x.ref===d.hole);if(!h)continue;const P=h.p,seg=[];let L=0;for(let i=1;i<P.length;i++){const l=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);seg.push({a:P[i-1],b:P[i],l0:L,l});L+=l;}
     const at=s=>{let q=seg[seg.length-1];for(const sg of seg)if(s<=sg.l0+sg.l){q=sg;break;}const u=(s-q.l0)/q.l,tx=(q.b[0]-q.a[0])/q.l,ty=(q.b[1]-q.a[1])/q.l;return{x:q.a[0]+(q.b[0]-q.a[0])*u,y:q.a[1]+(q.b[1]-q.a[1])*u,tx,ty};};
@@ -106,7 +107,9 @@ function buildOBX(){OBX_BUILT=true;OBX=[];const key=Object.keys(OBX_DEF).find(k=
       for(const t of TREES){const dx=t.x-q.x,dy=t.y-q.y,al=dx*q.tx+dy*q.ty,lat=dx*rx+dy*ry;if(Math.abs(al+(s-Math.max(0,Math.min(L,s))))<14&&lat>9&&lat<70)best=Math.min(best,lat);}off.push(best<1e8?best:null);}
     /* fill gaps, then a gentle smooth so the line runs straight along the tree edge */
     for(let i=0;i<off.length;i++)if(off[i]==null){let j=i;while(j<off.length&&off[j]==null)j++;const v=off[i-1]!=null?off[i-1]:(j<off.length?off[j]:30);off[i]=v;}
-    const sm=off.map((v,i)=>{const w=off.slice(Math.max(0,i-2),i+3).sort((a,b)=>a-b);return Math.max(10,w[Math.floor(w.length/2)]-1);});
+    let sm=off.map((v,i)=>{const w=off.slice(Math.max(0,i-2),i+3).sort((a,b)=>a-b);return Math.max(12,w[Math.floor(w.length/2)]-1);});
+    /* never inside the fairway: the line stays at least 3 m outside the fairway's edge on that side */
+    sm=sm.map((v,i)=>{const s=-10+i*st,q=at(Math.max(0,Math.min(L,s))),rx=q.ty*sd,ry=-q.tx*sd;let edge=0;for(let l=0;l<45;l+=1){const x=q.x+rx*l,y=q.y+ry*l;if(FAIRWAYS.some(f=>inP(f,x,y))||GREENS.some(g=>inP(g,x,y))||TEES.some(t=>inP(t,x,y)))edge=l;else if(l>edge+4)break;}return Math.max(v,edge+3);});
     OBX.push({hole:d.hole,sd,at,L,st,off:sm});}
   /* white stakes along each line */
   try{const pos=[];for(const o of OBX){for(let s=-10,i=0;s<=o.L+30;s+=o.st,i++){const q=o.at(Math.max(0,Math.min(o.L,s))),rx=q.ty*o.sd,ry=-q.tx*o.sd,x=q.x+q.tx*(s-Math.max(0,Math.min(o.L,s)))+rx*o.off[i],y=q.y+q.ty*(s-Math.max(0,Math.min(o.L,s)))+ry*o.off[i];pos.push([x,y]);}}
@@ -116,6 +119,38 @@ function inOBX(x,y){if(!HOLE||typeof TREES==='undefined'||!TREES.length)return f
       if(!best||d<best.d){const tx=dx/l,ty=dy/l;best={d,s:acc+u*l,lat:((x-px)*ty-(y-py)*tx)*o.sd};}acc+=l;}
     if(!best||best.s<-12||best.s>o.L+32)continue;const i=Math.max(0,Math.min(o.off.length-1,Math.round((best.s+10)/o.st)));if(best.lat>o.off[i]&&best.lat<o.off[i]+200)return true;}
   return false;}
+
+/* ---------- ravines (course-specific): West Seattle hole 3 has a gulch at the foot of the tee - a hazard with dead wood and murky water ---------- */
+const GULCH_DEF={'west seattle':[{hole:'3',s0:10,s1:74,half:30}]};let GULCH=null;
+function gulchInit(){GULCH=[];const key=Object.keys(GULCH_DEF).find(k=>new RegExp(k,'i').test(D.name||''));if(!key)return;
+  for(const d of GULCH_DEF[key]){const h=D.holes.find(x=>x.main&&x.ref===d.hole);if(!h)continue;const t=h.p[0],g=h.p[1],L=Math.hypot(g[0]-t[0],g[1]-t[1]),tx=(g[0]-t[0])/L,ty=(g[1]-t[1])/L,at=s=>[t[0]+tx*s,t[1]+ty*s];
+    const lim=Math.min(H(t[0],t[1]),H(...at(d.s1+6)))-2.5;GULCH.push({t,tx,ty,s0:d.s0,s1:d.s1,half:d.half,lim});}}
+function inGulch(x,y){if(!GULCH)gulchInit();for(const G of GULCH){const dx=x-G.t[0],dy=y-G.t[1],s=dx*G.tx+dy*G.ty,l=Math.abs(dx*G.ty-dy*G.tx);if(s>G.s0&&s<G.s1&&l<G.half&&H(x,y)<G.lim)return true;}return false;}
+function buildGulch(){if(!GULCH)gulchInit();if(!GULCH.length)return;let seed=91;const R=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const bark=new THREE.MeshStandardMaterial({color:0x6d6358,roughness:.95}),bark2=new THREE.MeshStandardMaterial({color:0x51483f,roughness:1});
+  const snag=new THREE.CylinderGeometry(.55,1,1,7,1,true);snag.translate(0,.5,0);const log=new THREE.CylinderGeometry(1,1,1,7);log.rotateZ(Math.PI/2);
+  const S1=[],S2=[],LG=[];
+  for(const G of GULCH){const pick=(n,fn)=>{let k=0,tries=0;while(k<n&&tries<n*40){tries++;const s=G.s0+R()*(G.s1-G.s0),l=(R()*2-1)*G.half,x=G.t[0]+G.tx*s+G.ty*l,y=G.t[1]+G.ty*s-G.tx*l;if(H(x,y)>=G.lim+.3)continue;fn(x,y);k++;}};
+    pick(46,(x,y)=>{const h=4+R()*9,r=.16+R()*.26,lean=(R()-.5)*.5,rot=R()*6.28;S1.push({x,y,h,r,lean,rot});const nb=1+Math.floor(R()*3);for(let k=0;k<nb;k++)S2.push({x,y,z:h*(.35+R()*.5),len:1+R()*2.4,r:r*.4,rot:R()*6.28,tilt:.5+R()*.7});});
+    pick(120,(x,y)=>{LG.push({x,y,len:2+R()*7,r:.08+R()*.28,rot:R()*6.28,tilt:(R()-.5)*.4});});
+    pick(260,(x,y)=>{LG.push({x,y,len:.6+R()*2.2,r:.025+R()*.045,rot:R()*6.28,tilt:(R()-.5)*.9});});}
+  const mk=(geo,mat,arr,fn)=>{const M=new THREE.InstancedMesh(geo,mat,arr.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();arr.forEach((o,i)=>{fn(o,m,q,e);M.setMatrixAt(i,m);});M.castShadow=true;M.receiveShadow=true;scene.add(M);};
+  mk(snag,bark,S1,(o,m,q,e)=>{e.set(o.lean,o.rot,o.lean*.6);q.setFromEuler(e);m.compose(V(o.x,o.y,H(o.x,o.y)-.2),q,new THREE.Vector3(o.r,o.h,o.r));});
+  mk(snag,bark2,S2,(o,m,q,e)=>{e.set(o.tilt,o.rot,0);q.setFromEuler(e);m.compose(V(o.x,o.y,H(o.x,o.y)+o.z),q,new THREE.Vector3(o.r,o.len,o.r));});
+  mk(log,bark2,LG,(o,m,q,e)=>{e.set(0,o.rot,o.tilt);q.setFromEuler(e);m.compose(V(o.x,o.y,H(o.x,o.y)+o.r*.6),q,new THREE.Vector3(o.len/2,o.r,o.r));});
+  /* gulch floor: mud and leaf litter instead of mown grass */
+  {const cs=1.4,P=[],C=[],I=[];let seed2=7;const R2=()=>{seed2=(seed2*16807)%2147483647;return seed2/2147483647;};
+   for(const G of GULCH){const nS=Math.ceil((G.s1-G.s0+8)/cs),nL=Math.ceil((2*G.half+8)/cs),base=P.length/3,grid=[];
+     for(let i=0;i<=nS;i++)for(let j=0;j<=nL;j++){const s=G.s0-4+i*cs,l=-G.half-4+j*cs,x=G.t[0]+G.tx*s+G.ty*l,y=G.t[1]+G.ty*s-G.tx*l,h=H(x,y),inside=h<G.lim+.6;const v=V(x,y,h+.14);P.push(v.x,v.y,v.z);const k=.75+R2()*.35,d=Math.max(0,Math.min(1,(G.lim+.6-h)/1.2));C.push(.3*k,.25*k,.15*k);grid.push(inside);}
+     for(let i=0;i<nS;i++)for(let j=0;j<nL;j++){const a=base+i*(nL+1)+j,b=a+1,c=a+nL+1,d=c+1,ia=a-base,ib=b-base,ic=c-base,id=d-base;if(grid[ia]&&grid[ib]&&grid[ic]&&grid[id])I.push(a,c,b,b,c,d);}}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.setIndex(I);g.computeVertexNormals();
+   const fl=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2}));fl.receiveShadow=true;scene.add(fl);}
+  /* murky water: a widened, dark, still channel along the creek through the gulch */
+  const mat=new THREE.MeshStandardMaterial({color:0x3a3b24,roughness:.18,metalness:.05,transparent:true,opacity:.93});
+  for(const c of (D.creek||[])){const pts=c.filter(p=>GULCH.some(G=>{const dx=p[0]-G.t[0],dy=p[1]-G.t[1],s=dx*G.tx+dy*G.ty,l=Math.abs(dx*G.ty-dy*G.tx);return s>G.s0-6&&s<G.s1+6&&l<G.half+8;}));if(pts.length<2)continue;
+    const P=[],I=[];pts.forEach((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b[0]-a[0],dy=b[1]-a[1],n=Math.hypot(dx,dy)||1,nx=-dy/n,ny=dx/n,w=3.2+1.6*Math.sin(i*1.7),z=Math.max(H(p[0]+nx*w,p[1]+ny*w),H(p[0]-nx*w,p[1]-ny*w),H(p[0],p[1]))+.07;
+      const A=V(p[0]+nx*w,p[1]+ny*w,z),B=V(p[0]-nx*w,p[1]-ny*w,z);P.push(A.x,A.y,A.z,B.x,B.y,B.z);if(i){const k=i*2;I.push(k-2,k-1,k,k-1,k+1,k);}});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setIndex(I);g.computeVertexNormals();const w=new THREE.Mesh(g,mat);w.receiveShadow=true;w.renderOrder=1;scene.add(w);}}
 const LIE_NAME={water:'Water',tee:'Tee box',fairway:'Fairway',rough:'Rough',bunker:'Bunker',fringe:'Fringe',green:'Green',oob:'Out of bounds'};
 
 /* ---------- three.js scene ---------- */
@@ -226,6 +261,10 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
   const t={x:tx,y:ty,gz:H(tx,ty),fir,h:fir?12+rnd()*13:10+rnd()*8,r:fir?2.6+rnd()*1.8:3.4+rnd()*2.4,v:Math.floor(rnd()*3)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);
   const R=Math.ceil(t.r/10)+1,cx=Math.floor(tx/10),cy=Math.floor(ty/10);
   for(let i=-R;i<=R;i++)for(let j=-R;j<=R;j++){const k=(cx+i)+','+(cy+j);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
+ /* tee corridor: nothing may hang into the line of play for the first ~90 m (the corridor widens from 7 m to 15 m either side) */
+ {const keep=[];for(const t of TREES){let bad=false;for(const h of D.holes){if(!h.main)continue;const P=h.p;let acc=0;for(let i=1;i<P.length&&!bad;i++){const ax=P[i-1][0],ay=P[i-1][1],dx=P[i][0]-ax,dy=P[i][1]-ay,l=Math.hypot(dx,dy)||1,u=((t.x-ax)*dx+(t.y-ay)*dy)/(l*l),s=acc+u*l;
+      if(u>=-.08*(i===1)&&u<=1&&s>-8&&s<90){const lat=Math.abs(((t.x-ax)*dy-(t.y-ay)*dx)/l);if(lat-t.r*.9<7+Math.max(0,s)*.09)bad=true;}acc+=l;}if(bad)break;}if(!bad)keep.push(t);}
+   if(keep.length!==TREES.length){TREES.length=0;TREES.push(...keep);THASH.clear();for(const t of TREES){const R2=Math.ceil(t.r/10)+1,cx=Math.floor(t.x/10),cy=Math.floor(t.y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}}}
  /* tree-line fill: where the aerial canopy map is solid near the course, pack trees tightly (rows of conifers between fairways) */
  if(CAN&&D.canopy){const c=D.canopy,near=(x,y)=>inP(MAIN,x,y)||lines.some(l=>dPL(x,y,l.p)<75),tooClose=(x,y,r)=>{const k=Math.floor(x/10)+','+Math.floor(y/10),L=THASH.get(k);return L?L.some(t=>Math.hypot(t.x-x,t.y-y)<r):false;};
    const tall=/Jefferson/i.test(D.name||'')?1.18:1;let added=0;
@@ -1290,6 +1329,43 @@ const OCC_VS='uniform vec3 uCamP,uTgt;uniform float uOccOn;varying float vOcc;\n
 const OCC_FS='varying float vOcc;uniform float uOccK,uOccDk;\n';
 const OCC_DISCARD='if(vOcc>.001){float ign=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));if(ign<vOcc*uOccK)discard;}';
 const OCC_DARK='diffuseColor.rgb*=1.-vOcc*uOccDk;';
+
+/* ---------- wildlife: the odd grey squirrel scampering about, and (about every other round) a coyote trotting across ---------- */
+const WILD={list:[],coyoteRound:null,coyoteDone:false,lastHole:-1};
+function mkSquirrel(){const G=new THREE.Group(),fur=new THREE.MeshStandardMaterial({color:0x8d8b86,roughness:.95}),belly=new THREE.MeshStandardMaterial({color:0xcfcbc2,roughness:1}),dark=new THREE.MeshStandardMaterial({color:0x2a2622,roughness:.6});
+  const sp=(r,mat,x,y,z,sx,sy,sz,par)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);(par||G).add(m);return m;};
+  const body=new THREE.Group();G.add(body);sp(.055,fur,0,.07,0,1,.9,1.6,body);sp(.042,belly,0,.055,.02,.9,.8,1.3,body);const head=sp(.036,fur,0,.1,.085,1,.95,1.15,body);
+  sp(.012,dark,.018,.012,.02,1,1,1,head);sp(.012,dark,-.018,.012,.02,1,1,1,head);for(const s of[1,-1]){const e=new THREE.Mesh(new THREE.ConeGeometry(.01,.025,6),fur);e.position.set(s*.02,.035,-.005);head.add(e);}
+  const tail=new THREE.Group();tail.position.set(0,.09,-.08);body.add(tail);[[0,.02,-.02,.04],[0,.07,-.05,.05],[0,.12,-.05,.055],[0,.16,-.02,.05],[0,.18,.02,.04]].forEach(q=>sp(q[3],fur,q[0],q[1],q[2],.8,1,.8,tail));
+  const legs=[];for(const [x,z] of [[.035,.06],[-.035,.06],[.04,-.05],[-.04,-.05]]){const l=new THREE.Mesh(new THREE.CylinderGeometry(.009,.007,.06,5),fur);l.geometry.translate(0,-.03,0);l.position.set(x,.06,z);body.add(l);legs.push(l);}
+  G.traverse(o=>{if(o.isMesh)o.castShadow=true;});return{G,body,head,tail,legs};}
+function mkCoyote(){const G=new THREE.Group(),fur=new THREE.MeshStandardMaterial({color:0x9a8466,roughness:.95}),pale=new THREE.MeshStandardMaterial({color:0xcdbfa6,roughness:1}),dark=new THREE.MeshStandardMaterial({color:0x2b241e,roughness:.7});
+  const sp=(r,mat,x,y,z,sx,sy,sz,par)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,9),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);(par||G).add(m);return m;};
+  const body=new THREE.Group();G.add(body);sp(.2,fur,0,.55,0,.85,.85,2.1,body);sp(.15,pale,0,.5,.22,.8,.8,1.1,body);
+  const head=new THREE.Group();head.position.set(0,.68,.46);body.add(head);sp(.1,fur,0,0,0,1,.9,1.05,head);const snout=sp(.055,pale,0,-.03,.11,.8,.7,1.6,head);sp(.018,dark,0,-.02,.2,1,1,1,head);
+  for(const s of[1,-1]){const e=new THREE.Mesh(new THREE.ConeGeometry(.035,.1,6),fur);e.position.set(s*.05,.09,-.02);e.rotation.z=-s*.15;head.add(e);sp(.012,dark,s*.045,.025,.07,1,1,1,head);}
+  const tail=new THREE.Group();tail.position.set(0,.6,-.42);body.add(tail);[[0,-.05,-.05,.06],[0,-.14,-.1,.07],[0,-.24,-.13,.07],[0,-.32,-.14,.05]].forEach(q=>sp(q[3],fur,q[0],q[1],q[2],.9,1.2,.9,tail));sp(.035,dark,0,-.39,-.14,1,1,1,tail);
+  const legs=[];for(const [x,z] of [[.09,.3],[-.09,.3],[.1,-.3],[-.1,-.3]]){const l=new THREE.Group();l.position.set(x,.5,z);const m=new THREE.Mesh(new THREE.CylinderGeometry(.035,.025,.5,6),fur);m.position.y=-.25;l.add(m);const pw=new THREE.Mesh(new THREE.SphereGeometry(.035,6,5),dark);pw.position.y=-.5;l.add(pw);body.add(l);legs.push(l);}
+  G.traverse(o=>{if(o.isMesh)o.castShadow=true;});return{G,body,head,tail,legs};}
+function spawnWild(kind){const p=cur;if(!p||!p.av)return;const a=p.aim,dx=Math.cos(a),dy=Math.sin(a);const A=kind==='coyote'?mkCoyote():mkSquirrel();
+  let x0,y0,x1,y1;if(kind==='coyote'){const d=45+Math.random()*45,side=Math.random()<.5?1:-1,cx=p.x+dx*d,cy=p.y+dy*d;x0=cx-dy*side*38;y0=cy+dx*side*38;x1=cx+dy*side*38;y1=cy-dx*side*38;}
+  else{const d=9+Math.random()*14,side=Math.random()<.5?1:-1,cx=p.x+dx*d+(-dy)*side*(3+Math.random()*5),cy=p.y+dy*d+dx*side*(3+Math.random()*5);x0=cx;y0=cy;
+    let tgt=null,bd=1e9;for(const t of TREES){const dd=Math.hypot(t.x-cx,t.y-cy);if(dd>4&&dd<32&&dd<bd){bd=dd;tgt=t;}}if(tgt){x1=tgt.x;y1=tgt.y;}else{x1=cx-dy*side*18;y1=cy+dx*side*18;}}
+  if(['water','oob'].includes(lieAt(x0,y0)))return;const L=Math.hypot(x1-x0,y1-y0);try{linearize(A.G);}catch(e){}scene.add(A.G);/* colours authored in sRGB, like everything else */WILD.list.push({kind,A,x0,y0,x1,y1,L,d:0,t0:performance.now()/1000,pause:0,climb:0,sp:kind==='coyote'?3.1:3.6});}
+function updWild(now,dt){
+  if(ROUND&&WILD.lastHole!==ROUND.k){WILD.lastHole=ROUND.k;if(WILD.coyoteRound!==ROUND){WILD.coyoteRound=ROUND;WILD.coyoteDone=Math.random()>=.5;WILD.coyoteHole=Math.floor(Math.random()*Math.max(1,ROUND.list.length));}}
+  if(state==='aim'&&cur&&!(cur.intro&&now<cur.intro)&&now>flyUntil+1&&!overhead&&WILD.list.length===0){
+    if(!WILD.coyoteDone&&ROUND&&ROUND.k>=WILD.coyoteHole&&Math.random()<dt*.12){WILD.coyoteDone=true;spawnWild('coyote');}
+    else if(Math.random()<dt*.018&&!(cur.lie==='green'))spawnWild('squirrel');}
+  for(let i=WILD.list.length-1;i>=0;i--){const W=WILD.list[i],A=W.A,t=now-W.t0;let moving=true;
+    if(W.kind==='squirrel'){if(W.pause>0){W.pause-=dt;moving=false;}else if(Math.random()<dt*.9&&W.d>1&&W.d<W.L-2){W.pause=.5+Math.random()*.9;}}
+    if(moving&&W.d<W.L)W.d=Math.min(W.L,W.d+W.sp*dt);const u=W.d/W.L,x=W.x0+(W.x1-W.x0)*u,y=W.y0+(W.y1-W.y0)*u,hd=Math.atan2(-(W.y1-W.y0),W.x1-W.x0);
+    const ph=t*(W.kind==='coyote'?7.5:15),g=H(x,y);
+    if(W.kind==='squirrel'){const hop=moving?Math.abs(Math.sin(ph))*.07:0;A.G.position.copy(V(x,y,g+hop+W.climb));A.G.rotation.set(0,Math.PI/2-hd,0);A.body.rotation.x=moving?-Math.sin(ph)*.25:-(.55);A.tail.rotation.x=moving?.3+Math.sin(ph*.5)*.2:.1+Math.sin(t*9)*.15;
+      A.legs.forEach((l,k)=>{l.rotation.x=moving?Math.sin(ph+(k<2?0:Math.PI))*.9:0;});if(W.d>=W.L){W.climb+=dt*2.2;A.body.rotation.x=-1.45;}if(W.climb>4||t>14){scene.remove(A.G);WILD.list.splice(i,1);}}
+    else{A.G.position.copy(V(x,y,g+Math.abs(Math.sin(ph))*.03));A.G.rotation.set(0,Math.PI/2-hd,0);A.legs.forEach((l,k)=>{l.rotation.x=Math.sin(ph+[0,Math.PI,Math.PI,0][k])*.55;});A.head.rotation.x=Math.sin(ph*.5)*.05;A.tail.rotation.x=.15+Math.sin(ph)*.08;
+      if(W.d>=W.L||t>30){scene.remove(A.G);WILD.list.splice(i,1);}}}
+  if(state!=='aim'&&state!=='s1'&&state!=='s2'&&state!=='flight'&&state!=='result'){for(const W of WILD.list)scene.remove(W.A.G);WILD.list.length=0;}}
 function updOcc(){let on=0;const p=cur;OCC.uCamP.value.copy(camera.position);
   if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2')&&!(overhead&&state==='aim')){OCC.uTgt.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));on=1;OCC.uOccK.value=.9;OCC.uOccDk.value=0;}
   else if(p&&p.ball&&(state==='flight'||state==='result'||state==='replay')){OCC.uTgt.value.copy(p.ball.b.position);on=1;OCC.uOccK.value=.62;OCC.uOccDk.value=.45;}
@@ -1405,7 +1481,7 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
     armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
   let cel=false;if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;const dd=p.strokes-PAR;if(dd<=-1)cel=startCeleb(p,'pump');else if(dd>=2)cel=startCeleb(p,'hips');}
-  else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?'In the water':'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
+  else if(r.oob){p.strokes++;big=lieAt(r.x,r.y)==='water'?(inGulch(r.x,r.y)?'In the gulch':'In the water'):'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';}
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
     if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':LIE_NAME[p.lie];}
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
@@ -1732,7 +1808,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
   flagG.rotation.y=wind.a;try{animFlag(now);}catch(e){}
-  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}try{curtainCam();}catch(e){}try{updOcc();updTerrain();}catch(e){}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
+  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}try{curtainCam();}catch(e){}try{updWild(now,dt);}catch(e){console.warn('wild',e);}try{updOcc();updTerrain();}catch(e){}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
 {const L=c=>new THREE.MeshLambertMaterial({color:c});
  for(const c of CLUBH){const sh=new THREE.Shape(c.p.map(q=>new THREE.Vector2(q[0],q[1])));const base=Math.min(...c.p.map(q=>H(q[0],q[1])))-.5;
    const wall=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:5.5,bevelEnabled:false}),L(0xb9ad98));wall.geometry.rotateX(-Math.PI/2);wall.position.y=base;scene.add(wall);
@@ -1745,7 +1821,7 @@ function placeTeeDeco(){const L=c=>new THREE.MeshLambertMaterial({color:c});if(t
  {const x=t0[0]-px*7-t1.tx*3,y=t0[1]-py*7-t1.ty*3,z=H(x,y);const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,8),L(0x2d2d2d));post.position.copy(V(x,y,z+.5));G.add(post);const bw=new THREE.Mesh(new THREE.BoxGeometry(.22,.3,.14),L(0x1f5a3a));bw.position.copy(V(x,y,z+1.05));G.add(bw);
   const bx=x-t1.tx*2.5,by=y-t1.ty*2.5,bz=H(bx,by),bench=new THREE.Group(),wd=L(0x7a5534);const seat=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.4),wd);seat.position.y=.45;bench.add(seat);const back=new THREE.Mesh(new THREE.BoxGeometry(1.6,.35,.05),wd);back.position.set(0,.75,-.18);bench.add(back);for(const s of[-.7,.7]){const lg=new THREE.Mesh(new THREE.BoxGeometry(.06,.45,.4),L(0x2d2d2d));lg.position.set(s,.22,0);bench.add(lg);}bench.position.copy(V(bx,by,bz));bench.rotation.y=Math.atan2(t1.tx,t1.ty)+Math.PI;G.add(bench);}
   scene.add(G);linearize(G);}
-setHole(0);linearize(scene);camLook.copy(V(PIN.x,PIN.y,0));
+try{buildGulch();}catch(e){console.warn('gulch',e);}setHole(0);linearize(scene);camLook.copy(V(PIN.x,PIN.y,0));
 
 function applyTOD(){const g=TOD==='gold';WARM.value=g?1:0;sun.color.set(g?0xffb574:0xffeccf);sun.intensity=g?1.6:1.95;SUNOFF.set(g?-26:-15.4,g?10:23,g?18:11.5);HEMI.color.set(g?0xf0cfa8:0xd3dae2);HEMI.groundColor.set(g?0x5a5234:0x485a36);HEMI.intensity=g?.56:.62;
   scene.fog.color.set(g?0xd9b48e:SKY);renderer.toneMappingExposure=g?.9:.95;const tb=$('todBtn');if(tb)tb.textContent=g?'Tee time: Golden hour':'Tee time: Midday';}
