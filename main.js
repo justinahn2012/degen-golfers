@@ -192,9 +192,10 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
  const iq=new THREE.PlaneGeometry(1,1);iq.translate(0,.5,0);
  const impMat=(tex,frames,rows)=>{const m=new THREE.MeshBasicMaterial({map:tex,alphaTest:.42,side:THREE.DoubleSide,toneMapped:false});m.userData.lin=1;
    m.onBeforeCompile=sh=>{sh.uniforms.uF={value:frames};sh.uniforms.uR={value:rows};
-     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aVar;uniform float uF,uR;varying vec2 vA,vB;varying float vM,vY;').replace('#include <project_vertex>',
-       'vec3 ctr=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;float sx=length(instanceMatrix[0].xyz),sy=length(instanceMatrix[1].xyz);vec3 toC=cameraPosition-ctr;vec2 hz=normalize(toC.xz+vec2(1e-4,0.));vec3 rt=vec3(hz.y,0.,-hz.x);\n vec3 wp=ctr+rt*position.x*sx+vec3(0.,position.y*sy,0.);vec4 mvPosition=viewMatrix*vec4(wp,1.);gl_Position=projectionMatrix*mvPosition;\n float f=mod(atan(hz.y,hz.x)/6.2831853*uF+uF,uF),f0=floor(f),f1=mod(f0+1.,uF),row=uR-1.-aVar;vM=f-f0;vA=vec2((f0+uv.x)/uF,(row+uv.y)/uR);vB=vec2((f1+uv.x)/uF,(row+uv.y)/uR);vY=uv.y;');
-     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA,vB;varying float vM,vY;').replace('#include <map_fragment>','vec4 texelColor=mix(texture2D(map,vA),texture2D(map,vB),vM);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.8+.2*smoothstep(0.,.45,vY);');};
+     sh.uniforms.uCamP=OCC.uCamP;sh.uniforms.uTgt=OCC.uTgt;sh.uniforms.uOccOn=OCC.uOccOn;
+     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aVar;uniform float uF,uR;varying vec2 vA,vB;varying float vM,vY;\n'+OCC_VS).replace('#include <project_vertex>',
+       'vec3 ctr=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;float sx=length(instanceMatrix[0].xyz),sy=length(instanceMatrix[1].xyz);vec3 toC=cameraPosition-ctr;vec2 hz=normalize(toC.xz+vec2(1e-4,0.));vec3 rt=vec3(hz.y,0.,-hz.x);\n vec3 wp=ctr+rt*position.x*sx+vec3(0.,position.y*sy,0.);vec4 mvPosition=viewMatrix*vec4(wp,1.);gl_Position=projectionMatrix*mvPosition;\n float f=mod(atan(hz.y,hz.x)/6.2831853*uF+uF,uF),f0=floor(f),f1=mod(f0+1.,uF),row=uR-1.-aVar;vM=f-f0;vA=vec2((f0+uv.x)/uF,(row+uv.y)/uR);vB=vec2((f1+uv.x)/uF,(row+uv.y)/uR);vY=uv.y;vOcc=occAt(ctr,sx,sy);');
+     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA,vB;varying float vM,vY;\n'+OCC_FS).replace('#include <map_fragment>',OCC_DISCARD+'vec4 texelColor=mix(texture2D(map,vA),texture2D(map,vB),vM);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.8+.2*smoothstep(0.,.45,vY);');};
    m.customProgramCacheKey=()=>'imp'+frames+'x'+rows;return m;};
  const ldT=k=>{const t=TL0.load(ASSETS[k]);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
  const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length)),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
@@ -1160,14 +1161,24 @@ function updPuttGrid(dt){if(!PG)return;const on=!!(cur&&(state==='aim'||state===
     const v=V(s.x,s.y,H(s.x,s.y)+.02);a[i*3]=v.x;a[i*3+1]=v.y;a[i*3+2]=v.z;});PG.dots.geometry.attributes.position.needsUpdate=true;}
 
 /* crossed-plane trees: 4 planes (conifers) or 2 (broadleaf), each showing the atlas frame for its own facing */
+
+/* ---------- see-through trees: any tree between the camera and what it's looking at (your golfer, or the ball in flight) dissolves out of the way ---------- */
+const OCC={uCamP:{value:new THREE.Vector3()},uTgt:{value:new THREE.Vector3()},uOccOn:{value:0}};
+const OCC_VS='uniform vec3 uCamP,uTgt;uniform float uOccOn;varying float vOcc;\nfloat occAt(vec3 base,float sx,float sy){vec3 sg=uTgt-uCamP;float L2=max(dot(sg,sg),1e-3),o=0.;for(int k=0;k<3;k++){vec3 c=base+vec3(0.,sy*(.3+.3*float(k)),0.);float t=clamp(dot(c-uCamP,sg)/L2,0.,1.);float d=length(c-(uCamP+sg*t));float r=max(sx*.45,1.4)+.6;o=max(o,(1.-step(.965,t))*(1.-smoothstep(r*.75,r*1.3,d)));}return o*uOccOn;}\n';
+const OCC_FS='varying float vOcc;\n';
+const OCC_DISCARD='if(vOcc>.001){float ign=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));if(ign<vOcc*.9)discard;}';
+function updOcc(){let on=0;const p=cur;OCC.uCamP.value.copy(camera.position);
+  if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2')&&!(overhead&&state==='aim')){OCC.uTgt.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));on=1;}
+  else if(p&&p.ball&&(state==='flight'||state==='result'||state==='replay')){OCC.uTgt.value.copy(p.ball.b.position);on=1;}
+  OCC.uOccOn.value=on;}
 function crossTreeMesh(imp,cap){const P=imp.frames===8?4:2,pos=[],uv=[],fr=[],idx=[];for(let k=0;k<P;k++){const a=k/imp.frames*Math.PI*2,rx=Math.sin(a),rz=-Math.cos(a),b=k*4;
     pos.push(-.5*rx,0,-.5*rz,.5*rx,0,.5*rz,.5*rx,1,.5*rz,-.5*rx,1,-.5*rz);uv.push(0,0,1,0,1,1,0,1);fr.push(k,k,k,k);idx.push(b,b+1,b+2,b,b+2,b+3);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('aF',new THREE.Float32BufferAttribute(fr,1));g.setIndex(idx);
   g.setAttribute('aVar',new THREE.InstancedBufferAttribute(new Float32Array(cap),1));
   const m=new THREE.MeshBasicMaterial({map:imp.tex,alphaTest:.42,side:THREE.DoubleSide,toneMapped:false});m.userData.lin=1;
-  m.onBeforeCompile=sh=>{sh.uniforms.uF={value:imp.frames};sh.uniforms.uR={value:imp.rows};
-    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aVar;attribute float aF;uniform float uF,uR;varying vec2 vA2;varying float vY2;').replace('#include <uv_vertex>','#include <uv_vertex>\nvA2=vec2((aF+uv.x)/uF,(uR-1.-aVar+uv.y)/uR);vY2=uv.y;');
-    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA2;varying float vY2;').replace('#include <map_fragment>','vec4 texelColor=texture2D(map,vA2);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.78+.22*smoothstep(0.,.45,vY2);');};
+  m.onBeforeCompile=sh=>{sh.uniforms.uF={value:imp.frames};sh.uniforms.uR={value:imp.rows};sh.uniforms.uCamP=OCC.uCamP;sh.uniforms.uTgt=OCC.uTgt;sh.uniforms.uOccOn=OCC.uOccOn;
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aVar;attribute float aF;uniform float uF,uR;varying vec2 vA2;varying float vY2;\n'+OCC_VS).replace('#include <uv_vertex>','#include <uv_vertex>\nvA2=vec2((aF+uv.x)/uF,(uR-1.-aVar+uv.y)/uR);vY2=uv.y;{vec3 ctr=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;vOcc=occAt(ctr,length(instanceMatrix[0].xyz),length(instanceMatrix[1].xyz));}');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA2;varying float vY2;\n'+OCC_FS).replace('#include <map_fragment>',OCC_DISCARD+'vec4 texelColor=texture2D(map,vA2);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.78+.22*smoothstep(0.,.45,vY2);');};
   m.customProgramCacheKey=()=>'impx'+imp.frames+'x'+imp.rows;const M=new THREE.InstancedMesh(g,m,cap);M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(cap*3).fill(1),3);M.count=0;M.frustumCulled=false;M.userData.lin=1;scene.add(M);return M;}
 function updNearTrees(x,y){if(!IMPS.length)return;if(!NEAR)NEAR=IMPS.map(M=>({M,X:crossTreeMesh(M.userData.imp,260),hid:[]}));
   const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),R=58;
@@ -1553,7 +1564,7 @@ function frameInner(){overheadMode(!!(overhead&&state==='aim'));const now=perfor
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
   flagG.rotation.y=wind.a;try{animFlag(now);}catch(e){}
-  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
+  sky.position.copy(camera.position);skyMat.uniforms.t.value=now;WT.value=now;scaleBalls();updFly(dt,now);updFX(dt);updDizzy(now);updPuttGrid(dt);try{updBeer(now);}catch(e){console.warn('beer',e);BEERA=null;}try{updOcc();}catch(e){}if(COMP){GRADE.uniforms.uT.value=now%10;COMP.render();}else renderer.render(scene,camera);}
 {const L=c=>new THREE.MeshLambertMaterial({color:c});
  for(const c of CLUBH){const sh=new THREE.Shape(c.p.map(q=>new THREE.Vector2(q[0],q[1])));const base=Math.min(...c.p.map(q=>H(q[0],q[1])))-.5;
    const wall=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:5.5,bevelEnabled:false}),L(0xb9ad98));wall.geometry.rotateX(-Math.PI/2);wall.position.y=base;scene.add(wall);
