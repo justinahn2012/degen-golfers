@@ -87,6 +87,7 @@ computeHole(0);
 function nearGreenEdge(x,y){for(const g of GREENS){if(x<g.x0-2||x>g.x1+2||y<g.y0-2||y>g.y1+2)continue;const p=g.p;for(let i=1;i<p.length;i++)if(dSeg(x,y,p[i-1][0],p[i-1][1],p[i][0],p[i][1])<1.8)return true;}return false;}
 function lieAt(x,y){
   if(!inP(MAIN,x,y))return'oob';
+  if(inOBX(x,y))return'oob';
   for(const w of WATER)if(inP(w,x,y))return'water';
   for(const g of GREENS)if(inP(g,x,y))return'green';
   for(const b of BUNKERS)if(inP(b,x,y))return'bunker';
@@ -94,6 +95,27 @@ function lieAt(x,y){
   if(nearGreenEdge(x,y))return'fringe';
   for(const f of FAIRWAYS)if(inP(f,x,y))return'fairway';
   return'rough';}
+
+/* ---------- extra out-of-bounds lines (course-specific): Jefferson Park hole 2 - the tree line down the entire right side is OB ---------- */
+const OBX_DEF={jefferson:[{hole:'2',side:'right'}]};let OBX=null,OBX_BUILT=false;
+function buildOBX(){OBX_BUILT=true;OBX=[];const key=Object.keys(OBX_DEF).find(k=>new RegExp(k,'i').test(D.name||''));if(!key)return;
+  for(const d of OBX_DEF[key]){const h=HOLES.find(x=>x.ref===d.hole);if(!h)continue;const P=h.p,seg=[];let L=0;for(let i=1;i<P.length;i++){const l=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);seg.push({a:P[i-1],b:P[i],l0:L,l});L+=l;}
+    const at=s=>{let q=seg[seg.length-1];for(const sg of seg)if(s<=sg.l0+sg.l){q=sg;break;}const u=(s-q.l0)/q.l,tx=(q.b[0]-q.a[0])/q.l,ty=(q.b[1]-q.a[1])/q.l;return{x:q.a[0]+(q.b[0]-q.a[0])*u,y:q.a[1]+(q.b[1]-q.a[1])*u,tx,ty};};
+    const sd=d.side==='right'?1:-1,st=10,off=[];
+    for(let s=-10;s<=L+30;s+=st){const q=at(Math.max(0,Math.min(L,s))),rx=q.ty*sd,ry=-q.tx*sd;let best=1e9;
+      for(const t of TREES){const dx=t.x-q.x,dy=t.y-q.y,al=dx*q.tx+dy*q.ty,lat=dx*rx+dy*ry;if(Math.abs(al+(s-Math.max(0,Math.min(L,s))))<14&&lat>9&&lat<70)best=Math.min(best,lat);}off.push(best<1e8?best:null);}
+    /* fill gaps, then a gentle smooth so the line runs straight along the tree edge */
+    for(let i=0;i<off.length;i++)if(off[i]==null){let j=i;while(j<off.length&&off[j]==null)j++;const v=off[i-1]!=null?off[i-1]:(j<off.length?off[j]:30);off[i]=v;}
+    const sm=off.map((v,i)=>{const w=off.slice(Math.max(0,i-2),i+3).sort((a,b)=>a-b);return Math.max(10,w[Math.floor(w.length/2)]-1);});
+    OBX.push({hole:d.hole,sd,at,L,st,off:sm});}
+  /* white stakes along each line */
+  try{const pos=[];for(const o of OBX){for(let s=-10,i=0;s<=o.L+30;s+=o.st,i++){const q=o.at(Math.max(0,Math.min(o.L,s))),rx=q.ty*o.sd,ry=-q.tx*o.sd,x=q.x+q.tx*(s-Math.max(0,Math.min(o.L,s)))+rx*o.off[i],y=q.y+q.ty*(s-Math.max(0,Math.min(o.L,s)))+ry*o.off[i];pos.push([x,y]);}}
+    const g=new THREE.CylinderGeometry(.035,.035,.95,8);g.translate(0,.47,0);const M=new THREE.InstancedMesh(g,new THREE.MeshLambertMaterial({color:0xf2f2ee}),pos.length),m=new THREE.Matrix4();pos.forEach((q,i)=>{m.makeTranslation(...V(q[0],q[1],H(q[0],q[1])).toArray());M.setMatrixAt(i,m);});M.castShadow=true;scene.add(M);}catch(e){console.warn('ob stakes',e);}}
+function inOBX(x,y){if(!HOLE||typeof TREES==='undefined'||!TREES.length)return false;if(!OBX_BUILT){try{buildOBX();}catch(e){console.warn('obx',e);OBX=[];}}if(!OBX||!OBX.length)return false;
+  for(const o of OBX){if(HOLE.ref!==o.hole)continue;const P=HOLE.p;let best=null;let acc=0;for(let i=1;i<P.length;i++){const ax=P[i-1][0],ay=P[i-1][1],dx=P[i][0]-ax,dy=P[i][1]-ay,l=Math.hypot(dx,dy),u=((x-ax)*dx+(y-ay)*dy)/(l*l),uc=Math.max(0,Math.min(1,u)),px=ax+dx*uc,py=ay+dy*uc,d=Math.hypot(x-px,y-py);
+      if(!best||d<best.d){const tx=dx/l,ty=dy/l;best={d,s:acc+u*l,lat:((x-px)*ty-(y-py)*tx)*o.sd};}acc+=l;}
+    if(!best||best.s<-12||best.s>o.L+32)continue;const i=Math.max(0,Math.min(o.off.length-1,Math.round((best.s+10)/o.st)));if(best.lat>o.off[i]&&best.lat<o.off[i]+200)return true;}
+  return false;}
 const LIE_NAME={water:'Water',tee:'Tee box',fairway:'Fairway',rough:'Rough',bunker:'Bunker',fringe:'Fringe',green:'Green',oob:'Out of bounds'};
 
 /* ---------- three.js scene ---------- */
@@ -829,6 +851,9 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     const idx=geo.index.array,foot=v=>T.cls[v]===6&&T.pos[v*3+1]<T.J.shoeY+.03,ni=[];for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2];if(foot(a)&&foot(b)&&foot(c))continue;ni.push(a,b,c);}geo.setIndex(ni);}
   else if(!T.pro){try{SHL=dressBody(body,geo,mat,RG,T,T.J,lk);}catch(e){console.warn('garments',e);}}
   /* rig bookkeeping */
+  /* the pro model's arms are short for its height (shoulder-to-wrist 0.36 m on a 1.67 m body, a real one is ~0.52 m): lengthen the upper arm and forearm
+     so the hands reach the grip with the shoulders up and square, instead of the shoulders slumping to make up the distance */
+  if(T.pro){const bn={};body.skeleton.bones.forEach(b=>bn[b.name]=b);for(const s of['l','r']){for(const n of['lowerarm_'+s,'hand_'+s]){const b=bn[n];if(b)b.position.multiplyScalar(1.45);}}body.updateMatrixWorld(true);}
   const B={},all=[];body.skeleton.bones.forEach(b=>{B[b.name]=b;all.push(b);b.userData.q0=b.quaternion.clone();b.userData.p0=b.position.clone();b.userData.r0=b.getWorldQuaternion(new THREE.Quaternion());});
   const gpR=nm=>B[nm].getWorldPosition(new THREE.Vector3());
   const R={skel:true,tpl:T,footPitch:(()=>{const o={};for(const s of['l','r']){const f=B['foot_'+s],b=B['ball_'+s];if(!f||!b)continue;const a=f.getWorldPosition(new THREE.Vector3()),c=b.getWorldPosition(new THREE.Vector3()),v=c.sub(a);o[s]=Math.atan2(v.y,Math.hypot(v.x,v.z));}return o;})(),footRestY:B.foot_l?B.foot_l.getWorldPosition(new THREE.Vector3()).y:undefined,pro:!!T.pro,rb:!!T.rb,shl:!!(SHL&&SHL.pants)||!!T.rb,B,all,ballZ:SK.ballZ*(lk.tall||1),pelvisPos:gpR('pelvis'),J_ankY:T.J.ankY,arms:{},legs:{}};g.userData.rig=R;
@@ -993,8 +1018,10 @@ function gripFix(g,type){/* golf grip: in each hand the shaft runs from the "V" 
   const lineP=s=>{const hb=B['hand_'+s],t=B['thumb_01_'+s],ix=B['index_01_'+s],pk=B['pinky_01_'+s];if(!t||!ix)return gripPt(g,s);const w=gpG(g,hb),heel=pk?w.clone().lerp(gpG(g,pk),.22):w;return gpG(g,t).add(gpG(g,ix)).multiplyScalar(.5).add(heel).multiplyScalar(.5);};
   const place=(s,pt0,n,pole)=>{const hb=B['hand_'+s],cl=B['clavicle_'+s],pt=pt0.clone().addScaledVector(n,-.03);/* the grip sits in the palm, so the hand's bone line is half a hand behind the shaft */
     const reach=()=>{const S0=gpG(g,B['upperarm_'+s]),E0=gpG(g,B['lowerarm_'+s]),H0=gpG(g,hb);return{S0,short:S0.distanceTo(pt)-(S0.distanceTo(E0)+E0.distanceTo(H0)+lineP(s).distanceTo(H0)*.9)*.985};};
-    if(cl){for(let it=0;it<2;it++){const r=reach();if(r.short<=0)break;const C=gpG(g,cl),v1=r.S0.clone().sub(C),L=v1.length();v1.normalize();const v2=pt.clone().sub(C).normalize(),tot=v1.angleTo(v2);if(tot<1e-3)break;
-      const ang=Math.min(.55,tot,r.short/L*1.15);setRelG(g,cl,new THREE.Quaternion().slerp(new THREE.Quaternion().setFromUnitVectors(v1,v2),ang/tot).multiply(relQ(g,cl)));}}
+    if(cl){for(let it=0;it<2;it++){const r=reach();if(r.short<=0)break;const C=gpG(g,cl),v1=r.S0.clone().sub(C),L=v1.length();v1.normalize();const v2=pt.clone().sub(C).normalize();
+      /* reach by bringing the shoulder FORWARD toward the hands (protraction) and at most a touch down - never slumping it */
+      const h1=new THREE.Vector3(v1.x,0,v1.z),h2=new THREE.Vector3(v2.x,0,v2.z);if(h1.lengthSq()<1e-6||h2.lengthSq()<1e-6)break;h1.normalize();h2.normalize();const yaw=Math.atan2(h1.x*h2.z-h1.z*h2.x,h1.dot(h2)),need=r.short/L*1.2,ang=Math.sign(-yaw)*Math.min(.32,Math.abs(yaw),need);
+      setRelG(g,cl,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),ang).multiply(relQ(g,cl)));}}
     for(let it=0;it<3;it++){setRelG(g,hb,handQ(s,n));const wr=gpG(g,hb),off=lineP(s).sub(wr),W=pt.clone().sub(off),hd=gpG(g,B['middle_01_'+s]).sub(wr).normalize(),l2=gpG(g,B['lowerarm_'+s]).distanceTo(wr);
       const pl=W.clone().addScaledVector(hd,-l2).add(new THREE.Vector3(0,-.08,0)).lerp(pole,R._gp!==undefined?R._gp:.6);armTo(g,s,W,pl);}setRelG(g,hb,handQ(s,n));};
   const top=cg.position.clone(),low=top.clone().addScaledVector(ya,put?-.075:-.062);
@@ -1003,7 +1030,7 @@ function gripFix(g,type){/* golf grip: in each hand the shaft runs from the "V" 
     place('r',lw,xa.clone(),put?pp(-1):(B.thigh_r?gpG(g,B.thigh_r):gpG(g,B.pelvis)).add(new THREE.Vector3(-.05,-.15,.12)));};
   both(top,low);
   /* if the trail hand fell short of its spot (arms fully extended through the finish), slide the club toward it and set both hands again, so the order on the grip never flips */
-  {const pr=lineP('r').addScaledVector(xa,-.03),miss=pr.clone().sub(low);miss.addScaledVector(ya,0);if(miss.length()>.015){const mv=miss.clone();if(mv.length()>.16)mv.setLength(.16);cg.position.add(mv);top.add(mv);low.add(mv);both(top,low);}}
+  {const pr=lineP('r').addScaledVector(xa,.03),miss=pr.clone().sub(low);/* undo the in-the-palm offset before comparing (the old sign made the club slide every frame) */miss.addScaledVector(ya,0);R._slide=0;if(miss.length()>.015){const mv=miss.clone();if(mv.length()>.16)mv.setLength(.16);R._slide=mv.length();cg.position.add(mv);top.add(mv);low.add(mv);both(top,low);}}
   /* thumbs sit on the grip pointing down the shaft (lead thumb under the trail palm, trail thumb just left of centre), each joint curled onto the grip */
   for(const [s,n] of [['l',xa.clone().negate()],['r',xa.clone()]]){const t1=B['thumb_01_'+s],t2=B['thumb_02_'+s],t3=B['thumb_03_'+s];if(!t1||!t2||!t3||typeof aimBoneG!=='function')continue;
     const p1=gpG(g,t1),l1=p1.distanceTo(gpG(g,t2)),d1=ya.clone().multiplyScalar(-.95).addScaledVector(n,.16).normalize();aimBoneG(g,t1,t2,p1.clone().addScaledVector(d1,l1));
@@ -1035,7 +1062,11 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
     if(ph==='back')f=A0+(K.top-A0)*(type==='putter'?Math.pow(p,.85):p);
     else if(ph==='down'){const uu=Math.min(1,u);f=K.top+(K.imp-K.top)*uu;if(p<.98){f2=A0+(K.top-A0)*p;w=1-Math.min(1,uu/.5);w*=w;}}
     else if(ph==='thru'){const put=type==='putter',pc=Math.min(1,p),fs=put?.35+.65*pc:type==='wedge'?.4+.6*pc:.6+.4*pc,fin=put?K.imp+(Math.min(K.fin,K.imp+3.2)-K.imp)*fs:K.imp+(K.fin-K.imp)*fs;const e=u<=1?1-(1-u)*(1-u):1;f=u<=1?K.imp+(fin-K.imp)*(put?e:u):(!put&&fs>=.97)?Math.min(K.end,K.fin+(u-1)*(K.fin-K.imp)*.5):fin;}
-    g.userData.rig._gp=type==='putter'?.92:(ph==='addr'||ph==='back')?.6:ph==='down'?.6-.45*u:.15;animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,type==='putter'?1:ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}/* putting: feet stay flat for the whole stroke */}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
+    g.userData.rig._gp=type==='putter'?.92:(ph==='addr'||ph==='back')?.6:ph==='down'?.6-.45*u:.15;animApply(g,ck,f,f2,w,type);if(!g.userData.rig.calib){try{flatFeet(g,type==='putter'?1:ph==='addr'?1:ph==='back'?1:ph==='down'?Math.max(0,1-u*1.4):0);feetToGround(g);}catch(e){}/* putting: feet stay flat for the whole stroke */
+      /* a real address: the upper body tilts slightly away from the target (trail shoulder lower), which lets the trail hand reach the grip with the shoulders square and up */
+      if(g.userData.rig.pro){const B2=g.userData.rig.B,sp=B2.spine_02;if(sp&&B2.upperarm_l&&B2.upperarm_r&&B2.spine_03&&B2.spine_01){const want=type==='putter'?.03:.065;
+        for(let it=0;it<2;it++){const L1=gpG(g,B2.upperarm_l),R1=gpG(g,B2.upperarm_r),up=gpG(g,B2.spine_03).sub(gpG(g,B2.spine_01)).normalize(),ax=new THREE.Vector3().crossVectors(up,L1.clone().sub(R1)).normalize(),drop=L1.y-R1.y;if(drop>=want-.004)break;
+          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
