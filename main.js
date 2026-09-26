@@ -1329,7 +1329,8 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   if(mh==='top'){carry*=.16+Math.random()*.16;MHA=.06;MHT=.35;}                                   /* topped: a low skimmer that runs */
   else if(mh==='chunk'&&drv){carry=Math.min(carry,(88+Math.random()*22)/TOYD*YD/YD);MHA=2.6;MHT=1.35;} /* driver under it: sky ball, ~90-110 yds */
   else if(mh==='chunk'){carry*=.1+Math.random()*.16;MHA=.5;MHT=.6;}                              /* fat: turf first, dribbles forward */
-  const T=c.T*(.5+.5*Math.min(power,1.05))*(shp==='Punch'?.8:1)*MHT,apex=c.apex*(.3+.7*Math.min(power,1.05))*(p.lie==='rough'?.85:1)*(shp==='Punch'?.5:1)*MHA,wk=shp==='Punch'?.45:1;
+  const wf=c.wedge?Math.max(.024,Math.pow(Math.min(power,1.05),1.6)):0;/* wedges: height grows with power - a tiny chip just hops ~2 ft, a full swing flies full height; flight time follows the height */
+  const T=(c.wedge?c.T*Math.max(.18,Math.sqrt(wf)):c.T*(.5+.5*Math.min(power,1.05)))*(shp==='Punch'?.8:1)*MHT,apex=(c.wedge?c.apex*wf:c.apex*(.3+.7*Math.min(power,1.05)))*(p.lie==='rough'?.85:1)*(shp==='Punch'?.5:1)*MHA,wk=shp==='Punch'?.45:1;
   if(p.lie==='rough'&&!c.putt){const q=Math.min(1,Math.abs(err)/1.2);carry*=1-.1*q;err*=1+.1*q;}
   const hs=p.look&&p.look.lefty?-1:1,a0=p.aim+hs*(err*.01-(shp==='Draw'?.035:shp==='Fade'?-.035:0)),dx=Math.cos(a0),dy=Math.sin(a0),lx=-dy,ly=dx,curve=hs*(err*carry*.085+(shp==='Draw'?carry*.06:shp==='Fade'?-carry*.06:0)),wx=wind.x*T*.3*wk,wy=wind.y*T*.3*wk;
   const x0=p.x,y0=p.y,h0=H(x0,y0)+.021;let ex=x0+dx*carry+lx*curve+wx,ey=y0+dy*carry+ly*curve+wy,h1=H(ex,ey);
