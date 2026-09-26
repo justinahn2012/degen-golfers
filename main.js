@@ -869,11 +869,18 @@ function makeBag(p){const acc=new THREE.Color(p.color||'#e0a030'),main=new THREE
   const covers=[{m:new THREE.MeshStandardMaterial({map:leather('#121316','#d23a2a',null),roughness:.42,metalness:.05}),k:knit('#15161a'),x:-.06,y:1.13,z:-.03,s:1},     /* driver: black leather, red piping */
     {m:new THREE.MeshStandardMaterial({map:leather('#1f4d34','#f2c230','#f2c230'),roughness:.45}),k:knit('#1b4430'),x:.045,y:1.1,z:-.06,s:.88},                           /* fairway: green with gold stripes */
     {m:new THREE.MeshStandardMaterial({map:hcCv((x,W,H)=>{x.fillStyle='#17181b';x.fillRect(0,0,W,H);for(let i=0;i<W;i+=6)for(let j=0;j<H;j+=6){x.fillStyle='#26282c';x.fillRect(i+1,j+1,3,3);}x.fillStyle='#c8202c';x.fillRect(W*.2,H*.62,W*.12,H*.1);}),roughness:.7}),k:knit('#141518'),x:.08,y:1.06,z:.02,s:.76}];  /* hybrid: black mesh */
-  const headGeo=(()=>{const g=new THREE.SphereGeometry(.075,32,20),P=g.attributes.position,v=new THREE.Vector3();for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i);const t=(v.y+.075)/.15;v.z*=1.28;v.x*=.9;v.y*=.8;if(v.y<0){const pinch=1-.5*Math.pow(1-t,1.6);v.x*=pinch;v.z*=pinch;}v.z+=.03*t*t;P.setXYZ(i,v.x,v.y,v.z);}g.computeVertexNormals();return g;})();
-  for(const cv of covers){const sock=new THREE.Mesh(new THREE.CylinderGeometry(.03,.026,.3,20,1,true),new THREE.MeshStandardMaterial({map:cv.k,roughness:.95}));sock.position.set(cv.x,cv.y-.2,cv.z);body.add(sock);
-    const cuff=new THREE.Mesh(new THREE.TorusGeometry(.029,.006,8,20),new THREE.MeshStandardMaterial({color:0x2a2b30,roughness:.9}));cuff.rotation.x=Math.PI/2;cuff.position.set(cv.x,cv.y-.06,cv.z);body.add(cuff);
-    const hd=new THREE.Mesh(headGeo,cv.m);hd.scale.setScalar(cv.s);hd.position.set(cv.x,cv.y+.02,cv.z+.02);hd.rotation.x=.55;body.add(hd);
-    const seam=new THREE.Mesh(new THREE.TorusGeometry(.074*cv.s,.0025,6,48,Math.PI),new THREE.MeshStandardMaterial({color:cv===covers[1]?0xf2c230:cv===covers[0]?0xd23a2a:0x2a2b30,roughness:.5}));seam.position.copy(hd.position);seam.rotation.set(.55,Math.PI/2,0);seam.scale.set(1.25,.8,1);body.add(seam);}
+  /* one continuous cover: the knit sock rises out of the bag, bends forward and swells into the head, closing in a rounded end - no gaps */
+  const sweep=(path,t0,t1,seg,rad,rFn)=>{const P=[],N=[],U=[],I=[],fr=path.computeFrenetFrames(400,false);
+    for(let i=0;i<=seg;i++){const t=t0+(t1-t0)*i/seg,c=path.getPointAt(t),k=Math.min(400,Math.round(t*400)),nn=fr.normals[k],bb=fr.binormals[k],r=rFn(t);
+      for(let j=0;j<=rad;j++){const a=j/rad*Math.PI*2,cs=Math.cos(a),sn=Math.sin(a),d=new THREE.Vector3().addScaledVector(nn,cs).addScaledVector(bb,sn*1.12);P.push(c.x+d.x*r,c.y+d.y*r,c.z+d.z*r);N.push(d.x,d.y,d.z);U.push(j/rad,(t-t0)/(t1-t0));}}
+    for(let i=0;i<seg;i++)for(let j=0;j<rad;j++){const a=i*(rad+1)+j,b=a+rad+1;I.push(a,b,a+1,b,b+1,a+1);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();return g;};
+  for(const cv of covers){const s=cv.s,x=cv.x,y=cv.y,z=cv.z;
+    const path=new THREE.CatmullRomCurve3([new THREE.Vector3(x,y-.34,z),new THREE.Vector3(x,y-.16,z),new THREE.Vector3(x,y-.02,z+.005),new THREE.Vector3(x,y+.05*s,z+.035*s),new THREE.Vector3(x,y+.075*s,z+.1*s),new THREE.Vector3(x,y+.07*s,z+.17*s)]);
+    const R=t=>{const sock=.028*(1+.06*Math.sin(t*120)*(t<.5?1:0));if(t<.52)return sock;if(t<.72){const k=(t-.52)/.2,e=k*k*(3-2*k);return sock+(.07*s-sock)*e;}const k=(t-.72)/.28;return .07*s*Math.sqrt(Math.max(0,1-Math.pow(k,2.2)));};
+    const sock=new THREE.Mesh(sweep(path,0,.56,40,20,R),new THREE.MeshStandardMaterial({map:cv.k,roughness:.95}));body.add(sock);
+    const head=new THREE.Mesh(sweep(path,.52,1,44,28,R),cv.m);body.add(head);
+    const cuffP=path.getPointAt(.5),cuff=new THREE.Mesh(new THREE.TorusGeometry(.03,.005,8,24),new THREE.MeshStandardMaterial({color:0x2a2b30,roughness:.9}));cuff.position.copy(cuffP);cuff.lookAt(path.getPointAt(.53));body.add(cuff);}
   const pc=new THREE.Mesh(new THREE.BoxGeometry(.11,.05,.06),new THREE.MeshStandardMaterial({color:0x1a1b1f,roughness:.4}));pc.position.set(-.05,.95,.03);pc.rotation.set(.3,.2,0);body.add(pc);
   const pcb=new THREE.Mesh(new THREE.BoxGeometry(.112,.012,.062),pan);pcb.position.copy(pc.position).add(v3(0,-.02,0));pcb.rotation.copy(pc.rotation);body.add(pcb);
   const bs=new THREE.Shape();bs.moveTo(0,0);bs.lineTo(.066,.002);bs.quadraticCurveTo(.078,.012,.074,.03);bs.lineTo(.064,.04);bs.lineTo(.012,.03);bs.lineTo(0,.02);const bgeo=new THREE.ExtrudeGeometry(bs,{depth:.016,bevelEnabled:true,bevelThickness:.002,bevelSize:.002,bevelSegments:1});
