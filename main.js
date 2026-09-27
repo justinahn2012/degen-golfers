@@ -1493,7 +1493,9 @@ function gripFix(g,type){/* golf grip: in each hand the shaft runs from the "V" 
   for(const [s,n] of [['l',xa.clone().negate()],['r',xa.clone()]]){const t1=B['thumb_01_'+s],t2=B['thumb_02_'+s],t3=B['thumb_03_'+s];if(!t1||!t2||!t3||typeof aimBoneG!=='function')continue;
     const p1=gpG(g,t1),l1=p1.distanceTo(gpG(g,t2)),d1=ya.clone().multiplyScalar(-.95).addScaledVector(n,.16).normalize();aimBoneG(g,t1,t2,p1.clone().addScaledVector(d1,l1));
     const p2=gpG(g,t2),l2=p2.distanceTo(gpG(g,t3)),d2=ya.clone().multiplyScalar(-.8).addScaledVector(n,.42).normalize();aimBoneG(g,t2,t3,p2.clone().addScaledVector(d2,l2));}}
-function animAddr(g,ck,type){const An=animSetup(g),key='A:'+ck+':'+type;if(An.cal[key]!==undefined)return An.cal[key];const C=ANIM.clips[ck],K=C.keys,cal=animCal(g,ck,type),R=g.userData.rig,cg=R.clubs[type];
+function animAddr(g,ck,type){const An=animSetup(g),key='A:'+ck+':'+type;if(An.cal[key]!==undefined)return An.cal[key];const C=ANIM.clips[ck],K=C.keys;
+  if(ck==='putt'){An.cal[key]=K.imp;return K.imp;}   /* putting: set up exactly where you strike it - the address is the impact position */
+  const cal=animCal(g,ck,type),R=g.userData.rig,cg=R.clubs[type];
   if(!cg){An.cal[key]=ck==='putt'?K.imp:K.addr;return An.cal[key];}const tgt=new THREE.Vector3(cal.bx,type==='driver'?.034:.012,cal.bz),end=ck==='putt'?K.imp:K.addr+(K.top-K.addr)*.35;let best=K.addr,bd=1e9;R.calib=1;
   for(let f=Math.max(0,K.addr-2);f<=end;f+=1){animApply(g,ck,f,undefined,0,type);animClub(g,ck,type);cg.updateMatrixWorld(true);const hd=g.worldToLocal(cg.localToWorld(new THREE.Vector3(0,-(cg.userData.L||1),0)));
     const face=new THREE.Vector3(1,0,0),d=Math.hypot(hd.x+.03-tgt.x,hd.z+.045-tgt.z)+Math.abs(hd.y-tgt.y)*.5;if(d<bd){bd=d;best=f;}}
@@ -1527,7 +1529,7 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
       if(g.userData.rig.pro&&type==='putter'){const s1=g.userData.rig.B.spine_01;if(s1)setRelG(g,s1,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.26).multiply(relQ(g,s1)));}/* putting: bend a little more from the hips (eyes over the ball) so the hands reach the shorter putter with the shoulders square */
       if(g.userData.rig.pro){const B2=g.userData.rig.B,sp=B2.spine_02;if(sp&&B2.upperarm_l&&B2.upperarm_r&&B2.spine_03&&B2.spine_01){const want=type==='putter'?-1:.065;
         for(let it=0;it<2;it++){const L1=gpG(g,B2.upperarm_l),R1=gpG(g,B2.upperarm_r),up=gpG(g,B2.spine_03).sub(gpG(g,B2.spine_01)).normalize(),ax=new THREE.Vector3().crossVectors(up,L1.clone().sub(R1)).normalize(),drop=L1.y-R1.y;if(drop>=want-.004)break;
-          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}animClub(g,ck,type,ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
+          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}animClub(g,ck,type,type==='putter'?0:(ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0));try{gripFix(g,type);}catch(e){}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
@@ -1921,7 +1923,13 @@ function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const
   for(const tag of['fir','dec']){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
 let INTRO_D=0;
 function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.aim);}catch(e){console.warn('hero',e);}const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
-  {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
+  {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;
+  /* putting: pose the stroke at impact, measure exactly where the putter face is, and set the golfer so the face meets the ball -
+     exact for every body and stance (the women's taller address lengthens the putter to reach the turf) */
+  if(pt){try{const g=p.av;g.updateMatrixWorld(true);applyPose(g,swingPose('down',1,.5,true),'putter');g.updateMatrixWorld(true);const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;
+    if(pc&&pc.userData.hb){pc.updateMatrixWorld(true);const f=pc.userData.hb.localToWorld(new THREE.Vector3(.0175+.0214,.013,.049)),b=V(p.x,p.y,0),dx=b.x-f.x,dz=b.z-f.z;
+      if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(H(gx2+sx,gy2+sy)+H(gx2-sx,gy2-sy)+H(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
+  applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
 
