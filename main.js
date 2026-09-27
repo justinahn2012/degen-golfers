@@ -1904,7 +1904,7 @@ function heroInit(){if(HERO.loading)return;HERO.loading=true;const TL=new THREE.
     const lm=new THREE.MeshStandardMaterial({map:tx('hero_'+tag+'_leaf.webp',1),alphaTest:.5,side:THREE.DoubleSide,roughness:.82,metalness:0});
     let h=1;for(const g of Object.values(parts)){g.computeBoundingBox();h=Math.max(h,g.boundingBox.max.y);}
     const N=tag==='fir'?12:10,B=IMC(new THREE.InstancedMesh(parts.branches,bm,N)),L=IMC(new THREE.InstancedMesh(parts.leaves,lm,N));
-    for(const M of[B,L]){M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;scene.add(M);}
+    for(const M of[B,L]){M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;scene.add(M);}
     HERO[tag]={B,L,h,N};HERO.key='';if(HERO.fir&&HERO.dec&&cur)heroUpdate(cur.x,cur.y);}catch(e){console.warn('hero trees',e);}},undefined,e=>console.warn('hero '+tag,e));
   mk('fir');mk('dec');}
 function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const ca=aim===undefined?(cur?cur.aim:0):aim,cx=x-Math.cos(ca)*5.5,cy=y-Math.sin(ca)*5.5;const key=Math.round(x/4)+','+Math.round(y/4);if(key===HERO.key)return;HERO.key=key;
@@ -1925,9 +1925,9 @@ function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.a
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
 
-function press(){if(CURT)return;if(performance.now()/1000<flyUntil){flyUntil=0;if(cur)cur.intro=performance.now()/1000+1.8;return;}if(state==='aim'){if(cur)cur.intro=0;state='s1';swingU=0;overhead=false;$('viewBtn').setAttribute('aria-pressed','false');}
-  else if(state==='s1'){swingPow=Math.max(.04,swingU);state='s2';}
-  else if(state==='s2')fire(swingU);}
+function press(){if(CURT)return;if(performance.now()/1000<flyUntil){flyUntil=0;if(cur)cur.intro=performance.now()/1000+1.8;return;}if(state==='aim'){if(cur)cur.intro=0;state='s1';swingU=0;overhead=false;if(cur)meterS1(cur);$('viewBtn').setAttribute('aria-pressed','false');}
+  else if(state==='s1'){if(S1&&cur&&!cur.over)swingU=Math.min(1.1,(performance.now()/1000-S1.t0)*S1.rate);swingPow=Math.max(.04,swingU);state='s2';if(cur)meterS2(cur);}
+  else if(state==='s2'){if(S2&&cur&&!cur.over)swingU=S2.u0-(performance.now()/1000-S2.t0)*S2.rate;mStop();$('mCur').style.transform='translateX('+pct(swingU)+'%)';fire(swingU);}}
 function fire(u){const p=cur,c=CLUBS[p.club],tol=tolFor(p,c);fireErr(u/tol);}
 function fireErr(err){const p=cur,c=CLUBS[p.club];
   p.mishit=null;/* tops and chunks only when the bar runs all the way through the red zone (110%); inside the red zone it's just a wild one */if(swingPow>=1.099&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
@@ -2146,9 +2146,20 @@ function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p
   else{L='Lie: <b>'+LIE_NAME[p.lie]+'</b>'+(MODE==='swipe'&&state==='aim'?'  Swipe down on the course, then up':'');R=p.boost?'<b>'+p.abName+'</b> ready':(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2?'<b>Consistency King</b> active':'');}
   $('iL').innerHTML=L;$('iR').innerHTML=R;updAim();}
 function pct(u){return(u+.15)/1.25*100;}
+/* ---- silky swing bar: while the bar sweeps, the phone's compositor animates it (Web Animations on transform), so it stays perfectly
+   smooth even if a 3D frame is slow; the game logic reads the same clock ---- */
+const MA={cur:null,fill:null};let S1=null,S2=null;
+const fillK=u=>Math.max(0,(pct(u)-12)/88);
+function mStop(){for(const k of['cur','fill'])if(MA[k]){try{MA[k].cancel();}catch(e){}MA[k]=null;}}
+function mAnim(el,from,to,ms){try{return el.animate([{transform:from},{transform:to}],{duration:Math.max(16,ms),easing:'linear',fill:'forwards'});}catch(e){return null;}}
+function meterS1(p){mStop();const rate=(CLUBS[p.club].putt?.75:1)*meterSpd(p);S1={t0:performance.now()/1000,rate};S2=null;
+  if(!p.over){MA.cur=mAnim($('mCur'),'translateX('+pct(0)+'%)','translateX('+pct(1.1)+'%)',1.1/rate*1000);MA.fill=mAnim($('mFill'),'scaleX('+fillK(0)+')','scaleX('+fillK(1.1)+')',1.1/rate*1000);}}
+function meterS2(p){mStop();const rate=1.45*meterSpd(p),u0=swingU;S2={t0:performance.now()/1000,rate,u0};S1=null;$('mFill').style.transform='scaleX('+fillK(swingPow)+')';
+  if(!p.over)MA.cur=mAnim($('mCur'),'translateX('+pct(u0)+'%)','translateX('+pct(-.15)+'%)',(u0+.15)/rate*1000);}
 function updMeter(){const p=cur;if(!p)return;const c=CLUBS[p.club],tol=tolFor(p,c);
   const sw=$('mSweet');sw.style.left=pct(-tol)+'%';sw.style.width=(pct(tol)-pct(-tol))+'%';
-  $('mCur').style.left=pct(swingU)+'%';const pw=(state==='s1'||state==='sw')?swingU:(state==='s2'||state==='flight'?swingPow:0);$('mFill').style.width=Math.max(0,pct(pw)-12)+'%';
+  const pw=(state==='s1'||state==='sw')?swingU:(state==='s2'||state==='flight'?swingPow:0);if(!MA.cur)$('mCur').style.transform='translateX('+pct(swingU)+'%)';if(!MA.fill)$('mFill').style.transform='scaleX('+fillK(pw)+')';
+  if(state!=='s1'&&state!=='s2'&&(MA.cur||MA.fill)){mStop();$('mCur').style.transform='translateX('+pct(swingU)+'%)';$('mFill').style.transform='scaleX('+fillK(pw)+')';}
   const mk=$('mMark');if(c.putt&&(state==='aim'||state==='s1'||state==='s2')){mk.style.display='block';mk.style.left=pct(Math.min(1.1,dist(p)/p.pmax))+'%';}else mk.style.display='none';
   $('mLbl').textContent=pw>0?Math.round(pw*100)+'%':(c.putt?'Line marks the hole':'');}
 function updAim(){const p=cur;if(!p||state!=='aim'){ring.visible=aimLine.visible=readLine.visible=false;return;}const c=CLUBS[p.club],dx=Math.cos(p.aim),dy=Math.sin(p.aim);
@@ -2382,7 +2393,7 @@ function applyPR(){const pr=BOOST?Math.max(normPR(),stillPR()):normPR();if(Math.
 function stillCheck(){const t=performance.now()/1000,dt=Math.min(.1,Math.max(.001,t-(_stT||t)));_stT=t;
   if(!_camP){_camP=camera.position.clone();_camQ=camera.quaternion.clone();return;}
   const dp=camera.position.distanceTo(_camP),dq=2*Math.acos(Math.min(1,Math.abs(camera.quaternion.dot(_camQ))));_camP.copy(camera.position);_camQ.copy(camera.quaternion);
-  const moving=dp>Math.max(.004,.06*dt)||dq>Math.max(.002,.03*dt)||document.visibilityState==='hidden';
+  const moving=dp>Math.max(.004,.06*dt)||dq>Math.max(.002,.03*dt)||document.visibilityState==='hidden'||state==='s1'||state==='s2'||state==='flight';
   if(moving){STILL=0;MOVEF++;if(BOOST&&(MOVEF>=2||dp>.05||dq>.02)){BOOST=false;PR_DIRTY=true;UNB_T=t;FT=16;DRSnext=Math.max(DRSnext,t+2);}}
   else{MOVEF=0;STILL+=dt;if(!BOOST&&STILL>.6&&t-UNB_T>1.2&&stillPR()>normPR()+.05){BOOST=true;PR_DIRTY=true;}}}
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
@@ -2421,8 +2432,8 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(swingAnim&&(swingAnim.p||p)){const A=swingAnim,t=now-A.t0,ft=A.ft||(A.putt?.7:.8),p=A.p||cur;if(!A.hit&&t>=A.ds){A.hit=1;try{strikeFX();SND.strike(A.type,A.pw,plan&&plan.lie);}catch(e){console.warn(e);}}const S=t<A.ds?swingPose('down',t/A.ds,A.pw,A.putt):swingPose('thru',(t-A.ds)/ft,A.pw,A.putt);if(p&&p.av)applyPose(p.av,S,A.type);if(t>A.ds+ft+2.5){swingAnim=null;if(cur&&cur.av&&state==='aim')posGolfer(cur,0);}}
   try{updCeleb(now);}catch(e){console.warn('celeb',e);CELEB=null;}
   const wob=p&&p.over?1+Math.min(.9,p.over*.35)*Math.sin(now*9.3)*Math.sin(now*3.1+1):1;
-  if(state==='s1'){swingU+=dt*(p&&CLUBS[p.club].putt?.75:1.0)*wob*meterSpd(p);if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';}updMeter();}
-  else if(state==='s2'){swingU-=dt*1.45*wob*meterSpd(p);if(swingU<-.15){swingU=-.15;fire(-.15);}updMeter();}
+  if(state==='s1'){if(S1&&!(p&&p.over))swingU=Math.min(1.1,(now-S1.t0)*S1.rate);else swingU+=dt*(p&&CLUBS[p.club].putt?.75:1.0)*wob*meterSpd(p);if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';meterS2(p);}updMeter();}
+  else if(state==='s2'){if(S2&&!(p&&p.over))swingU=S2.u0-(now-S2.t0)*S2.rate;else swingU-=dt*1.45*wob*meterSpd(p);if(swingU<-.15){swingU=-.15;mStop();fire(-.15);}updMeter();}
   else if(state==='flight')updMeter();
   if(fly){const tt=now-flyStart,L=HOLE_LEN;
     if(tt<FLY_OUT){const u=Math.min(1,tt/FLY_OUT),e=u*u*(3-2*u),a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
