@@ -1919,6 +1919,7 @@ function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const
     const k=t.h/H.h*(t.fir?1.02:1.08),yaw=((t.x*12.9898+t.y*78.233)%6.283);q.setFromAxisAngle(new THREE.Vector3(0,1,0),yaw);m.compose(V(t.x,t.y,t.gz-.15),q,s.set(k,k,k));
     const i=put[tag]++;H.B.setMatrixAt(i,m);H.L.setMatrixAt(i,m);const g=.86+((t.x*7.1+t.y*3.3)%1+1)%1*.18;c.setRGB(g*.97,g,g*.95);H.L.setColorAt(i,c);H.B.setColorAt(i,c.setRGB(1,1,1));}
   for(const tag of['fir','dec']){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
+let INTRO_D=0;
 function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.aim);}catch(e){console.warn('hero',e);}const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
   {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
@@ -2392,8 +2393,11 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
   else if(p&&(state==='aim'||state==='s1'||state==='s2'||state==='sw'||state==='done')){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),pt=CLUBS[p.club].putt;
     if(state==='s1'||state==='sw')applyPose(p.av,swingPose('back',1,swingU,!!pt),clubType(p.club));else if(state==='s2')applyPose(p.av,swingPose('back',1,swingPow,!!pt),clubType(p.club));
+    if(!(state==='aim'&&p.intro&&now<p.intro)){p._held=false;p._it0=null;INTRO_D=0;}
     if(state==='aim'&&p.intro&&now<p.intro){const P=p.av.position,k=p.look.tall||1,hm=p.look.lefty?-1:1,fx=Math.sin(p.aim)*hm,fz=Math.cos(p.aim)*hm,tx=Math.cos(p.aim),tz=-Math.sin(p.aim),Rg=p.av.userData.rig,hp=Rg&&Rg.B&&Rg.B.Head?Rg.B.Head.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(fx*.06,.06,fz*.06)):new THREE.Vector3(P.x+fx*.28,P.y+1.5*k,P.z+fz*.28);
-      const dx=fx*.86+tx*.5,dz=fz*.86+tz*.5,dl=Math.hypot(dx,dz)||1;want=new THREE.Vector3(hp.x+dx/dl*1.35,hp.y+.06,hp.z+dz/dl*1.35);look=hp.clone();}
+      const dx=fx*.86+tx*.5,dz=fz*.86+tz*.5,dl=Math.hypot(dx,dz)||1;want=new THREE.Vector3(hp.x+dx/dl*1.35,hp.y+.06,hp.z+dz/dl*1.35);look=hp.clone();
+      INTRO_D=camPos.distanceTo(want);if(p._it0==null)p._it0=now;
+      if(!p._held){if(INTRO_D<.4){p._held=true;p.intro=Math.max(p.intro,now+2.2);}else if(now<p._it0+6)p.intro=Math.max(p.intro,now+.3);}}   /* never cut away mid-trip; then a full beat on the face */
     else if(overhead&&state==='aim'){const d=dist(p),mx=(p.x+PIN.x)/2,my=(p.y+PIN.y)/2;want=V(mx-dx*d*.25,my-dy*d*.25,z+Math.max(25,d*.85));look=V(mx,my,z);}
     else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75);look=V(p.x+dx*4,p.y+dy*4,z);}
     else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);}}
@@ -2429,7 +2433,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(CELEB&&state==='result'&&now>=CELEB.t0-.2&&CELEB.p.av){const g=CELEB.p.av,c=g.userData.rig.B.spine_03.getWorldPosition(new THREE.Vector3()),f=g.localToWorld(new THREE.Vector3(0,0,1)).sub(g.position).setY(0).normalize(),sd=new THREE.Vector3(-f.z,0,f.x);
     want=c.clone().addScaledVector(f,3.1).addScaledVector(sd,CELEB.kind==='pump'?-1.6:.9).add(new THREE.Vector3(0,CELEB.kind==='pump'?.05:.15,0));look=c.clone().add(new THREE.Vector3(0,CELEB.kind==='pump'?.15:.05,0));}
   if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
-  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:3));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
+  if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:(INTRO_D>3?3+Math.min(4,INTRO_D/12):3)));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
