@@ -756,7 +756,8 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
         for(let y=0;y<H;y+=3){x.fillStyle='rgba(255,255,255,'+(Math.random()*.03)+')';x.fillRect(0,y,W,1);}});window._shaftTex.encoding=THREE.sRGBEncoding;}
       const gph=S({map:window._shaftTex,color:0xffffff,metalness:.35,roughness:.22});const sh=new THREE.Mesh(new THREE.CylinderGeometry(.0068,.0043,top-bot,20,1,true),gph);sh.position.y=(top+bot)/2;cg.add(sh);}
     else if(type==='putter'){/* slim chrome putter shaft with three step-downs near the grip */
-      seg(top,bot,.0056,.0042,mirror,cg,18);for(let k=0;k<3;k++){const y=top-.09-k*.05,rr=.0056-(.0014)*((top-y)/(top-bot));const r=new THREE.Mesh(new THREE.CylinderGeometry(rr+.00045,rr,.004,20),mirror);r.position.y=y;cg.add(r);}}
+      const pm=PSTYLE==='blackout'?S({color:0x070708,metalness:.55,roughness:.07,envMapIntensity:1.6}):mirror;   /* glossy black shaft on the blacked-out blade */
+      seg(top,bot,.0056,.0042,pm,cg,18);for(let k=0;k<3;k++){const y=top-.09-k*.05,rr=.0056-(.0014)*((top-y)/(top-bot));const r=new THREE.Mesh(new THREE.CylinderGeometry(rr+.00045,rr,.004,20),pm);r.position.y=y;cg.add(r);}}
     else{/* stepped steel: seven step-downs, each a small shoulder */
       seg(top,bot,.0064,.0045,steel,cg,18);for(let k=0;k<7;k++){const y=bot+.1+k*.05;const rr=.0045+(.0064-.0045)*((y-bot)/(top-bot));const r=new THREE.Mesh(new THREE.CylinderGeometry(rr+.00055,rr,.0035,20),steel);r.position.y=y;cg.add(r);}}
     const hg=new THREE.Group(),hb=new THREE.Group();hg.position.y=-L;hb.rotation.x=type==='putter'?.3:.44;hg.add(hb);build(hg,hb);cg.add(hg);cg.userData.hb=hb;cg.userData.hg=hg;cg.visible=false;cg.userData.L=L;out[type]=cg;};
@@ -781,7 +782,7 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
       bl.rotation.y=-Math.PI/2;const lg=new THREE.Group();lg.add(bl);lg.rotation.z=loft;lg.scale.setScalar(sc);hb.add(lg);
       const hs=new THREE.Mesh(new THREE.CylinderGeometry(.0062,.0078,.068,18),satin);hs.position.set(0,.036,.002);hg.add(hs);const fe=new THREE.Mesh(new THREE.CylinderGeometry(.0058,.0062,.012,18),ferr);fe.position.set(0,.075,.002);hg.add(fe);};
   mk('driver',wood(1));mk('wood',wood(.8));mk('iron',blade(.5,1));mk('wedge',blade(.92,1.05));
-  mk('putter',(hg,hb)=>{const sat=S({color:0xd6dadf,metalness:.92,roughness:.3}),dk=S({color:0x1a1b1e,metalness:.5,roughness:.35}),red=S({color:0xc8202c,metalness:.2,roughness:.35});
+  mk('putter',(hg,hb)=>{const sat=PSTYLE==='blackout'?S({color:0x151618,metalness:.3,roughness:.72,envMapIntensity:.5}):S({color:0xd6dadf,metalness:.92,roughness:.3}),dk=S({color:0x1a1b1e,metalness:.5,roughness:.35}),red=S({color:0xc8202c,metalness:.2,roughness:.35});
     /* top-view outline extruded upward: shape x = forward (face at +x), shape y = -z (heel at z=0, toe at z~.1) */
     const topShape=(pts,r0)=>{const s=new THREE.Shape();pts.forEach((q,i)=>i?s.lineTo(q[0],-q[1]):s.moveTo(q[0],-q[1]));s.closePath();return s;};
     const ext=(shape,y0,h,mat,bev)=>{const g=new THREE.ExtrudeGeometry(shape,{depth:h,bevelEnabled:!!bev,bevelThickness:bev||0,bevelSize:bev||0,bevelSegments:3,curveSegments:14});g.rotateX(-Math.PI/2);g.translate(0,y0,0);const m=new THREE.Mesh(g,mat);return m;};
@@ -793,9 +794,11 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
       const blk=S({color:0x131417,metalness:.55,roughness:.34}),wht=S({color:0xf3f3f0,roughness:.45});
       const rr3=(x0,x1,z0,z1,r)=>{const P=[];const c=[[x0-r,z1-r,0],[x1+r,z1-r,Math.PI/2],[x1+r,z0+r,Math.PI],[x0-r,z0+r,1.5*Math.PI]];for(const[cx,cz,a0]of c)for(let k=0;k<=5;k++){const a=a0+k/5*Math.PI/2;P.push([cx+Math.cos(a)*r,cz+Math.sin(a)*r]);}return P;};
       hb.add(ext(topShape(rr3(.0168,-.004,-.004,.104,.004)),.002,.0185,blk,.0016));                              /* the blade */
-      const disc=[];for(let k=0;k<48;k++){const a=k/48*Math.PI*2;disc.push([-.036+Math.cos(a)*.036,.05+Math.sin(a)*.036]);}
-      hb.add(ext(topShape(disc),.002,.0165,blk,.0016));                                                             /* the circle behind it */
-      const ln=new THREE.Mesh(new THREE.BoxGeometry(.084,.0006,.0022),wht);ln.position.set(-.028,.0212,.05);hb.add(ln);
+      const disc=[];for(let k=0;k<64;k++){const a=k/64*Math.PI*2;disc.push([-.036+Math.cos(a)*.036,.05+Math.sin(a)*.036]);}
+      const ds=topShape(disc),hole=new THREE.Path();for(let k=0;k<=64;k++){const a=-k/64*Math.PI*2,x=-.036+Math.cos(a)*.0228,z=.05+Math.sin(a)*.0228;k?hole.lineTo(x,-z):hole.moveTo(x,-z);}ds.holes.push(hole);   /* ball is 42.7 mm across: the hole is 45.6 mm */
+      hb.add(ext(ds,.002,.0165,blk,.0014));                                                                          /* the ring behind the blade */
+      const ln=new THREE.Mesh(new THREE.BoxGeometry(.0205,.0006,.0022),wht);ln.position.set(.0063,.0225,.05);hb.add(ln);   /* sightline on the blade */
+      const ln2=new THREE.Mesh(new THREE.BoxGeometry(.0118,.0006,.0022),wht);ln2.position.set(-.0651,.0203,.05);hb.add(ln2);  /* and on the back of the ring */
       const fc=new THREE.Mesh(new THREE.PlaneGeometry(.1,.0185),milled);fc.rotation.y=Math.PI/2;fc.position.set(.0191,.0135,.05);hb.add(fc);
     } else if(PSTYLE==='spider'){
       /* the Spider: a mesh generated from the product photos (free image-to-3D), cleaned up, cut to ~5k triangles and coloured like the
@@ -813,7 +816,7 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
       window._spiderP=window._spiderP||new Promise(res=>new THREE.GLTFLoader().load('putter_spider.glb',res,undefined,()=>res(null)));
       window._spiderP.then(gl=>{if(gl)put(gl);});
     }
-    if(PSTYLE!=='blade'){hb.userData.neck=[segMesh(.0042,.0042,neckMat,hb),segMesh(.0042,.0042,neckMat,hb),segMesh(.0046,.0042,neckMat,hb)];hb.userData.jn=[new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat),new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat)];hb.userData.jn.forEach(m=>hb.add(m));fitPutterNeck(hb);
+    if(PSTYLE==='lab'||PSTYLE==='spider'){hb.userData.neck=[segMesh(.0042,.0042,neckMat,hb),segMesh(.0042,.0042,neckMat,hb),segMesh(.0046,.0042,neckMat,hb)];hb.userData.jn=[new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat),new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat)];hb.userData.jn.forEach(m=>hb.add(m));fitPutterNeck(hb);
       const hs=new THREE.Mesh(new THREE.CylinderGeometry(.005,.0052,.03,14),dk);hs.position.set(0,.09,.0);hg.add(hs);return;}
     const rr=(w,h,r)=>{const s=new THREE.Shape();s.moveTo(-w/2+r,-h/2);s.lineTo(w/2-r,-h/2);s.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);s.lineTo(w/2,h/2-r);s.quadraticCurveTo(w/2,h/2,w/2-r,h/2);s.lineTo(-w/2+r,h/2);s.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);s.lineTo(-w/2,-h/2+r);s.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);return s;};
     const blade=new THREE.Group();
@@ -824,7 +827,7 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
     const cav=new THREE.Mesh(new THREE.BoxGeometry(.01,.0012,.058),dk);cav.position.set(-.001,.0108,.049);blade.add(cav);
     const sl=new THREE.Mesh(new THREE.BoxGeometry(.016,.0008,.0022),S({color:0xf4f4f2,roughness:.4}));sl.position.set(-.013,.0103,.049);blade.add(sl);
     for(const z of[.028,.07]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.0024,.0024,.0008,14),red);d.position.set(-.012,.0104,z);blade.add(d);}
-    const fc=new THREE.Mesh(new THREE.PlaneGeometry(.084,.02),S({color:0xc9ced4,metalness:.85,roughness:.5}));fc.rotation.y=Math.PI/2;fc.position.set(.0172,.0135,.049);blade.add(fc);
+    const fc=new THREE.Mesh(new THREE.PlaneGeometry(.084,.02),PSTYLE==='blackout'?S({color:0x2a2c30,metalness:.5,roughness:.6}):S({color:0xc9ced4,metalness:.85,roughness:.5}));fc.rotation.y=Math.PI/2;fc.position.set(.0172,.0135,.049);blade.add(fc);
     hb.add(blade);
     /* plumber's neck: up from the heel, a short jog, then into the shaft (re-fitted whenever the lie changes) */
     hb.userData.neck=[segMesh(.0042,.0042,sat,hb),segMesh(.0042,.0042,sat,hb),segMesh(.0046,.0042,sat,hb)];hb.userData.jn=[new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),sat),new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),sat)];hb.userData.jn.forEach(m=>hb.add(m));fitPutterNeck(hb);
@@ -1609,25 +1612,25 @@ function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);retur
 const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot'},dial:{n:'Dialed in',d:'near-perfect contact on one shot'},read:{n:'Green reader',d:'shows the true putt line for the rest of the hole'},hl:{n:'Lucky shot',d:'+10% carry and near-perfect contact on one shot'},bounce:{n:'Consistency King',d:'always on: contact tightens right after a bad shot',passive:true}};
 const B=(pow,acc,sg,put,rec)=>({pow,acc,sg,put,rec});
 const BASE=[
- {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
- {id:'red-brim',name:'David Chen',hcp:36,st:[32,57,42,58,42],ab:'read',color:'#e74c3c',look:{skin:'#e3b48e',cap:{style:'fwd',color:'#1b1b1d',brim:'#b8352b'},top:{type:'tee',color:'#e4e4e1'},legs:{color:'#2b2f36'}}},
+ {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{putter:'blackout',skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
+ {id:'red-brim',name:'David Chen',hcp:36,st:[32,57,42,58,42],ab:'read',color:'#e74c3c',look:{putter:'blackout',skin:'#e3b48e',cap:{style:'fwd',color:'#1b1b1d',brim:'#b8352b'},top:{type:'tee',color:'#e4e4e1'},legs:{color:'#2b2f36'}}},
  {id:'ramble-on',name:'Benja B',hcp:15,st:[89,68,71,70,70],ab:'rip',color:'#f1c40f',look:{skin:'#e8b893',tall:1.06,cap:{style:'fwd',color:'#1b1b1d',patch:'#d9892b'},top:{type:'polo',color:'#24345c',arms:'#5a7299'},legs:{color:'#1d1d20'},shoes:'#2a2a2e'}},
- {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{putter:'lab',skin:'#d9a47c',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
+ {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{skin:'#d9a47c',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
- {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{putter:'spider',skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
+ {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
  {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
  {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'polocap',color:'#1f2a44',logo:'#9b7fd6'},top:{type:'polo',color:'#4E2A84'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
- {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
+ {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{putter:'lab',skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
  {id:'shaka',name:'Brandon Kuntz',hcp:18,st:[79,75,64,64,66],ab:'rip',color:'#fd9644',look:{skin:'#f0c4a4',cap:{style:'fwd',color:'#1b1b1d'},top:{type:'polo',color:'#1b2640'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
  {id:'white-cap',name:'Darren Twanmoh',hcp:18,st:[91,54,69,68,66],ab:'rip',color:'#a29bfe',look:{skin:'#d7a17a',cap:{style:'fwd',color:'#f1f1ee'},top:{type:'vest',color:'#1d1d1f',arms:'#8a8d92'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
- {id:'selfie-cam',name:'Andrew Skalman',hcp:7,st:[72,89,89,89,81],ab:'bounce',color:'#ff7675',look:{skin:'#e6b58f',glasses:'#8a6e5a',stache:true,cap:{style:'fwd',color:'#1b1b1d',patch:'#eaeaea'},top:{type:'hawaiian',color:'#127c7a',pat:'lagoon'},legs:{color:'#1d1d20'}}},
+ {id:'selfie-cam',name:'Andrew Skalman',hcp:7,st:[72,89,89,89,81],ab:'bounce',color:'#ff7675',look:{putter:'spider',skin:'#e6b58f',glasses:'#8a6e5a',stache:true,cap:{style:'fwd',color:'#1b1b1d',patch:'#eaeaea'},top:{type:'hawaiian',color:'#127c7a',pat:'lagoon'},legs:{color:'#1d1d20'}}},
  {id:'navy-cap',name:'Mo Reda',hcp:36,st:[47,46,46,46,46],ab:'dial',color:'#fdcb6e',look:{skin:'#b58a6c',cap:{style:'back',color:'#27324f'},top:{type:'tee',color:'#2a3350'},legs:{color:'#2b2f36'}}},
  {id:'jarrett',name:'Jarrett Arakawa',hcp:28,st:[77,46,53,53,54],ab:'rip',color:'#e17055',look:{skin:'#b98a6c',cap:{style:'band',color:'#c8342f'},top:{type:'hawaiian',color:'#f2c230',pat:'pineapple'},legs:{color:'#4b4a3a',shorts:true},shoes:'#f2f2f2'}},
  {id:'kanishka',name:'Kanishka Tiwari',hcp:36,st:[56,40,42,55,38],ab:'rip',color:'#20bf6b',look:{skin:'#af6f53',hairMesh:'parted',hair:'#221a16',top:{type:'polo',color:'#cfc3a8'},legs:{color:'#2b2f36'}}},
  {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
- {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{putter:'lab',skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
-{id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{putter:'spider',skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
-{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'spider',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
+ {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
+{id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
+{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[62,69,63,63,65],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
