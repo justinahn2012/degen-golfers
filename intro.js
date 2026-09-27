@@ -3,7 +3,7 @@
    const tp=v=>v===0?'E':(v>0?'+':'')+v,srt=(a,b)=>a.tp-b.tp||a.s-b.s||a.t-b.t;
    const draw=L=>{L=(L||[]).slice().sort(srt).slice(0,10);let h='<div class="hd">Leaderboard<small>The Degen Golfers Invitational</small></div><div class="ch"><span>Place</span><span>Initials</span><span>Player</span><span>Course</span><span>Score</span></div>';
      if(!L.length){box.innerHTML=h+'<div class="vp"><div class="empty">The board is open \u2014 be the first to sign it</div></div>';return;}
-     const row=(r,k)=>'<div class="r"><span class="p">'+(k+1)+'</span><span class="i">'+esc(r.i)+'</span><span class="g">'+esc(String(r.g).split(' ')[0])+'</span><span class="c">'+(CS[r.c]||String(r.c).toUpperCase())+'</span><span class="s"><span class="'+(r.tp<0?'u':r.tp>0?'o':'e')+'">'+tp(r.tp)+'</span><small>'+r.s+'</small></span></div>';
+     const row=(r,k)=>'<div class="r"><span class="p">'+(k+1)+'</span><span class="i" style="white-space:pre">'+esc(r.i)+'</span><span class="g">'+esc(String(r.g).split(' ')[0])+'</span><span class="c">'+(CS[r.c]||String(r.c).toUpperCase())+'</span><span class="s"><span class="'+(r.tp<0?'u':r.tp>0?'o':'e')+'">'+tp(r.tp)+'</span><small>'+r.s+'</small></span></div>';
      const rows=L.map(row).join('');box.innerHTML=h+'<div class="vp"><div class="rows">'+rows+(L.length>3?rows:'')+'</div></div>';size();
      if(L.length>3){const el2=box.querySelector('.rows'),n=L.length,step=28,hold=1.6,move=.55;let t0=null;
        const tick=ts=>{if(!document.body.contains(el2))return;if(t0===null)t0=ts;const per=hold+move,tt=(ts-t0)/1000,k=Math.floor(tt/per),f=Math.min(1,Math.max(0,(tt-k*per-hold)/move)),e=f*f*(3-2*f);el2.style.transform='translateY('+(-((k%n)+e)*step)+'px)';requestAnimationFrame(tick);};requestAnimationFrame(tick);}};

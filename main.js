@@ -2021,7 +2021,7 @@ const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NC
 .arcade th{font-family:'Playfair Display SC',Georgia,serif;font-size:10px!important;letter-spacing:1.5px;color:#fff!important;background:#0b5a37!important;padding:4px 4px!important}
 .arcade tr+tr td{border-top:1px solid #e3d9b8!important}
 .arcade td.hspos{font-family:'Playfair Display',Georgia,serif;font-weight:700;color:#0b5a37;width:34px}
-.arcade td.hsini{font-family:'Playfair Display SC',Georgia,serif;font-weight:700;letter-spacing:1px;color:#1c2a22}
+.arcade td.hsini{white-space:pre;font-family:'Playfair Display SC',Georgia,serif;font-weight:700;letter-spacing:1px;color:#1c2a22}
 .arcade td.hsg{max-width:96px;overflow:hidden;text-overflow:ellipsis;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-size:13px!important}
 .arcade td.hscr{font-size:12px!important;color:#5a6b60;letter-spacing:.5px}
 .arcade td.hssc{text-align:right;font-family:'Playfair Display',Georgia,serif;font-weight:700;white-space:nowrap}
@@ -2039,6 +2039,7 @@ const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NC
 #hsEntry .slot{display:flex;flex-direction:column;align-items:center;gap:6px}
 #hsEntry .slot button{font-size:13px;width:52px;height:30px;background:transparent;color:#e9c75a;border:1px solid rgba(201,162,39,.6);border-radius:15px;cursor:pointer;touch-action:manipulation}
 #hsEntry .ch{font-family:'Playfair Display SC',Georgia,serif;font-size:36px;font-weight:700;width:52px;height:60px;line-height:60px;color:#1c2a22;background:#f6f1e1;border-radius:6px;box-shadow:inset 0 -3px 0 #d8cfae}
+#hsEntry .ch.blank{background:repeating-linear-gradient(90deg,#f6f1e1 0 6px,#efe7cf 6px 12px)}
 #hsEntry .slot.on .ch{box-shadow:0 0 0 2px #c9a227,inset 0 -3px 0 #d8cfae}
 #hsEntry .go{font-family:'Playfair Display',Georgia,serif;font-size:16px;font-weight:700;letter-spacing:1px;padding:11px 26px;background:#c9a227;color:#06391f;border:none;border-radius:22px;cursor:pointer;margin:2px 4px}
 #hsEntry .skip{font-family:'EB Garamond',Georgia,serif;font-size:13px;background:none;border:none;color:#d9c27a;cursor:pointer;margin-top:10px;text-decoration:underline}`;document.head.appendChild(st);})();
@@ -2062,10 +2063,10 @@ function hsLoad(mark){hsRender(mark);return hsFlush().then(()=>fetch('/api/score
   .catch(()=>{HS.online=false;try{HS.board=JSON.parse(localStorage.getItem('dg-hs-cache')||'[]');}catch(e){HS.board=[];}hsRender(mark);});}
 function hsQualifies(c,tp,s){const beats=L=>L.length<10||tp<L[9].tp||(tp===L[9].tp&&s<L[9].s);return beats(hsRows('all'))||beats(hsRows(c));}
 function hsSubmit(e){try{const P=hsPending();P.push(e);localStorage.setItem('dg-hs-pending',JSON.stringify(P));}catch(x){}return hsFlush().then(()=>hsLoad(e.rid));}
-function hsDefault(p){try{const v=localStorage.getItem('dg-ini-'+p.id);if(v&&v.length===3)return v;}catch(e){}const w=(p.name||'AAA').toUpperCase().replace(/[^A-Z ]/g,'').split(' ').filter(Boolean);return ((w[0]||'A')[0]+((w[1]||w[0]||'AA').slice(0,2))).padEnd(3,'A').slice(0,3);}
-function hsEntry(p,T,next){const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';let ini=hsDefault(p).split(''),on=0;const ov=document.createElement('div');ov.id='hsEntry';
-  const draw=()=>{ov.innerHTML='<div class="arcade"><h2>Leaderboard</h2><div class="crest">A place on the board</div><div class="hswho">'+esc(p.name)+'<br><b>'+hsTP(T.tp)+'</b> &nbsp;('+T.s+') &nbsp;at '+esc(HS_CN[window.COURSE_KEY]||D.short||'')+'</div><div style="font-family:Playfair Display,Georgia,serif;font-style:italic;font-size:14px;color:#d9c27a">Sign the board with your initials</div>'+
-    '<div class="slots">'+[0,1,2].map(k=>'<div class="slot'+(k===on?' on':'')+'" data-k="'+k+'"><button data-d="1" data-k="'+k+'">&#9650;</button><div class="ch" data-k="'+k+'">'+ini[k]+'</div><button data-d="-1" data-k="'+k+'">&#9660;</button></div>').join('')+'</div>'+
+function hsDefault(p){try{const v=localStorage.getItem('dg-ini-'+p.id);if(v&&v.length===3&&v.trim())return v;}catch(e){}const w=(p.name||'AAA').toUpperCase().replace(/[^A-Z ]/g,'').split(' ').filter(Boolean);return ((w[0]||'A')[0]+((w[1]||w[0]||'AA').slice(0,2))).padEnd(3,'A').slice(0,3);}
+function hsEntry(p,T,next){const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ',best=hsRows(window.COURSE_KEY)[0],rec=!best||T.tp<best.tp||(T.tp===best.tp&&T.s<best.s),CN=HS_CN[window.COURSE_KEY]||D.short||'';let ini=hsDefault(p).split(''),on=0;const ov=document.createElement('div');ov.id='hsEntry';
+  const draw=()=>{ov.innerHTML='<div class="arcade"><h2>'+(rec?'Course Record':'Leaderboard')+'</h2><div class="crest">'+(rec?'The lowest round ever posted at '+esc(CN):'A top-ten finish')+'</div><div class="hswho">'+esc(p.name)+'<br><b>'+hsTP(T.tp)+'</b> &nbsp;('+T.s+') &nbsp;at '+esc(HS_CN[window.COURSE_KEY]||D.short||'')+'</div><div style="font-family:Playfair Display,Georgia,serif;font-style:italic;font-size:14px;color:#d9c27a">Sign the board with your initials<br><span style="font-size:11px;opacity:.8">(a blank is fine — it comes after Z and 9)</span></div>'+
+    '<div class="slots">'+[0,1,2].map(k=>'<div class="slot'+(k===on?' on':'')+'" data-k="'+k+'"><button data-d="1" data-k="'+k+'">&#9650;</button><div class="ch'+(ini[k]===' '?' blank':'')+'" data-k="'+k+'">'+(ini[k]===' '?'&nbsp;':ini[k])+'</div><button data-d="-1" data-k="'+k+'">&#9660;</button></div>').join('')+'</div>'+
     '<button class="go">Sign</button><br><button class="skip">not this time</button></div>';
     ov.querySelectorAll('.slot button').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;on=k;const i=A.indexOf(ini[k]);ini[k]=A[(i+(+b.dataset.d)+A.length)%A.length];draw();});
     ov.querySelectorAll('.ch').forEach(c=>c.onclick=()=>{on=+c.dataset.k;draw();});
@@ -2073,7 +2074,7 @@ function hsEntry(p,T,next){const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';let in
   const key=ev=>{const c=(ev.key||'').toUpperCase();if(c.length===1&&A.includes(c)){ini[on]=c;on=Math.min(2,on+1);draw();ev.preventDefault();}else if(ev.key==='Backspace'){on=Math.max(0,on-1);draw();ev.preventDefault();}
     else if(ev.key==='ArrowUp'||ev.key==='ArrowDown'){const i=A.indexOf(ini[on]);ini[on]=A[(i+(ev.key==='ArrowUp'?1:-1)+A.length)%A.length];draw();ev.preventDefault();}else if(ev.key==='ArrowLeft'){on=Math.max(0,on-1);draw();}else if(ev.key==='ArrowRight'){on=Math.min(2,on+1);draw();}else if(ev.key==='Enter'){save();}ev.stopPropagation();};
   function close(){document.removeEventListener('keydown',key,true);ov.remove();next&&next();}
-  function save(){const i=ini.join('');try{localStorage.setItem('dg-ini-'+p.id,i);}catch(e){}hsSubmit({i,g:p.name,c:window.COURSE_KEY,cn:HS_CN[window.COURSE_KEY]||D.short,s:T.s,par:T.s-T.tp,rid:p.id+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)});close();}
+  function save(){const i=ini.join('');if(!i.trim())return;try{localStorage.setItem('dg-ini-'+p.id,i);}catch(e){}hsSubmit({i,g:p.name,c:window.COURSE_KEY,cn:HS_CN[window.COURSE_KEY]||D.short,s:T.s,par:T.s-T.tp,rid:p.id+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)});close();}
   document.addEventListener('keydown',key,true);draw();document.body.appendChild(ov);}
 function hsAfterRound(){if(!ROUND||ROUND.len!=='18'||ROUND.list.length<18)return;const q=players.map(p=>({p,T:tally(p)})).filter(o=>o.T&&o.T.s>0&&hsQualifies(window.COURSE_KEY,o.T.tp,o.T.s)).sort((a,b)=>a.T.tp-b.T.tp);
   let k=0;const step=()=>{if(k<q.length){const o=q[k++];hsEntry(o.p,o.T,step);}};step();}

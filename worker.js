@@ -12,10 +12,10 @@ export default {
       if (req.method === 'GET') return json({ board: (await env.SCORES.get('board', { type: 'json' })) || [] });
       if (req.method === 'POST') {
         let e; try { e = await req.json(); } catch (x) { return json({ err: 'bad request' }, 400); }
-        const i = String(e.i || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+        const i = String(e.i || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 3).padEnd(3, ' ');
         const g = String(e.g || '').replace(/[<>&"]/g, '').trim().slice(0, 24);
         const c = String(e.c || ''), s = Math.round(+e.s), par = Math.round(+e.par), tp = s - par;
-        if (i.length !== 3 || !g || !COURSES[c] || !(s >= 40 && s <= 220) || !(par >= 54 && par <= 80)) return json({ err: 'invalid score' }, 400);
+        if (!i.trim() || !g || !COURSES[c] || !(s >= 40 && s <= 220) || !(par >= 54 && par <= 80)) return json({ err: 'invalid score' }, 400);
         const rid = String(e.rid || '').slice(0, 48);
         const b = (await env.SCORES.get('board', { type: 'json' })) || [];
         if (rid && b.some(r => r.rid === rid)) return json({ board: b, dup: true });
