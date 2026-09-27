@@ -237,7 +237,7 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
       if(!open(x,y))continue;const g=grad(x,y),sl=Math.hypot(g[0],g[1]);if(sl<.06&&R()<.75)continue;let clear=true;for(const t of treesNear(x,y))if(Math.hypot(t.x-x,t.y-y)<t.r*.6+1.2){clear=false;break;}if(!clear)continue;
       const cnt=3+Math.floor(R()*6);for(let c=0;c<cnt;c++){const qx=x+(R()-.5)*4,qy=y+(R()-.5)*4;if(open(qx,qy))JP.push([qx,qy,.9+R()*1.1]);}}}
   if(JP.length){const g=new THREE.IcosahedronGeometry(1,2),P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i),k=1+.18*Math.sin(x*7.1+z*5.3)*Math.cos(y*6.2);P.setXYZ(i,x*k,Math.max(-.2,y)*k,z*k);}g.computeVertexNormals();
-    const jm=new THREE.InstancedMesh(g,new THREE.MeshLambertMaterial({color:0xffffff}),JP.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
+    const jm=IMC(new THREE.InstancedMesh(g,new THREE.MeshLambertMaterial({color:0xffffff}),JP.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
     JP.forEach((p,i)=>{const s=p[2];q.setFromAxisAngle(new THREE.Vector3(0,1,0),R()*6.28);m.compose(V(p[0],p[1],H(p[0],p[1])-.1*s),q,new THREE.Vector3(s*1.25,s*.5,s*1.25));jm.setMatrixAt(i,m);c.setHSL(.29+R()*.04,.32+R()*.12,.13+R()*.05);jm.setColorAt(i,c);});
     jm.castShadow=true;jm.receiveShadow=true;linearize(jm);scene.add(jm);}
   /* 3) red geranium beds framing the front of the par-3 tees and the 1st tee */
@@ -250,7 +250,7 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
   const RK=[];{const h=byRef('7');if(h){const T0=h.p[0],T1=h.p[h.p.length-1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0]);for(let d=35;d<190;d+=5.5){const side=26+R()*8,x=T0[0]+Math.cos(a0)*d-Math.sin(a0)*side,y=T0[1]+Math.sin(a0)*d+Math.cos(a0)*side;if(open(x,y))RK.push([x,y,2.2+R()*2.6,1.4+R()*1.6]);}}}
   {const h=byRef('5');if(h){const G=h.p[h.p.length-1],T0=h.p[0],a0=Math.atan2(G[1]-T0[1],G[0]-T0[0]);for(let k=0;k<16;k++){const a=a0-1.6+k/15*3.2,rr=17+R()*6,x=G[0]+Math.cos(a)*rr,y=G[1]+Math.sin(a)*rr;if(open(x,y))RK.push([x,y,2+R()*2.4,1.1+R()*1.1]);}}}
   if(RK.length){const g=new THREE.IcosahedronGeometry(1,3),P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i),k=.84+.12*Math.sin(x*3.1+z*2.3)+.07*Math.sin(x*9.7+y*8.1+z*7.3)+.04*Math.sin(y*17+z*13);P.setXYZ(i,x*k,(y>.35?.35+(y-.35)*.7:y)*k,z*k);}g.computeVertexNormals();
-    const rm=new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97}),RK.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
+    const rm=IMC(new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97}),RK.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
     RK.forEach((p,i)=>{q.setFromEuler(new THREE.Euler(R()*.3,R()*6.28,R()*.3));m.compose(V(p[0],p[1],H(p[0],p[1])-p[3]*.35),q,new THREE.Vector3(p[2],p[3]*1.5,p[2]*.85));rm.setMatrixAt(i,m);c.setHSL(.055+R()*.035,.3+R()*.15,.26+R()*.1);rm.setColorAt(i,c);});
     rm.castShadow=true;rm.receiveShadow=true;linearize(rm);scene.add(rm);}
   /* 5) the pier off to the left of the 14th tee, and a line of swim buoys across the bay */
@@ -445,7 +445,7 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vA,vB;varying float vM,vY;\n'+OCC_FS).replace('#include <map_fragment>',OCC_DISCARD+'vec4 texelColor=mix(texture2D(map,vA),texture2D(map,vB),vM);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;diffuseColor.rgb*=.8+.2*smoothstep(0.,.45,vY);'+OCC_DARK);};
    m.customProgramCacheKey=()=>'imp'+frames+'x'+rows;return m;};
  const ldT=k=>{const t=TL0.load(ASSETS[k]);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
- const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length)),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
+ const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=IMC(new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length))),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
    list.forEach((t,i)=>{const v=rows>1?t.v%rows:0,hh=t.h*ratio[v];av[i]=v;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
    iq.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.geometry=iq.clone();M.geometry.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.count=list.length;M.frustumCulled=false;M.userData.lin=1;M.userData.imp={list,tex,frames,rows,ratio,aspect,av,mats:M.instanceMatrix.array.slice(),cols:M.instanceColor?M.instanceColor.array.slice():null};IMPS.push(M);return M;};
  if(HASA){scene.add((D.trees==='ponderosa'?mkImp(firs,ldT('pondAtlas'),8,3,[1.081,1.03,1.098],.5):mkImp(firs,ldT('firAtlas'),8,4,[1.03,1.03,1.03,1.301],.5)),mkImp(decs,ldT('broadAtlas'),4,2,[1.216,1.03],1));}
@@ -529,7 +529,7 @@ const bladeMat=(()=>{const m=new THREE.MeshLambertMaterial({color:0xffffff,side:
 const BLADE_LIE_0={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.09,.17],w:.008,c:0x436b25}};
 const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assign({},BLADE_LIE_0[k]);v.c=new THREE.Color(cdaHex('#'+new THREE.Color(v.c).getHexString())).getHex();o[k]=v;}return o;})();
 function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}
-  const N=MOBILE?40000:70000,R=11,M=new THREE.InstancedMesh(bladeGeo,bladeMat,N),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();let n=0;
+  const N=MOBILE?40000:70000,R=11,M=IMC(new THREE.InstancedMesh(bladeGeo,bladeMat,N)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();let n=0;
   for(let i=0;i<N*1.6&&n<N;i++){const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[lieAt(x,y)];if(!L||onPath(x,y))continue;
     const fade=1-Math.max(0,(r-R*.7)/(R*.3)),h=(L.h[0]+Math.random()*(L.h[1]-L.h[0]))*(.35+.65*fade);e.set((Math.random()-.5)*.5,Math.random()*6.283,(Math.random()-.5)*.35);q.setFromEuler(e);
     m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));M.setMatrixAt(n,m);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);M.setColorAt(n,c);n++;}
@@ -537,10 +537,11 @@ function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLAD
 function updBlades(){if(!BLADES)return;const sh=bladeMat.userData.sh;if(sh){const L=Math.hypot(wind.x,wind.y)||1,k=Math.min(1,wind.sp/8+.25);sh.uniforms.uW.value.set(wind.x/L*k,-wind.y/L*k);}}
 const MULCH=[],MULCHG=new Map();
 function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if(!L)return false;for(const b of L)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&inPoly(b.p,x,y))return true;return false;}
+function IMC(M){if(!M.instanceColor)M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1,M.count)*3).fill(1),3);return M;}
 function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
  for(let i=0,NT=20000,NN=7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
- const M=new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
+ const M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length))),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
  const tv=new Float32Array(Math.max(1,list.length));list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));M.setMatrixAt(i,m);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);M.setColorAt(i,c);});M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(tv,1));
  M.count=list.length;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
 /* sRGB authoring -> linear lighting */
