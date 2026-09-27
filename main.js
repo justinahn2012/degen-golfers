@@ -1501,13 +1501,21 @@ function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace
 /* ---------- balls ---------- */
 const ballGeo=new THREE.SphereGeometry(.0214,40,28),shadowGeo=new THREE.CircleGeometry(.03,16);
 
-function ballPrint(p){const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');x.fillStyle='#fbfbf9';x.fillRect(0,0,1024,512);
-  x.fillStyle='#16171a';x.fillRect(150,253,300,6);                                   /* alignment line */
-  x.font='italic 800 64px "Barlow Condensed","Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='alphabetic';x.fillText('Degen',300,238);
-  x.font='700 30px "Barlow Condensed",sans-serif';x.fillStyle='#16171a';x.fillText('D1',300,300);x.fillStyle='#c8202c';x.beginPath();x.arc(336,289,5,0,7);x.fill();
-  x.fillStyle='#16171a';x.font='800 58px "Barlow Condensed",sans-serif';x.fillText(String((p&&p.num)||1),812,276);
-  x.fillStyle=(p&&p.color)||'#e5484d';x.beginPath();x.arc(812,196,9,0,7);x.fill();   /* player dot above the number */
-  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;}
+function ballPrint(p){const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;
+  const draw=()=>{x.clearRect(0,0,1024,512);x.fillStyle='#fbfbf9';x.fillRect(0,0,1024,512);
+    /* logo: a flowing tour-ball script wordmark */
+    x.save();x.fillStyle='#16171a';x.font='86px "Yellowtail","Snell Roundhand","Brush Script MT",cursive';x.textAlign='center';x.textBaseline='alphabetic';x.fillText('Degen',300,246);x.restore();
+    x.font='700 30px "Barlow Condensed",sans-serif';x.textAlign='center';x.fillStyle='#16171a';x.fillText('D1',300,298);x.fillStyle='#c8202c';x.beginPath();x.arc(336,287,5,0,7);x.fill();
+    /* alignment marker: a quarter turn to the right of the logo, perpendicular to it - a straight line (a meridian, so it stays straight on
+       the ball) with an arrow point at each end; widths scaled by 1/cos(latitude) so the heads keep their true shape */
+    {const u0=556,v0=256,half=75,hd=20;x.fillStyle='#16171a';
+      for(let v=v0-half+hd-2;v<=v0+half-hd+2;v++){const lat=Math.abs(v-256)/256*Math.PI/2,w=3.2/Math.max(.2,Math.cos(lat));x.fillRect(u0-w,v,2*w,1);}
+      for(const s of[-1,1]){const tip=v0+s*half;for(let k=0;k<=hd;k++){const v=tip-s*k,lat=Math.abs(v-256)/256*Math.PI/2,w=(k*.62)/Math.max(.2,Math.cos(lat));x.fillRect(u0-w,v,2*w,1);}}}
+    /* player number and colour dot on the far side */
+    x.fillStyle='#16171a';x.font='800 58px "Barlow Condensed",sans-serif';x.textAlign='center';x.fillText(String((p&&p.num)||1),812,276);
+    x.fillStyle=(p&&p.color)||'#e5484d';x.beginPath();x.arc(812,196,9,0,7);x.fill();t.needsUpdate=true;};
+  draw();try{document.fonts&&document.fonts.load('86px "Yellowtail"').then(draw).catch(()=>{});}catch(e){}
+  return t;}
 function makeBall(p){const b=new THREE.Mesh(ballGeo,new THREE.MeshStandardMaterial({color:0xffffff,map:ballPrint(p),emissive:0x1c1c1c,roughness:.28,metalness:0,bumpMap:makeDimples(),bumpScale:.0019,envMapIntensity:.9}));b.userData.lin=1;b.castShadow=true;
   const sh=new THREE.Mesh(shadowGeo,new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.34,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));sh.rotation.x=-Math.PI/2;
   const mk=new THREE.Mesh(new THREE.RingGeometry(.036,.041,40),new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.9,depthWrite:false}));mk.position.z=.001;sh.add(mk);scene.add(b,sh);return{b,sh};}
