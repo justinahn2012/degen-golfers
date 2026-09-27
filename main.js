@@ -44,6 +44,12 @@ const CREEKS=[];for(const l of (D.creek||[])){if(l.length<2)continue;const hw=1.
   const w=mkPoly(L.concat(Rt.reverse()));w.creek=true;w.line=l;WATER.push(w);CREEKS.push(w);}
 const WOODS=D.f.filter(f=>f.k==='wood'&&f.c&&f.p.length>3).map(f=>mkPoly(f.p));
 const HOLES=D.holes.filter(h=>h.main).sort((a,b)=>+a.ref-+b.ref), P3HOLES=D.holes.filter(h=>!h.main);
+(function snapTees(){if(!TEES.length)return;let moved=0;for(const h of D.holes){const t=h.p[0];if(TEES.some(q=>inP(q,t[0],t[1])))continue;
+    let best=null;for(const q of TEES){const P=q.p;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy||1;let u=((t[0]-a[0])*dx+(t[1]-a[1])*dy)/L2;u=Math.max(0,Math.min(1,u));const x=a[0]+dx*u,y=a[1]+dy*u,d=Math.hypot(x-t[0],y-t[1]);if(!best||d<best.d)best={d,x,y,q};}}
+    if(!best||best.d>35)continue;let cx=0,cy=0;for(const v of best.q.p){cx+=v[0];cy+=v[1];}cx/=best.q.p.length;cy/=best.q.p.length;
+    const k=Math.min(1,2/Math.max(.01,Math.hypot(cx-best.x,cy-best.y)));const nx=best.x+(cx-best.x)*k,ny=best.y+(cy-best.y)*k;
+    if(inP(best.q,nx,ny)){h.p[0]=[nx,ny];moved++;}}
+  if(moved)console.log('[tees] snapped',moved,'hole start(s) onto their tee boxes');})();
 // fairways: OSM polygons, plus a centerline corridor for any par 4/5 the map leaves bare
 function corridor(h){const L=plLen(h.p),a=Math.min(70,L*.2),b=L-12,left=[],right=[],s0=+h.ref*1.7;
   for(let d=a;d<=b+0.01;d+=4){const s=plAt(h.p,d),t=(d-a)/(b-a);let w=15.5*(0.8+0.2*Math.sin(Math.PI*Math.min(1,t*1.15)))+1.4*Math.sin(d/21+s0);if(t>0.88)w*=1-(t-0.88)*3;if(t<0.05)w*=0.7+t*6;
@@ -511,7 +517,7 @@ const bladeTex=(()=>{const c=document.createElement('canvas');c.width=c.height=1
 const tuftGeo=(()=>{const g=new THREE.BufferGeometry(),P=[],U=[],N=[],I=[];for(let k=0;k<2;k++){const a=k*Math.PI/2,cx=Math.cos(a)*.5,cz=Math.sin(a)*.5,b=k*4;P.push(-cx,0,-cz,cx,0,cz,cx,1,cz,-cx,1,-cz);U.push(k*.5,0,k*.5+.5,0,k*.5+.5,.25,k*.5,.25);N.push(0,1,0,0,1,0,0,1,0,0,1,0);I.push(b,b+1,b+2,b,b+2,b+3);}
  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3));g.setIndex(I);return g;})();
 const grassAt=HASA?(()=>{const t=TL0.load(ASSETS.grassAtlas);t.anisotropy=4;return t;})():bladeTex;const tuftMat=new THREE.MeshLambertMaterial({map:grassAt,alphaTest:.4,side:THREE.DoubleSide});swayMat(tuftMat,.09);{const ob=tuftMat.onBeforeCompile;tuftMat.onBeforeCompile=sh=>{ob(sh);sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aTV;').replace('#include <uv_vertex>','#include <uv_vertex>\nvUv.y+=aTV*.25;');sh.fragmentShader=sh.fragmentShader.replace(/gl_FrontFacing/g,'true');};tuftMat.customProgramCacheKey=()=>'tuft2';}let tufts=null;
-const TUFT={rough:{p:.42,h:[.15,.25],c:0xa7bd8b,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xb4c89c,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xb0c597,v:[0,1]},tee:{p:.03,h:[.03,.045],c:0xb4c89c,v:[0,1]}};/* clumps tinted into the turf instead of pale blotches; rough a touch thicker and taller */
+const TUFT={rough:{p:.42,h:[.09,.15],c:0x8ea473,v:[2,3]},fairway:{p:.2,h:[.07,.11],c:0xb4c89c,v:[0,1]},fringe:{p:.26,h:[.09,.13],c:0xb0c597,v:[0,1]},tee:{p:.03,h:[.03,.045],c:0xb4c89c,v:[0,1]}};/* clumps tinted into the turf instead of pale blotches; rough a touch thicker and taller */
 const PGRID=new Uint8Array(WW*HH);for(const p of PATHS)for(let i=1;i<p.length;i++){const ax=p[i-1][0],ay=p[i-1][1],L=Math.hypot(p[i][0]-ax,p[i][1]-ay);for(let t=0;t<=L;t+=.5){const x=ax+(p[i][0]-ax)*t/(L||1),y=ay+(p[i][1]-ay)*t/(L||1);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const gx=Math.floor(x-X0)+dx,gy=Math.floor(y-Y0)+dy;if(gx>=0&&gy>=0&&gx<WW&&gy<HH)PGRID[gy*WW+gx]=1;}}}
 
 /* ---------- grass blades: tens of thousands of individually shaped blades in a patch around the golfer (all procedural, no files),
@@ -526,11 +532,11 @@ const bladeMat=(()=>{const m=new THREE.MeshLambertMaterial({color:0xffffff,side:
       .replace('#include <begin_vertex>','vec3 transformed=vec3(position);vH=position.y;\n vec3 ip=(instanceMatrix*vec4(0.,0.,0.,1.)).xyz;float ph=dot(ip.xz,vec2(.73,.41));\n float bend=position.y*position.y;transformed.z+=bend*(.18+.1*sin(ph*3.1));\n float sw=(.12+.1*sin(uT*2.3+ph))*.35*bend;transformed.x+=sw*uW.x*6.;transformed.z+=sw*uW.y*6.;');
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vH;').replace('#include <color_fragment>','#include <color_fragment>\n diffuseColor.rgb*=mix(.45,1.,smoothstep(0.,1.,vH));diffuseColor.rgb+=vec3(.03,.035,.005)*smoothstep(.75,1.,vH);');};
   m.customProgramCacheKey=()=>'blades1';return m;})();
-const BLADE_LIE_0={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.09,.17],w:.008,c:0x436b25}};
+const BLADE_LIE_0={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.065,.12],w:.008,c:0x436b25}};
 const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assign({},BLADE_LIE_0[k]);v.c=new THREE.Color(cdaHex('#'+new THREE.Color(v.c).getHexString())).getHex();o[k]=v;}return o;})();
 function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}
   const N=MOBILE?40000:70000,R=11,M=IMC(new THREE.InstancedMesh(bladeGeo,bladeMat,N)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();let n=0;
-  for(let i=0;i<N*1.6&&n<N;i++){const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[lieAt(x,y)];if(!L||onPath(x,y))continue;
+  for(let i=0;i<N*1.6&&n<N;i++){const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[(cur&&cur.lie==='tee'&&r<3.5)?'tee':lieAt(x,y)];if(!L||onPath(x,y))continue;
     const fade=1-Math.max(0,(r-R*.7)/(R*.3)),h=(L.h[0]+Math.random()*(L.h[1]-L.h[0]))*(.35+.65*fade);e.set((Math.random()-.5)*.5,Math.random()*6.283,(Math.random()-.5)*.35);q.setFromEuler(e);
     m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));M.setMatrixAt(n,m);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);M.setColorAt(n,c);n++;}
   M.count=n;M.frustumCulled=false;M.receiveShadow=true;linearize(M);BLADES=M;scene.add(M);}
@@ -540,7 +546,7 @@ function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if
 function IMC(M){if(!M.instanceColor)M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1,M.count)*3).fill(1),3);return M;}
 function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
- for(let i=0,NT=20000,NN=7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
+ for(let i=0,NT=20000,NN=7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[(cur&&cur.lie==='tee'&&r<3.5)?'tee':lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
  const M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length))),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
  const tv=new Float32Array(Math.max(1,list.length));list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));M.setMatrixAt(i,m);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);M.setColorAt(i,c);});M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(tv,1));
  M.count=list.length;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
