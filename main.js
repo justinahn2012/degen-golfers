@@ -196,12 +196,23 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
   let beds=0;
   for(const t of TREES){if(t.isle||!t.fir)continue;let near=1e9;for(const h of holes)near=Math.min(near,segD(t.x,t.y,h.p));if(near>58||!open(t.x,t.y))continue;
     const Rr=Math.max(2.4,t.r*.95+1.2),pts=[];let ok=true;for(let k=0;k<18;k++){const a=k/18*Math.PI*2,rr=Rr*(.82+.36*Math.sin(a*3+t.x)*.5+.18*R());const x=t.x+Math.cos(a)*rr,y=t.y+Math.sin(a)*rr;if(!open(x,y)){ok=false;break;}pts.push([x,y]);}
-    if(!ok)continue;beds++;
+    if(!ok)continue;beds++;{let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const q of pts){x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1]);}const bb={p:pts,x0,x1,y0,y1,cx:t.x,cy:t.y};MULCH.push(bb);for(let gx=Math.floor(x0/8);gx<=Math.floor(x1/8);gx++)for(let gy=Math.floor(y0/8);gy<=Math.floor(y1/8);gy++){const k=gx+','+gy;if(!MULCHG.has(k))MULCHG.set(k,[]);MULCHG.get(k).push(bb);}}
     ctx.fillStyle='#6e3b22';ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();
     ctx.save();ctx.clip();for(let i=0;i<Rr*Rr*9;i++){ctx.fillStyle=R()<.5?'rgba(150,86,52,.5)':'rgba(66,32,16,.45)';const a=R()*6.283,rr=R()*Rr;ctx.fillRect(t.x+Math.cos(a)*rr,t.y+Math.sin(a)*rr,.25+R()*.35,.12);}ctx.restore();
     ctx.strokeStyle='rgba(40,30,15,.35)';ctx.lineWidth=.35;ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
     mx.fillStyle='#ffff00';mx.beginPath();pts.forEach((q,i)=>i?mx.lineTo(q[0],q[1]):mx.moveTo(q[0],q[1]));mx.closePath();mx.fill();}
   tex.needsUpdate=true;maskT.needsUpdate=true;
+  if(MULCH.length&&ASSETS.mulch){const P=[],U=[],I=[],st=.85;let base=0;
+    /* radial mesh per bed: rings from the trunk out to the bed's own smooth outline, draped on the ground (no stair-step edges) */
+    const NA=30,NR=3;for(const b of MULCH){const bp=b.p,n=bp.length,c0=base;const put=(x,y,dz)=>{const v=V(x,y,Math.max(H(x,y),baseH(x,y))+dz);P.push(v.x,v.y,v.z);U.push(x/1.7,y/1.7);return base++;};
+      put(b.cx,b.cy,.07);const edge=k=>{const f=k/NA*n,i0=Math.floor(f)%n,i1=(i0+1)%n,u=f-Math.floor(f);return[bp[i0][0]+(bp[i1][0]-bp[i0][0])*u,bp[i0][1]+(bp[i1][1]-bp[i0][1])*u];};
+      for(let r=1;r<=NR;r++){const fr=r/NR;for(let k=0;k<NA;k++){const e=edge(k);put(b.cx+(e[0]-b.cx)*fr,b.cy+(e[1]-b.cy)*fr,r===NR?.02:.055);}}
+      for(let k=0;k<NA;k++){const k2=(k+1)%NA;I.push(c0,c0+1+k2,c0+1+k,c0,c0+1+k,c0+1+k2);}
+      for(let r=1;r<NR;r++){const a0=c0+1+(r-1)*NA,a1=c0+1+r*NA;for(let k=0;k<NA;k++){const k2=(k+1)%NA;I.push(a0+k,a1+k,a0+k2,a0+k2,a1+k,a1+k2);}}}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();
+    const tl=new THREE.TextureLoader(),mt=tl.load(ASSETS.mulch),mn=tl.load(ASSETS.nMulch);for(const t of[mt,mn]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=renderer.capabilities.getMaxAnisotropy();}mt.encoding=THREE.sRGBEncoding;
+    const mm=new THREE.Mesh(g,new THREE.MeshStandardMaterial({map:mt,normalMap:mn,normalScale:new THREE.Vector2(1.4,1.4),roughness:.96,metalness:0,color:new THREE.Color(.64,.6,.56),polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+    mm.receiveShadow=true;mm.renderOrder=0;scene.add(mm);console.log('[cda] mulch surface tris',I.length/3);}
   /* 2) juniper banks: low dark-green mounds on the slopes around the tees and down the sides of the lakeside/ridge holes */
   const JP=[];for(const r of['3','4','5','6','7','13','14']){const h=byRef(r);if(!h)continue;const T0=h.p[0],T1=h.p[1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0]);
     for(let n=0;n<420&&JP.length<2600;n++){const along=-15+R()*95,side=(R()<.5?-1:1)*(12+R()*34),x=T0[0]+Math.cos(a0)*along-Math.sin(a0)*side,y=T0[1]+Math.sin(a0)*along+Math.cos(a0)*side;
@@ -506,7 +517,9 @@ function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLAD
     m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));M.setMatrixAt(n,m);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);M.setColorAt(n,c);n++;}
   M.count=n;M.frustumCulled=false;M.receiveShadow=true;linearize(M);BLADES=M;scene.add(M);}
 function updBlades(){if(!BLADES)return;const sh=bladeMat.userData.sh;if(sh){const L=Math.hypot(wind.x,wind.y)||1,k=Math.min(1,wind.sp/8+.25);sh.uniforms.uW.value.set(wind.x/L*k,-wind.y/L*k);}}
-function onPath(x,y){const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
+const MULCH=[],MULCHG=new Map();
+function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if(!L)return false;for(const b of L)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&inPoly(b.p,x,y))return true;return false;}
+function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
  for(let i=0,NT=20000,NN=7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
  const M=new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
