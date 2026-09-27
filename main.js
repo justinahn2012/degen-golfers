@@ -272,10 +272,12 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
   if(JP.length){const g=new THREE.SphereGeometry(1,12,6,0,6.2832,0,Math.PI*.62),P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i),k=1+.16*Math.sin(x*5.1+z*3.7)*Math.cos(y*4.2)+.08*Math.sin(x*11.3-z*9.1);P.setXYZ(i,x*k,y*k-.18,z*k);}g.computeVertexNormals();
     const jmat=new THREE.MeshStandardMaterial({color:0xffffff,map:jTex,bumpMap:jTex,bumpScale:.03,roughness:.92,metalness:0});
     const jm=IMC(new THREE.InstancedMesh(g,jmat,JP.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
-    JP.forEach((p,i)=>{const s=p[2];q.setFromAxisAngle(new THREE.Vector3(0,1,0),R()*6.28);m.compose(V(p[0],p[1],H(p[0],p[1])-.1*s),q,new THREE.Vector3(s*1.25,s*.45,s*1.25));jm.setMatrixAt(i,m);c.setHSL(.3+R()*.06,.22+R()*.15,.5+R()*.14);jm.setColorAt(i,c);});
+    JP.forEach((p,i)=>{const s=p[2];q.setFromAxisAngle(new THREE.Vector3(0,1,0),R()*6.28);m.compose(V(p[0],p[1],H(p[0],p[1])-.1*s),q,new THREE.Vector3(s*1.15,s*.2,s*1.15));jm.setMatrixAt(i,m);c.setHSL(.3+R()*.06,.22+R()*.15,.5+R()*.14);jm.setColorAt(i,c);});
     jm.castShadow=true;jm.receiveShadow=true;jm.frustumCulled=false;linearize(jm);scene.add(jm);
     /* spray cards round each mound's edge and a few on top */
-    const cg=new THREE.PlaneGeometry(1,1);cg.translate(0,.5,0);const PER=9,cm=IMC(new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({map:jCard,alphaTest:.45,side:THREE.DoubleSide,color:0xffffff}),JP.length*PER));let n=0;
+    if(window.__MKIMP){try{const jt=new THREE.TextureLoader().load('juniperAtlas.webp');jt.encoding=THREE.sRGBEncoding;jt.anisotropy=4;
+      const L=[];JP.forEach((p,i)=>{L.push({x:p[0],y:p[1],gz:H(p[0],p[1])+.26,h:.8*p[2],v:i%2});const a=R()*6.283,rr=p[2]*.6,x2=p[0]+Math.cos(a)*rr,y2=p[1]+Math.sin(a)*rr;L.push({x:x2,y:y2,gz:H(x2,y2)+.24,h:.62*p[2],v:(i+1)%2});});const JM=window.__MKIMP(L,jt,8,2,[1.03,1.03],3.2);JM.frustumCulled=false;scene.add(JM);}catch(e){console.warn('juniper imp',e);}}
+    const cg=new THREE.PlaneGeometry(1,1);cg.translate(0,.5,0);const PER=0,cm=IMC(new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({map:jCard,alphaTest:.45,side:THREE.DoubleSide,color:0xffffff}),JP.length*PER));let n=0;
     JP.forEach(p=>{const s=p[2],z0=H(p[0],p[1]);for(let k=0;k<PER;k++){const a=R()*6.283,top=k>=6,rr=top?R()*s*.5:s*(1.02+R()*.15),x=p[0]+Math.cos(a)*rr,y=p[1]+Math.sin(a)*rr,sz=s*(top?.55:.75)*(.8+R()*.4);
       q.setFromEuler(new THREE.Euler(top?0:(R()-.5)*.3,-a+Math.PI/2+(R()-.5)*.6,top?0:.35*(R()<.5?-1:1)));m.compose(V(x,y,top?z0+s*.3:H(x,y)-.05),q,new THREE.Vector3(sz*1.3,sz*.62,1));cm.setMatrixAt(n,m);c.setHSL(.3+R()*.06,.22+R()*.15,.6+R()*.14);cm.setColorAt(n,c);n++;}});
     cm.count=n;cm.frustumCulled=false;cm.castShadow=true;linearize(cm);scene.add(cm);}
@@ -301,31 +303,18 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
   const RK=[];{const h=byRef('7');if(h){const T0=h.p[0],T1=h.p[h.p.length-1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0]);for(let d=35;d<190;d+=5.5){const side=26+R()*8,x=T0[0]+Math.cos(a0)*d-Math.sin(a0)*side,y=T0[1]+Math.sin(a0)*d+Math.cos(a0)*side;if(open(x,y))RK.push([x,y,2.2+R()*2.6,1.4+R()*1.6]);}}}
   {const h=byRef('5');if(h){const G=h.p[h.p.length-1],T0=h.p[0],a0=Math.atan2(G[1]-T0[1],G[0]-T0[0]);for(let k=0;k<16;k++){const a=a0-1.6+k/15*3.2,rr=17+R()*6,x=G[0]+Math.cos(a)*rr,y=G[1]+Math.sin(a)*rr;if(open(x,y))RK.push([x,y,2+R()*2.4,1.1+R()*1.1]);}}}
   if(RK.length){
-    /* weathered granite outcrops: smooth, high-detail boulders shaped by layered 3D noise with jointing planes and a flattened, buried base,
-       wearing a granite texture - grey-tan grain, rust staining running down the faces, dark cracks and pale lichen blotches */
-    const hs=(x,y,z)=>{const s=Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453;return s-Math.floor(s);};
-    const vn=(x,y,z)=>{const xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),xf=x-xi,yf=y-yi,zf=z-zi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),w=zf*zf*(3-2*zf);let r=0;
-      for(let a=0;a<2;a++)for(let b=0;b<2;b++)for(let c=0;c<2;c++)r+=hs(xi+a,yi+b,zi+c)*(a?u:1-u)*(b?v:1-v)*(c?w:1-w);return r;};
-    const fbm=(x,y,z)=>{let s=0,a=.5,f=1;for(let o=0;o<5;o++){s+=a*vn(x*f,y*f,z*f);f*=2.03;a*=.5;}return s;};
-    const rockTex=cvs(512,512,(x,W,H2)=>{const img=x.createImageData(W,H2),d=img.data;
-      for(let j=0;j<H2;j++)for(let i=0;i<W;i++){const u=i/W*8,v=j/H2*8;let g=fbm(u,v,.5),grain=hs(i,j,1)*.18,rust=Math.max(0,fbm(u*.6+3,v*.15,2)-.52)*2.2;
-        let r=.52+g*.34+grain,gg=.49+g*.3+grain,bb=.44+g*.26+grain;r+=rust*.28;gg+=rust*.06;bb-=rust*.12;
-        const crack=Math.abs(fbm(u*1.4,v*1.4,7)-.5)<.012?.45:1;const lich=fbm(u*2.3+9,v*2.3,4)>.72?1:0;
-        r=r*crack+lich*.18;gg=gg*crack+lich*.19;bb=bb*crack+lich*.14;const k=(j*W+i)*4;d[k]=Math.min(255,r*200);d[k+1]=Math.min(255,gg*200);d[k+2]=Math.min(255,bb*200);d[k+3]=255;}
-      x.putImageData(img,0,0);});
-    rockTex.wrapS=rockTex.wrapT=THREE.RepeatWrapping;rockTex.repeat.set(2,1);
-    const rmat=new THREE.MeshStandardMaterial({color:0xffffff,map:rockTex,bumpMap:rockTex,bumpScale:.06,roughness:.93,metalness:0});
-    const VAR=4,geos=[];for(let vI=0;vI<VAR;vI++){const g=new THREE.SphereGeometry(1,40,26),P=g.attributes.position,sd=vI*13.7;const jn=new THREE.Vector3(Math.sin(sd),.4,Math.cos(sd)).normalize();
-      for(let i=0;i<P.count;i++){let x=P.getX(i),y=P.getY(i),z=P.getZ(i);let k=.78+.42*fbm(x*1.3+sd,y*1.3,z*1.3)+.08*fbm(x*5+sd,y*5,z*5);
-        const pj=x*jn.x+y*jn.y+z*jn.z;if(pj>.55)k*=1-(pj-.55)*.55;         /* a jointing plane shears one face flat */
-        if(y>.62)k*=1-(y-.62)*.35;                                          /* a weathered, rounded-off top */
-        x*=k;y*=k;z*=k;if(y<-.25)y=-.25+(y+.25)*.2;                          /* flat, buried base */
-        P.setXYZ(i,x,y,z);}
-      g.computeVertexNormals();geos.push(g);}
-    const m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
-    for(let vI=0;vI<VAR;vI++){const L=RK.filter((_,i)=>i%VAR===vI);if(!L.length)continue;const rm=IMC(new THREE.InstancedMesh(geos[vI],rmat,L.length));
-      L.forEach((p,i)=>{q.setFromEuler(new THREE.Euler(R()*.2,R()*6.28,R()*.2));m.compose(V(p[0],p[1],H(p[0],p[1])-p[3]*.18),q,new THREE.Vector3(p[2],p[3]*1.25,p[2]*.9));rm.setMatrixAt(i,m);c.setHSL(.07+R()*.04,.12+R()*.12,.78+R()*.2);rm.setColorAt(i,c);});
-      rm.castShadow=true;rm.receiveShadow=true;rm.frustumCulled=false;linearize(rm);scene.add(rm);}}
+    /* real granite boulders: photo-scanned Namaqualand granite (Poly Haven, CC0), cut down to ~3,600 triangles each and dressed in
+       their own scanned colour, surface-detail and roughness/occlusion maps */
+    const TL=new THREE.TextureLoader();
+    new THREE.GLTFLoader().load('rocks.glb',gl=>{try{const meshes=[];gl.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});meshes.sort((a,b)=>a.name.localeCompare(b.name));
+      const m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
+      meshes.forEach((me,vi)=>{const tx=(s,lin)=>{const t=TL.load('rock'+vi+'_'+s+'.jpg');t.flipY=false;if(!lin)t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
+        const g=me.geometry;if(g.attributes.uv&&!g.attributes.uv2)g.setAttribute('uv2',g.attributes.uv);g.computeBoundingBox();const h0=Math.max(.2,g.boundingBox.max.y);
+        const mat=new THREE.MeshStandardMaterial({color:0xffffff,map:tx('d'),normalMap:tx('n',1),roughnessMap:tx('r',1),aoMap:tx('r',1),aoMapIntensity:.9,roughness:1,metalness:0});
+        const L=RK.filter((_,i)=>i%meshes.length===vi);if(!L.length)return;const im=IMC(new THREE.InstancedMesh(g,mat,L.length));
+        L.forEach((p,i)=>{const s=p[2],ys=Math.max(.75,Math.min(1.35,p[3]/(s*h0)));q.setFromEuler(new THREE.Euler(0,R()*6.28,(R()-.5)*.12));m.compose(V(p[0],p[1],H(p[0],p[1])-.14*s*h0),q,new THREE.Vector3(s,s*ys,s));im.setMatrixAt(i,m);c.setHSL(.06+R()*.03,.18+R()*.12,.82+R()*.14);im.setColorAt(i,c);});
+        im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;linearize(im);scene.add(im);});
+      console.log('[cda] scanned boulders',RK.length);}catch(e){console.warn('rocks',e);}},undefined,e=>console.warn('rocks.glb',e));}
   /* 5) the pier off to the left of the 14th tee, and a line of swim buoys across the bay */
   {const h=byRef('14');if(h){const T0=h.p[0],T1=h.p[1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0])+.95;let s=4,x=T0[0],y=T0[1];for(;s<120;s+=1){x=T0[0]+Math.cos(a0)*s;y=T0[1]+Math.sin(a0)*s;if(lieAt(x,y)==='water')break;}
     if(s<120){const wz=H(x+Math.cos(a0)*6,y+Math.sin(a0)*6)+.6+.35,grp=new THREE.Group(),wood=new THREE.MeshStandardMaterial({color:0x7a5a3c,roughness:.9}),dk=new THREE.MeshStandardMaterial({color:0x5b4330,roughness:.9}),L=34,Wd=2.6;
@@ -520,8 +509,9 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
    m.customProgramCacheKey=()=>'imp'+frames+'x'+rows;return m;};
  const ldT=k=>{const t=TL0.load(ASSETS[k]);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
  const mkImp=(list,tex,frames,rows,ratio,aspect)=>{const M=IMC(new THREE.InstancedMesh(iq,impMat(tex,frames,rows),Math.max(1,list.length))),av=new Float32Array(Math.max(1,list.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color();
-   list.forEach((t,i)=>{const v=rows>1?t.v%rows:0,hh=t.h*ratio[v];av[i]=v;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
+   list.forEach((t,i)=>{const v=rows>1?t.v%rows:0,hh=t.h*ratio[v];av[i]=v;t._impM=M;t._impI=i;m.compose(V(t.x,t.y,t.gz-.3),q,s.set(hh*aspect,hh,1));M.setMatrixAt(i,m);const k=.84+rnd()*.16;M.setColorAt(i,rows>1?c.setRGB(k*(.96+rnd()*.06),k,k*(.94+rnd()*.06)):c.setRGB(k*.82,k*.95,k*.74));});
    iq.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.geometry=iq.clone();M.geometry.setAttribute('aVar',new THREE.InstancedBufferAttribute(av,1));M.count=list.length;M.frustumCulled=false;M.userData.lin=1;M.userData.imp={list,tex,frames,rows,ratio,aspect,av,mats:M.instanceMatrix.array.slice(),cols:M.instanceColor?M.instanceColor.array.slice():null};IMPS.push(M);return M;};
+ window.__MKIMP=mkImp;
  if(HASA){scene.add((D.trees==='ponderosa'?mkImp(firs,ldT('pondAtlas'),8,3,[1.081,1.03,1.098],.5):mkImp(firs,ldT('firAtlas'),8,4,[1.03,1.03,1.03,1.301],.5)),mkImp(decs,ldT('broadAtlas'),4,2,[1.216,1.03],1));}
  const SD=[.8,.6],SA=Math.atan2(SD[1],SD[0]);
  for(const t of TREES){if(t.x<X0-30||t.x>X1+30||t.y<Y0-30||t.y>Y1+30)continue;const len=t.h*.83;
@@ -1257,7 +1247,14 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     new THREE.Matrix4().copy(B.Head.matrixWorld).invert().multiply(want2).decompose(plate.position,plate.quaternion,plate.scale);if(lk.lefty)plate.scale.x*=-1;B.Head.add(plate);}
   if(T.pro&&lk.hairMesh&&HAIRG[lk.hairMesh]&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'||lk.cap.style==='polocap')))&&TPL.M&&T.headNC){const key='pro_'+lk.hairMesh+(T.k==='PRO_F'?'_f':'');
     if(!HAIRG[key]){const M=TPL.M,P=T.headNC,g2=HAIRG[lk.hairMesh].clone(),pa=g2.attributes.position,mz=(M.zFront+M.zBack)/2,pz=(P.zF+P.zB)/2,sx=P.halfW/M.halfW,sy=(P.top-P.eyeY)/(M.top-M.eyeY),sz=(P.zF-P.zB)/(M.zFront-M.zBack);
-      for(let i=0;i<pa.count;i++){const zz=pz+(pa.getZ(i)-mz)*sz*1.05;pa.setXYZ(i,pa.getX(i)*sx*1.05,P.eyeY+(pa.getY(i)-M.eyeY)*sy*1.03-.02,zz+(zz>pz?.004:0));}g2.computeVertexNormals();g2.computeBoundingSphere();HAIRG[key]=g2;}
+      const FEM=T.k==='PRO_F';
+       for(let i=0;i<pa.count;i++){let zz=pz+(pa.getZ(i)-mz)*sz*(FEM?1.03:1.05),x=pa.getX(i)*sx*(FEM?1.03:1.05),y=P.eyeY+(pa.getY(i)-M.eyeY)*sy*1.03-(FEM?.006:.02);zz+=zz>pz?.004:0;
+         if(FEM){/* women's long hair lies flush: the hairline sits up on the forehead, the fringe folds back onto it, and the side strands
+                    are tucked behind the edge of the face instead of hanging out in front of it */
+           const hl=P.eyeY+.062,front=P.zF-.012,ax=Math.abs(x),cen=ax<P.halfW*.78;
+           if(cen&&zz>P.zF-.05&&y<hl){const k=Math.min(1,(zz-(P.zF-.05))/.03);y=y+(hl+.004-y)*k;zz=Math.min(zz,front);}
+           else if(!cen&&zz>P.zF-.035&&y<P.eyeY+.09){zz=P.zF-.035-(y<P.eyeY?(P.eyeY-y)*.25:0);x=Math.sign(x)*Math.max(ax,P.halfW*.96);}}
+         pa.setXYZ(i,x,y,zz);}g2.computeVertexNormals();g2.computeBoundingSphere();HAIRG[key]=g2;}
     const hm=new THREE.Mesh(HAIRG[key],hairMat(lk.hair||'#1b1512',T.k==='PRO_F'));hm.castShadow=true;attachRest(hm,B.Head,v3(0,0,0));}
   if(lk.hairMesh&&HAIRG[lk.hairMesh]&&!T.rb&&!T.pro){const hm=new THREE.Mesh(HAIRG[lk.hairMesh],hairMat(lk.hair||'#1b1512',FEMALE.has(p.id)));hm.castShadow=true;attachRest(hm,B.Head,v3(0,0,0));}
 
@@ -1557,7 +1554,7 @@ const BASE=[
  {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
  {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
 {id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
-{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'bounce',color:'#2e86de',look:{skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
+{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[62,69,63,63,65],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
@@ -1896,7 +1893,33 @@ function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)retu
 function startTurn(){swingAnim=null;for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
   buildTufts(cur.x,cur.y);try{buildBlades(cur.x,cur.y);}catch(e){console.warn('blades',e);}try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
 function seatBag(p){const bg=p.av&&p.av.userData.bag;if(!bg)return;p.av.updateMatrixWorld(true);const w=p.av.localToWorld(v3(1.25,0,2.55));bg.position.y=(H(w.x,-w.z)-p.av.position.y)/(p.av.scale.x||1);}
-function posGolfer(p,rot){const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
+
+/* ---------- hero trees: the trees around the golfer are full 3D models (real branches and leaf clusters that catch the light and
+   cast proper shadows); the flat sprites carry on for everything further away. Swapped when the golfer moves to a new spot. ---------- */
+const HERO={fir:null,dec:null,on:[],key:'',loading:false};
+function heroInit(){if(HERO.loading)return;HERO.loading=true;const TL=new THREE.TextureLoader(),GL=new THREE.GLTFLoader();
+  const mk=tag=>GL.load('hero_'+tag+'.glb',gl=>{try{const parts={};gl.scene.traverse(o=>{if(o.isMesh)parts[o.name.replace(/[^a-z]/g,'')]=o.geometry;});
+    const tx=(f,srgb)=>{const t=TL.load(f);t.flipY=false;if(srgb)t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
+    const bm=new THREE.MeshStandardMaterial({map:tx('hero_'+tag+'_bark.jpg',1),normalMap:tx('hero_'+tag+'_barkn.jpg'),roughness:.95,metalness:0});
+    const lm=new THREE.MeshStandardMaterial({map:tx('hero_'+tag+'_leaf.webp',1),alphaTest:.5,side:THREE.DoubleSide,roughness:.82,metalness:0});
+    let h=1;for(const g of Object.values(parts)){g.computeBoundingBox();h=Math.max(h,g.boundingBox.max.y);}
+    const N=tag==='fir'?12:10,B=IMC(new THREE.InstancedMesh(parts.branches,bm,N)),L=IMC(new THREE.InstancedMesh(parts.leaves,lm,N));
+    for(const M of[B,L]){M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;scene.add(M);}
+    HERO[tag]={B,L,h,N};HERO.key='';if(HERO.fir&&HERO.dec&&cur)heroUpdate(cur.x,cur.y);}catch(e){console.warn('hero trees',e);}},undefined,e=>console.warn('hero '+tag,e));
+  mk('fir');mk('dec');}
+function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const ca=aim===undefined?(cur?cur.aim:0):aim,cx=x-Math.cos(ca)*5.5,cy=y-Math.sin(ca)*5.5;const key=Math.round(x/4)+','+Math.round(y/4);if(key===HERO.key)return;HERO.key=key;
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),z0=new THREE.Matrix4().makeScale(0,0,0),c=new THREE.Color();
+  for(const t of HERO.on){if(t._impM&&t._m0){t._impM.setMatrixAt(t._impI,t._m0);t._impM.instanceMatrix.needsUpdate=true;}}HERO.on=[];
+  const cam=camera.position,near=TREES.map(t=>({t,d:Math.hypot(t.x-x,t.y-y)})).filter(o=>o.d<30&&o.t._impM).sort((a,b)=>a.d-b.d);
+  const put={fir:0,dec:0};
+  for(const {t} of near){const tag=t.fir?'fir':'dec',H=HERO[tag];if(put[tag]>=H.N)continue;
+    /* keep as a (fading) sprite any tree whose canopy could sit between the camera and the golfer */
+    {const cr=Math.max(3.5,t.h*.3),vx=x-cx,vy=y-cy,L2=vx*vx+vy*vy||1,u=Math.max(0,Math.min(1,((t.x-cx)*vx+(t.y-cy)*vy)/L2)),dd=Math.hypot(t.x-(cx+vx*u),t.y-(cy+vy*u));if(dd<cr)continue;}
+    if(!t._m0){t._m0=new THREE.Matrix4();t._impM.getMatrixAt(t._impI,t._m0);}t._impM.setMatrixAt(t._impI,z0);t._impM.instanceMatrix.needsUpdate=true;HERO.on.push(t);
+    const k=t.h/H.h*(t.fir?1.02:1.08),yaw=((t.x*12.9898+t.y*78.233)%6.283);q.setFromAxisAngle(new THREE.Vector3(0,1,0),yaw);m.compose(V(t.x,t.y,t.gz-.15),q,s.set(k,k,k));
+    const i=put[tag]++;H.B.setMatrixAt(i,m);H.L.setMatrixAt(i,m);const g=.86+((t.x*7.1+t.y*3.3)%1+1)%1*.18;c.setRGB(g*.97,g,g*.95);H.L.setColorAt(i,c);H.B.setColorAt(i,c.setRGB(1,1,1));}
+  for(const tag of['fir','dec']){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
+function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.aim);}catch(e){console.warn('hero',e);}const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
   {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
