@@ -1697,7 +1697,7 @@ function placeBall(p,x,y,z){const b=p.ball.b,np=V(x,y,z),lp=b.userData.lp;
   if(lp){const mx=np.x-lp.x,mz=np.z-lp.z,d=Math.hypot(mx,mz);if(d>1e-5&&d<40){const g=H(x,y),onGround=z<g+.045,ax=new THREE.Vector3(mz/d,0,-mx/d);
       if(!onGround)ax.negate();b.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(ax,Math.min(2.4,d/.0214*(onGround?1:.08))));}}
   b.userData.lp=np.clone();b.position.copy(np);p.ball.sh.position.copy(V(x,y,H(x,y)+.006));}
-function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=Math.max(1,d*.0038/.0214);p.ball.b.scale.setScalar(s);p.ball.sh.scale.set(s,s,1);p.ball.b.visible=p.ball.sh.visible=!p.done||(state==='replay'&&RP&&RP.p===p);}}
+function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=Math.max(1,d*.0038/.0214);p.ball.b.scale.setScalar(s);p.ball.sh.scale.set(s,s,1);p.ball.b.visible=p.ball.sh.visible=(!p.done&&!(p.strokes===0&&p!==cur))||(state==='replay'&&RP&&RP.p===p);}}
 
 /* ---------- game flow ---------- */
 let ROUND=null;
@@ -1934,8 +1934,8 @@ function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one'
 function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
 
 function press(){if(CURT)return;if(performance.now()/1000<flyUntil){flyUntil=0;if(cur)cur.intro=performance.now()/1000+1.8;return;}if(state==='aim'){if(cur)cur.intro=0;state='s1';swingU=0;overhead=false;if(cur)meterS1(cur);$('viewBtn').setAttribute('aria-pressed','false');}
-  else if(state==='s1'){if(S1&&cur&&!cur.over)swingU=Math.min(1.1,(performance.now()/1000-S1.t0)*S1.rate);swingPow=Math.max(.04,swingU);state='s2';if(cur)meterS2(cur);}
-  else if(state==='s2'){if(S2&&cur&&!cur.over)swingU=S2.u0-(performance.now()/1000-S2.t0)*S2.rate;mStop();$('mCur').style.transform='translateX('+pct(swingU)+'%)';fire(swingU);}}
+  else if(state==='s1'){swingPow=Math.max(.04,swingU);state='s2';if(cur)meterS2(cur);}
+  else if(state==='s2')fire(swingU);}
 function fire(u){const p=cur,c=CLUBS[p.club],tol=tolFor(p,c);fireErr(u/tol);}
 function fireErr(err){const p=cur,c=CLUBS[p.club];
   p.mishit=null;/* tops and chunks only when the bar runs all the way through the red zone (110%); inside the red zone it's just a wild one */if(swingPow>=1.099&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
@@ -2161,9 +2161,9 @@ const fillK=u=>Math.max(0,(pct(u)-12)/88);
 function mStop(){for(const k of['cur','fill'])if(MA[k]){try{MA[k].cancel();}catch(e){}MA[k]=null;}}
 function mAnim(el,from,to,ms){try{return el.animate([{transform:from},{transform:to}],{duration:Math.max(16,ms),easing:'linear',fill:'forwards'});}catch(e){return null;}}
 function meterS1(p){mStop();const rate=(CLUBS[p.club].putt?.75:1)*meterSpd(p);S1={t0:performance.now()/1000,rate};S2=null;
-  if(!p.over){MA.cur=mAnim($('mCur'),'translateX('+pct(0)+'%)','translateX('+pct(1.1)+'%)',1.1/rate*1000);MA.fill=mAnim($('mFill'),'scaleX('+fillK(0)+')','scaleX('+fillK(1.1)+')',1.1/rate*1000);}}
+}
 function meterS2(p){mStop();const rate=1.45*meterSpd(p),u0=swingU;S2={t0:performance.now()/1000,rate,u0};S1=null;$('mFill').style.transform='scaleX('+fillK(swingPow)+')';
-  if(!p.over)MA.cur=mAnim($('mCur'),'translateX('+pct(u0)+'%)','translateX('+pct(-.15)+'%)',(u0+.15)/rate*1000);}
+}
 function updMeter(){const p=cur;if(!p)return;const c=CLUBS[p.club],tol=tolFor(p,c);
   const sw=$('mSweet');sw.style.left=pct(-tol)+'%';sw.style.width=(pct(tol)-pct(-tol))+'%';
   const pw=(state==='s1'||state==='sw')?swingU:(state==='s2'||state==='flight'?swingPow:0);if(!MA.cur)$('mCur').style.transform='translateX('+pct(swingU)+'%)';if(!MA.fill)$('mFill').style.transform='scaleX('+fillK(pw)+')';
