@@ -1216,7 +1216,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     const top=new THREE.Color(lk.top&&lk.top.color||'#ffffff'),pants=new THREE.Color(lk.legs&&lk.legs.color||'#2b2f36').multiplyScalar(T.k==='PRO_F'?1:2.6);if(T.k==='PRO_F'){top.convertSRGBToLinear();pants.convertSRGBToLinear();}const _pf=0,capC=new THREE.Color(lk.cap&&lk.cap.color||p.color||'#1f2a44').multiplyScalar(2.4);
     body.material=src.map(m=>{const n=m.clone();n.userData.lin=1;const nm=n.name||'';if(/TSHIRT/.test(nm)){n.color.copy(top);if(lk.top&&lk.top.pat){const pt=hawaiiTex(lk.top.pat,true);pt.repeat.set(3.2,3.2);n.onBeforeCompile=sh=>{sh.uniforms.uPat={value:pt};sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uPat;').replace('#include <map_fragment>','#include <map_fragment>\n{float l=dot(diffuseColor.rgb,vec3(.3,.59,.11));vec3 pc=texture2D(uPat,vUv*3.2).rgb;pc=pow(pc,vec3(2.2));diffuseColor.rgb=pc*clamp(l*1.25,0.,1.2);}');};const ck2='protshirt_'+p.id;n.customProgramCacheKey=()=>ck2;n.color.setRGB(1,1,1);}}
       else if(/PANT/.test(nm))n.color.copy(pants);else if(/CAP/.test(nm)){n.color.copy(capC);if(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'))n.visible=false;}else if(/LASH/.test(nm)){n.visible=false;}else if(/HEAD|ARM|LEG|BODY|NAILS/.test(nm)){n.color.copy(tintS);if(/HEAD/.test(nm)){/* the model's scalp/forehead under its cap is left unpainted (white): fill it with the golfer's skin */const sk=skin.clone();
-        const hairOn=!!(T.hairPlane&&lk.hairMesh&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy')))),hc=new THREE.Color(lk.hair||'#1b1512').convertSRGBToLinear();
+        const hairOn=!!(T.hairPlane&&lk.hairMesh&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'||lk.cap.style==='polocap')))),hc=new THREE.Color(lk.hair||'#1b1512').convertSRGBToLinear();
         n.onBeforeCompile=sh=>{sh.uniforms.uSk={value:sk};sh.uniforms.uHairOn={value:hairOn?1:0};sh.uniforms.uHairC={value:new THREE.Vector3(hc.r,hc.g,hc.b)};sh.uniforms.uHairP={value:hairOn?T.hairPlane.p0:new THREE.Vector3()};sh.uniforms.uHairU={value:hairOn?T.hairPlane.u:new THREE.Vector3(0,1,0)};
           sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vPosL;').replace('#include <begin_vertex>','#include <begin_vertex>\nvPosL=position;');
           sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uSk;uniform float uHairOn;uniform vec3 uHairC,uHairP,uHairU;varying vec3 vPosL;').replace('#include <map_fragment>','#include <map_fragment>\n{float hz=dot(vPosL-uHairP,uHairU)/dot(uHairU,uHairU);diffuseColor.rgb=mix(diffuseColor.rgb,uHairC*.85,smoothstep(0.,.02,hz)*uHairOn);}');sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n{float mn=min(min(texelColor.r,texelColor.g),texelColor.b),mx=max(max(texelColor.r,texelColor.g),texelColor.b);float w=smoothstep(.62,.8,mn)*(1.-smoothstep(.08,.2,mx-mn));diffuseColor.rgb=mix(diffuseColor.rgb,pow(uSk,vec3(2.2))*.92,w);}');};const ckH='proHead_'+p.id;n.customProgramCacheKey=()=>ckH;}}return n;});}
@@ -1251,16 +1251,51 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     for(let i=0;i<pp.count;i++){const x=pp.getX(i),y=pp.getY(i);pp.setZ(i,-(x*x/(2*.075)+y*y/(2*.2)));}pg.computeVertexNormals();
     if(!window._plateA){window._plateA=new THREE.TextureLoader().load(ASSETS.plateA);}
     const fm=new THREE.MeshLambertMaterial({map:faceTex(p.id),alphaMap:window._plateA,transparent:true,depthWrite:true,alphaTest:.02});fm.map.encoding=THREE.sRGBEncoding;fm.userData.lin=1;
-    const capped=!!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')&&!(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'));if(T.pro&&(capped?T.brimProf:lk.hairMesh)){const base=T.eyeY-26*mpp,bp=capped?T.brimProf.map(y=>y+.009-base):[0,1,2,3,4,5,6,7,8].map(k=>{const x=-.08+k*.02;return T.eyeY+.085-x*x*3-base;});/* photo stops at the brim, or at the hairline for golfers with hair */fm.onBeforeCompile=sh=>{sh.uniforms.uBrim={value:bp};sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vLP;').replace('#include <begin_vertex>','#include <begin_vertex>\nvLP=position.xy;');
+    const capped=!!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')&&!(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'||lk.cap.style==='polocap'));if(T.pro&&(capped?T.brimProf:lk.hairMesh)){const base=T.eyeY-26*mpp,bp=capped?T.brimProf.map(y=>y+.009-base):[0,1,2,3,4,5,6,7,8].map(k=>{const x=-.08+k*.02;return T.eyeY+.085-x*x*3-base;});/* photo stops at the brim, or at the hairline for golfers with hair */fm.onBeforeCompile=sh=>{sh.uniforms.uBrim={value:bp};sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vLP;').replace('#include <begin_vertex>','#include <begin_vertex>\nvLP=position.xy;');
       sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform float uBrim[9];varying vec2 vLP;').replace('#include <alphamap_fragment>','#include <alphamap_fragment>\n{float fx=clamp((vLP.x+.08)/.02,0.,7.999);int k=int(floor(fx));float cut=0.;for(int i=0;i<8;i++){if(i==k)cut=mix(uBrim[i],uBrim[i+1],fx-float(i));}diffuseColor.a*=1.-smoothstep(cut-.006,cut,vLP.y);}');};fm.customProgramCacheKey=()=>'plateBrim';}
     const plate=new THREE.Mesh(pg,fm);plate.renderOrder=2;const want2=new THREE.Matrix4().compose(v3(0,T.eyeY-26*mpp,T.plateZ!=null?T.plateZ:T.noseZ+.006),new THREE.Quaternion(),v3(1,1,1));
     new THREE.Matrix4().copy(B.Head.matrixWorld).invert().multiply(want2).decompose(plate.position,plate.quaternion,plate.scale);if(lk.lefty)plate.scale.x*=-1;B.Head.add(plate);}
-  if(T.pro&&lk.hairMesh&&HAIRG[lk.hairMesh]&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy')))&&TPL.M&&T.headNC){const key='pro_'+lk.hairMesh+(T.k==='PRO_F'?'_f':'');
+  if(T.pro&&lk.hairMesh&&HAIRG[lk.hairMesh]&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'||lk.cap.style==='polocap')))&&TPL.M&&T.headNC){const key='pro_'+lk.hairMesh+(T.k==='PRO_F'?'_f':'');
     if(!HAIRG[key]){const M=TPL.M,P=T.headNC,g2=HAIRG[lk.hairMesh].clone(),pa=g2.attributes.position,mz=(M.zFront+M.zBack)/2,pz=(P.zF+P.zB)/2,sx=P.halfW/M.halfW,sy=(P.top-P.eyeY)/(M.top-M.eyeY),sz=(P.zF-P.zB)/(M.zFront-M.zBack);
       for(let i=0;i<pa.count;i++){const zz=pz+(pa.getZ(i)-mz)*sz*1.05;pa.setXYZ(i,pa.getX(i)*sx*1.05,P.eyeY+(pa.getY(i)-M.eyeY)*sy*1.03-.02,zz+(zz>pz?.004:0));}g2.computeVertexNormals();g2.computeBoundingSphere();HAIRG[key]=g2;}
     const hm=new THREE.Mesh(HAIRG[key],hairMat(lk.hair||'#1b1512',T.k==='PRO_F'));hm.castShadow=true;attachRest(hm,B.Head,v3(0,0,0));}
   if(lk.hairMesh&&HAIRG[lk.hairMesh]&&!T.rb&&!T.pro){const hm=new THREE.Mesh(HAIRG[lk.hairMesh],hairMat(lk.hair||'#1b1512',FEMALE.has(p.id)));hm.castShadow=true;attachRest(hm,B.Head,v3(0,0,0));}
 
+
+  if(T.k==='PRO_F'&&lk.cap&&lk.cap.style==='polocap'&&T.headNC){try{
+    /* a classic unstructured six-panel "polo" cap: soft low crown with stitched panel seams and eyelets, top button, pre-curved bill
+       with rows of stitching, and a small embroidered golfer on the front panel */
+    const P=T.headNC,col=new THREE.Color(lk.cap.color||'#1f2a44'),lc=lk.cap.logo||'#9b7fd6',cz=(P.zF+P.zB)/2,rx=P.halfW*1.06+.012,rz=(P.zF-P.zB)/2*1.03+.012,y0=P.eyeY+.056,CH=.086;
+    const tx=document.createElement('canvas');tx.width=1024;tx.height=256;{const x=tx.getContext('2d');x.fillStyle='#'+col.getHexString();x.fillRect(0,0,1024,256);
+      for(let i=0;i<9000;i++){x.fillStyle=Math.random()<.5?'rgba(255,255,255,.035)':'rgba(0,0,0,.06)';x.fillRect(Math.random()*1024,Math.random()*256,3,1);}   /* cotton twill grain */
+      x.strokeStyle='rgba(0,0,0,.38)';x.lineWidth=3;for(let k=0;k<6;k++){const u=((k+.5)/6)*1024;x.beginPath();x.moveTo(u,0);x.lineTo(u,256);x.stroke();}   /* panel seams */
+      x.strokeStyle='rgba(255,255,255,.14)';x.lineWidth=1.2;x.setLineDash([5,4]);for(let k=0;k<6;k++)for(const o of[-6,6]){const u=((k+.5)/6)*1024+o;x.beginPath();x.moveTo(u,0);x.lineTo(u,256);x.stroke();}
+      x.setLineDash([]);x.fillStyle='rgba(0,0,0,.45)';for(let k=0;k<6;k++){x.beginPath();x.arc(((k)/6)*1024+85,58,5,0,7);x.fill();}}   /* eyelets */
+    const cT=new THREE.CanvasTexture(tx);cT.encoding=THREE.sRGBEncoding;cT.anisotropy=4;
+    const cm=new THREE.MeshStandardMaterial({map:cT,roughness:.92,metalness:0,side:THREE.DoubleSide});
+    /* crown: a soft dome that sits low over the forehead, a little lower and rounder at the front (unstructured) */
+    const dg=new THREE.SphereGeometry(1,64,18,0,Math.PI*2,0,Math.PI/2),D=dg.attributes.position;
+    for(let i=0;i<D.count;i++){const x=D.getX(i),y=D.getY(i),z=D.getZ(i);const front=Math.max(0,z);D.setXYZ(i,x*rx,y0+y*CH*(1-.12*front*front)-(1-y)*.004,cz+z*rz);}
+    dg.computeVertexNormals();const cap=new THREE.Group();cap.add(new THREE.Mesh(dg,cm));
+    /* button */const bt=new THREE.Mesh(new THREE.SphereGeometry(.009,16,8),cm);bt.scale.set(1,.45,1);bt.position.set(0,y0+CH-.002,cz);cap.add(bt);
+    /* bill: pre-curved (sides bent down), pitched slightly down, with stitched rows */
+    const bx=document.createElement('canvas');bx.width=512;bx.height=128;{const x=bx.getContext('2d');x.fillStyle='#'+col.getHexString();x.fillRect(0,0,512,128);x.strokeStyle='rgba(255,255,255,.13)';x.lineWidth=1.3;x.setLineDash([5,4]);for(let r=0;r<8;r++){const y=18+r*13;x.beginPath();x.moveTo(0,y);x.lineTo(512,y);x.stroke();}}
+    const bT=new THREE.CanvasTexture(bx);bT.encoding=THREE.sRGBEncoding;const bm=new THREE.MeshStandardMaterial({map:bT,roughness:.88,side:THREE.DoubleSide});
+    const NA=36,NR=6,bp=[],bu=[],bi=[];for(let r=0;r<=NR;r++)for(let k=0;k<=NA;k++){const a=-1.25+2.5*k/NA,t=r/NR,sa=Math.sin(a),ca=Math.cos(a);
+      const ex=sa*rx*1.0,ez=cz+ca*rz*1.0;const out=.088*t*Math.pow(Math.max(0,ca),.6);const side=Math.abs(sa);
+      bp.push(ex+sa*out*.35,y0+.002-out*.12-t*.02*side*side-.004*t,ez+ca*out);bu.push(k/NA,t);}
+    for(let r=0;r<NR;r++)for(let k=0;k<NA;k++){const a=r*(NA+1)+k,b=a+NA+1;bi.push(a,b,a+1,a+1,b,b+1);}
+    const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.setAttribute('uv',new THREE.Float32BufferAttribute(bu,2));bg.setIndex(bi);bg.computeVertexNormals();cap.add(new THREE.Mesh(bg,bm));
+    /* the embroidered mark: a small golfer at the finish, raised satin stitching */
+    const lx=document.createElement('canvas');lx.width=lx.height=128;{const x=lx.getContext('2d');x.strokeStyle=lc;x.fillStyle=lc;x.lineCap='round';x.lineJoin='round';
+      x.lineWidth=9;x.beginPath();x.arc(66,26,10,0,7);x.fill();x.beginPath();x.moveTo(64,38);x.lineTo(58,74);x.stroke();                                   /* head, body */
+      x.beginPath();x.moveTo(58,74);x.lineTo(44,110);x.moveTo(58,74);x.lineTo(74,108);x.stroke();                                                         /* legs */
+      x.beginPath();x.moveTo(62,46);x.lineTo(80,38);x.lineTo(88,22);x.stroke();                                                                             /* arms over the shoulder */
+      x.lineWidth=5;x.beginPath();x.moveTo(88,22);x.lineTo(40,12);x.stroke();                                                                               /* club */
+      x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=1.5;for(let i=0;i<40;i++){const a=Math.random()*6.28,r=Math.random()*40;x.beginPath();x.moveTo(64+Math.cos(a)*r,64+Math.sin(a)*r);x.lineTo(64+Math.cos(a)*r+3,64+Math.sin(a)*r-2);x.stroke();}}
+    const lT=new THREE.CanvasTexture(lx);lT.encoding=THREE.sRGBEncoding;const lg=new THREE.Mesh(new THREE.PlaneGeometry(.042,.042),new THREE.MeshStandardMaterial({map:lT,transparent:true,alphaTest:.3,roughness:.5,metalness:.1,polygonOffset:true,polygonOffsetFactor:-2}));
+    const la=0,lv=.36,ly=y0+CH*lv,lzr=Math.sqrt(Math.max(0,1-lv*lv));lg.position.set(0,ly,cz+rz*lzr+.0015);lg.rotation.x=-Math.asin(lv)*.9;cap.add(lg);
+    cap.traverse(o=>{if(o.isMesh)o.castShadow=true;});attachRest(cap,B.Head,v3(0,0,0));}catch(e){console.warn('polocap',e);}}
   if(T.k==='PRO_F'&&lk.cap&&lk.cap.style==='cowboy'&&T.headNC){try{
     /* rodeo hat: cattleman crown with a centre crease and front pinches, brim rolled up at the sides, a studded band - the whole hat
        paved in cardinal-red rhinestones that throw the light */
@@ -1506,7 +1541,7 @@ const BASE=[
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
  {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
  {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
- {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'visor',color:'#1f2a44'},top:{type:'polo',color:'#4E2A84'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
+ {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'polocap',color:'#1f2a44',logo:'#9b7fd6'},top:{type:'polo',color:'#4E2A84'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
  {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
  {id:'shaka',name:'Brandon Kuntz',hcp:18,st:[79,75,64,64,66],ab:'rip',color:'#fd9644',look:{skin:'#f0c4a4',cap:{style:'fwd',color:'#1b1b1d'},top:{type:'polo',color:'#1b2640'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
  {id:'white-cap',name:'Darren Twanmoh',hcp:18,st:[91,54,69,68,66],ab:'rip',color:'#a29bfe',look:{skin:'#d7a17a',cap:{style:'fwd',color:'#f1f1ee'},top:{type:'vest',color:'#1d1d1f',arms:'#8a8d92'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
@@ -2007,9 +2042,9 @@ function hsPending(){try{return JSON.parse(localStorage.getItem('dg-hs-pending')
 function hsAll(){const seen=new Set(HS.board.map(r=>r.rid));return HS.board.concat(hsPending().filter(r=>!seen.has(r.rid)));}
 function hsRows(tab){return hsAll().filter(r=>tab==='all'||r.c===tab).sort(hsSort).slice(0,10);}
 function hsRender(mark){const el=$('hs');if(!el)return;const tabs=['all','jp','ws','nc','cda'];
-  let h='<h2>Leaders</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'">'+(t==='all'?'All courses':HS_CN[t])+'</button>').join('')+'</div><div class="board">';
+  let h='<h2>Leaderboard</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'">'+(t==='all'?'All courses':HS_CN[t])+'</button>').join('')+'</div><div class="board">';
   const L=hsRows(HS.tab);
-  h+='<table><tr><th>Pos</th><th>Init</th><th>Golfer</th>'+(HS.tab==='all'?'<th>Course</th>':'')+'<th style="text-align:right">To par</th></tr>';
+  h+='<table><tr><th>Place</th><th>Initials</th><th>Player</th>'+(HS.tab==='all'?'<th>Course</th>':'')+'<th style="text-align:right">Score</th></tr>';
   for(let k=0;k<10;k++){const r=L[k],cls=r?(r.tp<0?'hsu':r.tp>0?'hso':'hse'):'';
     h+=r?'<tr class="hr'+(k+1)+(mark&&r.rid===mark?' me':'')+'"><td class="hspos">'+(k+1)+'</td><td class="hsini">'+esc(r.i)+'</td><td class="hsg">'+esc(r.g.split(' ')[0])+'</td>'+(HS.tab==='all'?'<td class="hscr">'+(HS_CS[r.c]||r.c.toUpperCase())+'</td>':'')+'<td class="hssc"><span class="'+cls+'">'+hsTP(r.tp)+'</span><small>'+r.s+'</small></td></tr>'
       :'<tr class="empty"><td class="hspos">'+(k+1)+'</td><td class="hsini">&middot;&middot;&middot;</td><td class="hsg"></td>'+(HS.tab==='all'?'<td class="hscr"></td>':'')+'<td class="hssc">&mdash;</td></tr>';}
@@ -2024,7 +2059,7 @@ function hsQualifies(c,tp,s){const beats=L=>L.length<10||tp<L[9].tp||(tp===L[9].
 function hsSubmit(e){try{const P=hsPending();P.push(e);localStorage.setItem('dg-hs-pending',JSON.stringify(P));}catch(x){}return hsFlush().then(()=>hsLoad(e.rid));}
 function hsDefault(p){try{const v=localStorage.getItem('dg-ini-'+p.id);if(v&&v.length===3)return v;}catch(e){}const w=(p.name||'AAA').toUpperCase().replace(/[^A-Z ]/g,'').split(' ').filter(Boolean);return ((w[0]||'A')[0]+((w[1]||w[0]||'AA').slice(0,2))).padEnd(3,'A').slice(0,3);}
 function hsEntry(p,T,next){const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';let ini=hsDefault(p).split(''),on=0;const ov=document.createElement('div');ov.id='hsEntry';
-  const draw=()=>{ov.innerHTML='<div class="arcade"><h2>Leaders</h2><div class="crest">A place on the board</div><div class="hswho">'+esc(p.name)+'<br><b>'+hsTP(T.tp)+'</b> &nbsp;('+T.s+') &nbsp;at '+esc(HS_CN[window.COURSE_KEY]||D.short||'')+'</div><div style="font-family:Playfair Display,Georgia,serif;font-style:italic;font-size:14px;color:#d9c27a">Sign the board with your initials</div>'+
+  const draw=()=>{ov.innerHTML='<div class="arcade"><h2>Leaderboard</h2><div class="crest">A place on the board</div><div class="hswho">'+esc(p.name)+'<br><b>'+hsTP(T.tp)+'</b> &nbsp;('+T.s+') &nbsp;at '+esc(HS_CN[window.COURSE_KEY]||D.short||'')+'</div><div style="font-family:Playfair Display,Georgia,serif;font-style:italic;font-size:14px;color:#d9c27a">Sign the board with your initials</div>'+
     '<div class="slots">'+[0,1,2].map(k=>'<div class="slot'+(k===on?' on':'')+'" data-k="'+k+'"><button data-d="1" data-k="'+k+'">&#9650;</button><div class="ch" data-k="'+k+'">'+ini[k]+'</div><button data-d="-1" data-k="'+k+'">&#9660;</button></div>').join('')+'</div>'+
     '<button class="go">Sign</button><br><button class="skip">not this time</button></div>';
     ov.querySelectorAll('.slot button').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;on=k;const i=A.indexOf(ini[k]);ini[k]=A[(i+(+b.dataset.d)+A.length)%A.length];draw();});

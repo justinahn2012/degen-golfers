@@ -1,11 +1,11 @@
 (function(){const el=document.getElementById('intro');if(window.BOOT){el.remove();return;}
  (function leaders(){const box=document.getElementById('introLB');if(!box)return;const CS={jp:'JPK',ws:'WSEA',nc:'NCST',cda:'CDA'};const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
    const tp=v=>v===0?'E':(v>0?'+':'')+v,srt=(a,b)=>a.tp-b.tp||a.s-b.s||a.t-b.t;
-   const draw=L=>{L=(L||[]).slice().sort(srt).slice(0,10);let h='<div class="hd">Leaders<small>The Degen Golfers Invitational</small></div>';
+   const draw=L=>{L=(L||[]).slice().sort(srt).slice(0,10);let h='<div class="hd">Leaderboard<small>The Degen Golfers Invitational</small></div><div class="ch"><span>Place</span><span>Initials</span><span>Player</span><span>Course</span><span>Score</span></div>';
      if(!L.length){box.innerHTML=h+'<div class="vp"><div class="empty">The board is open \u2014 be the first to sign it</div></div>';return;}
      const row=(r,k)=>'<div class="r"><span class="p">'+(k+1)+'</span><span class="i">'+esc(r.i)+'</span><span class="g">'+esc(String(r.g).split(' ')[0])+'</span><span class="c">'+(CS[r.c]||String(r.c).toUpperCase())+'</span><span class="s"><span class="'+(r.tp<0?'u':r.tp>0?'o':'e')+'">'+tp(r.tp)+'</span><small>'+r.s+'</small></span></div>';
-     const rows=L.map(row).join('');box.innerHTML=h+'<div class="vp"><div class="rows">'+rows+(L.length>3?rows:'')+'</div></div>';
-     if(L.length>3){const el2=box.querySelector('.rows'),n=L.length,step=28,hold=1.6,move=.55;let t0=null;
+     const rows=L.map(row).join('');box.innerHTML=h+'<div class="vp"><div class="rows">'+rows+(L.length>5?rows:'')+'</div></div>';
+     if(L.length>5){const el2=box.querySelector('.rows'),n=L.length,step=28,hold=1.6,move=.55;let t0=null;
        const tick=ts=>{if(!document.body.contains(el2))return;if(t0===null)t0=ts;const per=hold+move,tt=(ts-t0)/1000,k=Math.floor(tt/per),f=Math.min(1,Math.max(0,(tt-k*per-hold)/move)),e=f*f*(3-2*f);el2.style.transform='translateY('+(-((k%n)+e)*step)+'px)';requestAnimationFrame(tick);};requestAnimationFrame(tick);}};
    let cached=[];try{cached=JSON.parse(localStorage.getItem('dg-hs-cache')||'[]');const P=JSON.parse(localStorage.getItem('dg-hs-pending')||'[]'),seen=new Set(cached.map(r=>r.rid));cached=cached.concat(P.filter(r=>!seen.has(r.rid)));}catch(e){}
    draw(cached);fetch('/api/scores',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.board){try{localStorage.setItem('dg-hs-cache',JSON.stringify(d.board));}catch(e){}draw(d.board);}}).catch(()=>{});})();
@@ -31,9 +31,12 @@
  const ring=new THREE.Mesh(new THREE.TorusGeometry(4.35,.075,16,160),gold);ring.rotation.x=1.25;spin.add(ring);
  const ball=new THREE.Mesh(new THREE.SphereGeometry(.3,64,40),new THREE.MeshStandardMaterial({color:0xffffff,metalness:0,roughness:.32,bumpMap:makeDimples(),bumpScale:.018}));ring.add(ball);
  const slow=matchMedia('(prefers-reduced-motion: reduce)').matches;const t0=performance.now();
- function size(){const W=innerWidth,H=innerHeight;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();const vis=2*15*Math.tan(THREE.MathUtils.degToRad(16))*cam.aspect;const k=Math.min(1,vis*.9/(w+.4),2*15*Math.tan(THREE.MathUtils.degToRad(16))*.44/4.6);spin.scale.setScalar(k);}
- size();addEventListener('resize',size);
+ let baseY=1.55;function size(){const W=innerWidth,H=innerHeight;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();const visH=2*15*Math.tan(THREE.MathUtils.degToRad(16)),vis=visH*cam.aspect,wpp=visH/H;
+   /* fit the logo into the space between the title and the leaderboard, whatever the screen height */
+   const lb=document.getElementById('introLB'),pre=document.querySelector('.i-pre');const top=(pre?pre.getBoundingClientRect().bottom:H*.12)+12,bot=(lb?lb.getBoundingClientRect().top:H*.6)-12,avail=Math.max(80,bot-top);
+   const k=Math.min(1,vis*.9/(w+.4),avail*wpp/4.9);spin.scale.setScalar(k);baseY=(H/2-(top+bot)/2)*wpp;}
+ size();addEventListener('resize',size);setTimeout(size,60);setTimeout(size,2400);
  (function loop(){if(!alive)return;const t=(performance.now()-t0)/1000;const e=Math.min(1,Math.max(0,(t-.7)/1.3)),pop=e<1?1-Math.pow(1-e,3)*Math.cos(e*7):1;
-   logo.scale.setScalar(Math.max(.001,pop));const om=1.2,ph=Math.max(0,t-.7)*om;spin.rotation.y=slow?Math.sin(t*.4)*.35:(ph-Math.sin(ph))+Math.PI*2*(1-e);spin.position.y=1.55+Math.sin(t*1.3)*.08;
+   logo.scale.setScalar(Math.max(.001,pop));const om=1.2,ph=Math.max(0,t-.7)*om;spin.rotation.y=slow?Math.sin(t*.4)*.35:(ph-Math.sin(ph))+Math.PI*2*(1-e);spin.position.y=baseY+Math.sin(t*1.3)*.08*spin.scale.x;
    const a=-t*1.4;ball.position.set(Math.cos(a)*4.35,Math.sin(a)*4.35,0);ball.rotation.set(t*2.1,t*1.4,0);
    R.render(sc,cam);requestAnimationFrame(loop);})();})();
