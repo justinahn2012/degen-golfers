@@ -592,22 +592,41 @@ const bladeMat=(()=>{const m=new THREE.MeshLambertMaterial({color:0xffffff,side:
   m.customProgramCacheKey=()=>'blades1';return m;})();
 const BLADE_LIE_0={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.065,.12],w:.008,c:0x436b25}};
 const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assign({},BLADE_LIE_0[k]);v.c=new THREE.Color(cdaHex('#'+new THREE.Color(v.c).getHexString())).getHex();o[k]=v;}return o;})();
-function buildBlades(x0,y0){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}
-  const N=MOBILE?40000:70000,R=11,M=IMC(new THREE.InstancedMesh(bladeGeo,bladeMat,N)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();let n=0;
-  for(let i=0;i<N*1.6&&n<N;i++){const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[(cur&&cur.lie==='tee'&&r<3.5)?'tee':lieAt(x,y)];if(!L||onPath(x,y))continue;
+/* ---------- grass, built in slices: the same blades and tufts as before, but the work can be spread over many frames and done ahead
+   of time (while the ball bounces and rolls), so the next turn just swaps the finished grass in ---------- */
+function* genBlades(x0,y0,tee,out){const N=MOBILE?40000:70000,R=11,m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();
+  out.m=new Float32Array(N*16);out.c=new Float32Array(N*3);out.n=0;let n=0;
+  for(let i=0;i<N*1.6&&n<N;i++){if(i%1200===1199)yield;const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||onPath(x,y))continue;
     const fade=1-Math.max(0,(r-R*.7)/(R*.3)),h=(L.h[0]+Math.random()*(L.h[1]-L.h[0]))*(.35+.65*fade);e.set((Math.random()-.5)*.5,Math.random()*6.283,(Math.random()-.5)*.35);q.setFromEuler(e);
-    m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));M.setMatrixAt(n,m);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);M.setColorAt(n,c);n++;}
-  M.count=n;M.frustumCulled=false;M.receiveShadow=true;linearize(M);BLADES=M;scene.add(M);}
+    m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));m.toArray(out.m,n*16);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);c.toArray(out.c,n*3);n++;out.n=n;}}
+function applyBlades(d){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}const n=Math.max(1,d.n),M=IMC(new THREE.InstancedMesh(bladeGeo,bladeMat,n));
+  M.instanceMatrix.array.set(d.m.subarray(0,n*16));M.instanceColor.array.set(d.c.subarray(0,n*3));M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;
+  M.count=d.n;M.frustumCulled=false;M.receiveShadow=true;linearize(M);BLADES=M;scene.add(M);}
+function buildBlades(x0,y0){const d={},it=genBlades(x0,y0,!!(cur&&cur.lie==='tee'),d);while(!it.next().done);applyBlades(d);}
 function updBlades(){if(!BLADES)return;const sh=bladeMat.userData.sh;if(sh){const L=Math.hypot(wind.x,wind.y)||1,k=Math.min(1,wind.sp/8+.25);sh.uniforms.uW.value.set(wind.x/L*k,-wind.y/L*k);}}
 const MULCH=[],MULCHG=new Map();
 function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if(!L)return false;for(const b of L)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&inPoly(b.p,x,y))return true;return false;}
 function IMC(M){if(!M.instanceColor)M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1,M.count)*3).fill(1),3);return M;}
 function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
-function buildTufts(x0,y0){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const list=[];
- for(let i=0,NT=20000,NN=7000;i<NT;i++){const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[(cur&&cur.lie==='tee'&&r<3.5)?'tee':lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
- const M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,Math.max(1,list.length))),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);
- const tv=new Float32Array(Math.max(1,list.length));list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));M.setMatrixAt(i,m);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);M.setColorAt(i,c);});M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(tv,1));
- M.count=list.length;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
+function* genTufts(x0,y0,tee,out){const list=[];
+ for(let i=0,NT=20000,NN=7000;i<NT;i++){if(i%1500===1499)yield;const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
+ const n=Math.max(1,list.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);out.m=new Float32Array(n*16);out.c=new Float32Array(n*3);out.tv=new Float32Array(n);out.n=list.length;
+ list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);out.tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));m.toArray(out.m,i*16);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);c.toArray(out.c,i*3);});}
+function applyTufts(d){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const n=Math.max(1,d.n),M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,n));
+ M.instanceMatrix.array.set(d.m.subarray(0,n*16));M.instanceColor.array.set(d.c.subarray(0,n*3));M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;
+ M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
+function buildTufts(x0,y0){const d={},it=genTufts(x0,y0,!!(cur&&cur.lie==='tee'),d);while(!it.next().done);applyTufts(d);}
+/* the scheduler: one prepared spot at a time, a few milliseconds of work per frame (never while the swing bar runs) */
+const GRASS={job:null,key:null,ready:null};let GRASS_DEFER=false;
+const grassKey=(x,y,tee)=>Math.round(x*2)+','+Math.round(y*2)+','+(tee?1:0);
+function grassPrepare(x,y,tee){const key=grassKey(x,y,tee);if(GRASS.key===key)return;const b={},t={};GRASS.key=key;GRASS.ready=null;
+  GRASS.job={it:(function*(){yield* genBlades(x,y,tee,b);yield* genTufts(x,y,tee,t);})(),b,t};}
+function grassStep(ms){const J=GRASS.job;if(!J)return;const t0=performance.now();while(performance.now()-t0<ms){if(J.it.next().done){GRASS.ready={b:J.b,t:J.t};GRASS.job=null;break;}}}
+function grassUse(x,y,tee){if(GRASS.key!==grassKey(x,y,tee))return false;if(GRASS.job){const J=GRASS.job;while(!J.it.next().done);GRASS.ready={b:J.b,t:J.t};GRASS.job=null;}
+  if(!GRASS.ready)return false;applyTufts(GRASS.ready.t);applyBlades(GRASS.ready.b);GRASS.ready=null;GRASS.key=null;return true;}
+/* who plays next once this ball stops, and from where (same rule as the turn order: anyone yet to tee off, else furthest from the hole) */
+function grassPrepareNext(pl){try{const P=[];for(const p of players){if(p.done)continue;if(p===cur){if(pl.holed)continue;P.push({x:pl.oob?p.x:pl.x,y:pl.oob?p.y:pl.y,s:1});}else P.push({x:p.x,y:p.y,s:p.strokes});}
+  if(!P.length)return;const f=P.find(o=>o.s===0);const nx=f||P.reduce((a,b)=>Math.hypot(b.x-PIN.x,b.y-PIN.y)>Math.hypot(a.x-PIN.x,a.y-PIN.y)?b:a);grassPrepare(nx.x,nx.y,!!f);}catch(e){console.warn('grass prep',e);}}
 /* sRGB authoring -> linear lighting */
 const _c=new THREE.Color();
 function linearize(root){root.traverse(o=>{if(o.isInstancedMesh&&o.instanceColor&&!o.userData.lin){o.userData.lin=1;const a=o.instanceColor.array;for(let i=0;i<a.length;i+=3){_c.fromArray(a,i).convertSRGBToLinear().toArray(a,i);}o.instanceColor.needsUpdate=true;}
@@ -1176,6 +1195,12 @@ function buildFace3D(p,T,B){const FD=window.FACE3D&&FACE3D.faces&&FACE3D.faces[p
     const nb=Array.from({length:n},()=>new Set());for(let t=0;t<tri.length;t+=3){const a=tri[t],b=tri[t+1],c=tri[t+2];nb[a].add(b).add(c);nb[b].add(a).add(c);nb[c].add(a).add(b);}
     const d=new Int16Array(n).fill(99);let fr=[];for(const i of FACE3D.oval){d[i]=0;fr.push(i);}for(let k=1;k<4;k++){const nx=[];for(const i of fr)for(const j of nb[i])if(d[j]>k){d[j]=k;nx.push(j);}fr=nx;}
     for(let i=0;i<n;i++){A[i]=d[i]===0?0:d[i]===1?.45:d[i]===2?.85:1;P[i*3+2]-=d[i]===0?.014:d[i]===1?.006:d[i]===2?.002:0;}
+    /* golfers in caps: stretch the forehead of the photo up to meet the underside of the brim (eyes, nose and mouth stay put), so
+       there's no strip of bare head between the face and the cap */
+    {const lk=golfLook(p),st=lk&&lk.cap&&lk.cap.style;if(T.brimProf&&st&&st!=='none'&&T.k!=='PRO_F'){const bp=T.brimProf,brimAt=x=>{const f=Math.max(0,Math.min(7.999,(x+.08)/.02)),k=Math.floor(f);return bp[k]+(bp[k+1]-bp[k])*(f-k);};
+      let top=-1e9;for(let i=0;i<n;i++)if(d[i]>=1&&Math.abs(P[i*3])<.035)top=Math.max(top,P[i*3+1]);
+      const ey=T.eyeY,gap=brimAt(0)-.002-top;if(gap>.001&&top>ey+.02){const k=Math.min(.7,gap/(top-ey));
+        for(let i=0;i<n;i++){const y=P[i*3+1];if(y<=ey+.01)continue;const w=Math.min(1,(y-(ey+.01))/.035);P[i*3+1]=y+(y-ey)*k*w;}}}}
     /* sit the surface just in front of the sculpted face: eyes at the eye line, then push forward until nothing pokes through */
     const z0=T.eyeZ+.012;let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9;for(let i=0;i<n;i++){P[i*3+2]+=z0;if(d[i]>=2){mnx=Math.min(mnx,P[i*3]);mxx=Math.max(mxx,P[i*3]);mny=Math.min(mny,P[i*3+1]);mxy=Math.max(mxy,P[i*3+1]);}}
     let pen=0;const pos=T.pos,cls=T.cls,N=cls.length;for(let v=0;v<N;v++){if(cls[v]!==1)continue;const x=pos[v*3],y=pos[v*3+1],z=pos[v*3+2];if(x<mnx||x>mxx||y<mny||y>mxy||z<T.eyeZ-.035)continue;
@@ -1754,7 +1779,7 @@ function startHoleNow(quiet){setHole(ROUND.list[ROUND.k]);for(const q of players
   const wa=Math.random()*Math.PI*2,sp=Math.random()*6;wind={a:wa,sp,x:Math.cos(wa)*sp,y:Math.sin(wa)*sp};
   const t=H1[0],q=plAt(H1,15);
   players.forEach((p,i)=>{const o=(i-(players.length-1)/2)*.7;p.x=t[0]-q.ty*o;p.y=t[1]+q.tx*o;p.strokes=0;p.done=false;p.abUsed=false;p.boost=null;p.lie='tee';p.lastErr=0;p.av.visible=false;placeBall(p,p.x,p.y,H(p.x,p.y)+.05);});
-  readOn=false;setRibbon([]);startTurn();if(quiet){flyStart=0;flyUntil=0;}else{flyStart=performance.now()/1000;flyUntil=flyStart+FLY_OUT+FLY_BACK;if(cur)cur.intro=flyUntil+3.4;showHoleCard();}}
+  readOn=false;setRibbon([]);GRASS_DEFER=!quiet;startTurn();GRASS_DEFER=false;if(quiet){flyStart=0;flyUntil=0;}else{flyStart=performance.now()/1000;flyUntil=flyStart+FLY_OUT+FLY_BACK;if(cur)cur.intro=flyUntil+3.4;showHoleCard();}}
 
 function drawHoleMap(cv){const x=cv.getContext('2d'),W=cv.width,Hh=cv.height,hp=HOLE.p,t=hp[0],gr=hp[hp.length-1],ang=Math.atan2(gr[1]-t[1],gr[0]-t[0]),len=Math.hypot(gr[0]-t[0],gr[1]-t[1])||1;
   const s=Math.min((Hh-44)/len,(W-20)/Math.max(60,len*.35)),cx=(t[0]+gr[0])/2,cy=(t[1]+gr[1])/2,rot=Math.PI/2-ang,co=Math.cos(rot),si=Math.sin(rot);
@@ -1906,7 +1931,8 @@ function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove
   if(drink>.5&&t>A.gulp){A.gulp=t+(A.shot?.22:.36);SND.gulp&&SND.gulp();}}
 function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)return null;const fresh=live.find(p=>p.strokes===0);if(fresh)return fresh;return live.reduce((a,b)=>dist(b)>dist(a)?b:a);}
 function startTurn(){swingAnim=null;for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
-  buildTufts(cur.x,cur.y);try{buildBlades(cur.x,cur.y);}catch(e){console.warn('blades',e);}try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
+  if(GRASS_DEFER){grassPrepare(cur.x,cur.y,cur.lie==='tee');}   /* new hole: the tee's grass is built during the flyover */
+  else if(!grassUse(cur.x,cur.y,cur.lie==='tee')){buildTufts(cur.x,cur.y);try{buildBlades(cur.x,cur.y);}catch(e){console.warn('blades',e);}}try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
 function seatBag(p){const bg=p.av&&p.av.userData.bag;if(!bg)return;p.av.updateMatrixWorld(true);const w=p.av.localToWorld(v3(1.25,0,2.55));bg.position.y=(H(w.x,-w.z)-p.av.position.y)/(p.av.scale.x||1);}
 
 /* ---------- hero trees: the trees around the golfer are full 3D models (real branches and leaf clusters that catch the light and
@@ -2420,6 +2446,8 @@ function stillCheck(){const t=performance.now()/1000,dt=Math.min(.1,Math.max(.00
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
   applyPR();}catch(e){}}
 function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&!BOOST&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));applyPR();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);applyPR();DRSnext=now+3;}}}
+  if(GRASS.job&&state!=='s1'&&state!=='s2'){try{grassStep(MOBILE?3:4);}catch(e){console.warn('grass',e);GRASS.job=null;}}
+  if(GRASS.ready&&cur&&state==='aim'&&GRASS.key===grassKey(cur.x,cur.y,cur.lie==='tee')){try{grassUse(cur.x,cur.y,cur.lie==='tee');}catch(e){console.warn('grass',e);}}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
@@ -2435,7 +2463,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
     else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
-    if(state==='flight'&&t>0){if(!plan.landSnd&&!plan.putt&&plan.club&&t>=plan.club.T*TS*(.5+.5*Math.min(1,swingPow))){plan.landSnd=1;SND.land(lieAt(pos.x,pos.y));}if(t<2.6)flightSparks(p.ball.b.position,camera.position.distanceTo(p.ball.b.position));trailPts.push(V(pos.x,pos.y,pos.z));if(trailPts.length>690)trailPts.shift();setRibbon(trailPts);}
+    if(state==='flight'&&t>0){if(!plan.landSnd&&!plan.putt&&plan.club&&t>=plan.club.T*TS*(.5+.5*Math.min(1,swingPow))){plan.landSnd=1;SND.land(lieAt(pos.x,pos.y));grassPrepareNext(plan);}if(plan.putt&&!plan.grassPrep&&t>.3){plan.grassPrep=1;grassPrepareNext(plan);}if(t<2.6)flightSparks(p.ball.b.position,camera.position.distanceTo(p.ball.b.position));trailPts.push(V(pos.x,pos.y,pos.z));if(trailPts.length>690)trailPts.shift();setRibbon(trailPts);}
     else if(state==='result'&&trailPts.length>1)setRibbon(trailPts);
     const dx=Math.cos(plan.dir),dy=Math.sin(plan.dir),lastT=plan.pts[plan.pts.length-1].t,land=plan.pts.length>1?plan.pts[Math.min(plan.pts.length-1,111)]:pos;
     if(plan.putt){want=V(plan.startX-dx*3.2,plan.startY-dy*3.2,H(plan.startX,plan.startY)+1.6);look=V(pos.x,pos.y,pos.z);}
