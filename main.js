@@ -904,8 +904,21 @@ function prepTemplate(sc,k){sc.updateMatrixWorld(true);let body=null,eye=null,ca
     const G=new THREE.BufferGeometry();G.setAttribute('position',new THREE.Float32BufferAttribute(A.position,3));G.setAttribute('normal',new THREE.Float32BufferAttribute(A.normal,3));G.setAttribute('uv',new THREE.Float32BufferAttribute(A.uv,2));
     G.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(A.skinIndex,4));G.setAttribute('skinWeight',new THREE.Float32BufferAttribute(A.skinWeight,4));G.setIndex(I);groups.forEach(q=>G.addGroup(q[0],q[1],q[2]));
     {const Pp=G.attributes.position,Mw=parts[0].matrixWorld,v=new THREE.Vector3(),ix=G.index.array,keep=[],ng=[];
+      /* where each sleeve actually ends, all the way round the arm (the hem is slanted: further out on top than in the armpit) */
+      const HEM={};if(k==='PRO_M'){const pts={1:[],'-1':[]};for(const gr of G.groups){if(!/TSHIRT/.test(mats[gr.materialIndex].name||''))continue;for(let t=gr.start;t<gr.start+gr.count;t++){const q=v.fromBufferAttribute(Pp,ix[t]).applyMatrix4(Mw);if(Math.abs(q.x)>.26)pts[q.x>0?1:'-1'].push(q.clone());}}
+        for(const s of[1,'-1']){const P=pts[s];if(!P.length)continue;const mx=Math.max(...P.map(q=>Math.abs(q.x))),ring=P.filter(q=>Math.abs(q.x)>mx-.035);const cy=ring.reduce((a,q)=>a+q.y,0)/ring.length,cz=ring.reduce((a,q)=>a+q.z,0)/ring.length,NB=36,prof=new Array(NB).fill(0);
+          for(const q of P){const b=Math.floor(((Math.atan2(q.z-cz,q.y-cy)/(2*Math.PI))+1)%1*NB);prof[b]=Math.max(prof[b],Math.abs(q.x));}
+          for(let it=0;it<2;it++)for(let b=0;b<NB;b++)if(!prof[b])prof[b]=Math.max(prof[(b+NB-1)%NB],prof[(b+1)%NB]);HEM[s]={cy,cz,prof,NB};}}
+      const hemAt=q=>{const H0=HEM[q.x>0?1:'-1'];if(!H0)return .325;const b=Math.floor(((Math.atan2(q.z-H0.cz,q.y-H0.cy)/(2*Math.PI))+1)%1*H0.NB);return H0.prof[b]||.325;};
+      /* the arm skin just inside and just outside the hem is drawn in a few millimetres toward the arm's axis, so when the arm bends
+         at address it stays under the sleeve fabric instead of pushing through it */
+      if(k==='PRO_M'&&HEM[1]){const Mi=new THREE.Matrix4().copy(Mw).invert(),done=new Set();
+        for(const gr of G.groups){if(!/ARM/.test(mats[gr.materialIndex].name||''))continue;for(let t=gr.start;t<gr.start+gr.count;t++){const vi=ix[t];if(done.has(vi))continue;done.add(vi);
+          const q=v.fromBufferAttribute(Pp,vi).applyMatrix4(Mw).clone(),H0=HEM[q.x>0?1:'-1'];if(!H0)continue;const hx=hemAt(q),ax=Math.abs(q.x);if(ax<hx-.045||ax>hx+.02)continue;
+          const w=ax<hx?Math.min(1,(ax-(hx-.045))/.015):Math.max(0,1-(ax-hx)/.02),ry=q.y-H0.cy,rz=q.z-H0.cz,rl=Math.hypot(ry,rz)||1,sh=.0065*w;
+          q.y-=ry/rl*sh;q.z-=rz/rl*sh;q.applyMatrix4(Mi);Pp.setXYZ(vi,q.x,q.y,q.z);}}Pp.needsUpdate=true;}
       const hidden=(nm,a,b,c)=>{if(k!=='PRO_M')return false;const pts=[a,b,c].map(k=>v.fromBufferAttribute(Pp,k).applyMatrix4(Mw).clone());
-        if(/ARM/.test(nm))return pts.every(q=>Math.abs(q.x)<.325);            /* upper arms and shoulders under the sleeves */
+        if(/ARM/.test(nm))return pts.every(q=>Math.abs(q.x)<Math.max(.325,hemAt(q)-.007));   /* upper arms and shoulders under the sleeves, right up to the hem all round */
         if(/TSHIRT/.test(nm))return pts.every(q=>q.y<.95);                    /* shirt tail tucked inside the trousers */
         if(/HEAD/.test(nm))return pts.every(q=>q.y<1.385||(q.y<1.45&&Math.abs(q.x)>.072)||(q.y<1.47&&q.z<-.03));   /* neck base and the shoulder/trapezius skin under the collar and shoulders */
         return false;};
@@ -1697,7 +1710,7 @@ function placeBall(p,x,y,z){const b=p.ball.b,np=V(x,y,z),lp=b.userData.lp;
   if(lp){const mx=np.x-lp.x,mz=np.z-lp.z,d=Math.hypot(mx,mz);if(d>1e-5&&d<40){const g=H(x,y),onGround=z<g+.045,ax=new THREE.Vector3(mz/d,0,-mx/d);
       if(!onGround)ax.negate();b.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(ax,Math.min(2.4,d/.0214*(onGround?1:.08))));}}
   b.userData.lp=np.clone();b.position.copy(np);p.ball.sh.position.copy(V(x,y,H(x,y)+.006));}
-function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=Math.max(1,d*.0038/.0214);p.ball.b.scale.setScalar(s);p.ball.sh.scale.set(s,s,1);p.ball.b.visible=p.ball.sh.visible=(!p.done&&!(p.strokes===0&&p!==cur))||(state==='replay'&&RP&&RP.p===p);}}
+function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=p===cur?Math.max(1,Math.min(3.5,d*.0021/.0214)):Math.max(1,Math.min(1.6,d*.0009/.0214));   /* gentle: only enough to find a ball, never a beach ball */p.ball.b.scale.setScalar(s);p.ball.sh.scale.set(s,s,1);p.ball.b.visible=p.ball.sh.visible=(!p.done&&!(p.strokes===0&&p!==cur))||(state==='replay'&&RP&&RP.p===p);}}
 
 /* ---------- game flow ---------- */
 let ROUND=null;
