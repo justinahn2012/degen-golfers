@@ -108,5 +108,10 @@
 "tex": "face_dillon_tex.jpg",
 "por": "face_dillon_por.jpg",
 "skin": "#c08a72"
+},
+"beau": {
+"tex": "face_beau_tex.jpg",
+"por": "face_beau_por.jpg",
+"skin": "#c99a86"
 }
 }
