@@ -12,7 +12,7 @@
 "red-brim": {
 "tex": "face_red-brim_tex.jpg",
 "por": "face_red-brim_por.jpg",
-"skin": "#ad7d6a"
+"skin": "#e3b48e"
 },
 "ramble-on": {
 "tex": "face_ramble-on_tex.jpg",
@@ -32,7 +32,7 @@
 "the-bay": {
 "tex": "face_the-bay_tex.jpg",
 "por": "face_the-bay_por.jpg",
-"skin": "#a57e68"
+"skin": "#dfae86"
 },
 "photobomber": {
 "tex": "face_photobomber_tex.jpg",
@@ -47,7 +47,7 @@
 "green-fleece": {
 "tex": "face_green-fleece_tex.jpg",
 "por": "face_green-fleece_por.jpg",
-"skin": "#c49578"
+"skin": "#dcaa82"
 },
 "shaka": {
 "tex": "face_shaka_tex.jpg",
@@ -57,12 +57,12 @@
 "white-cap": {
 "tex": "face_white-cap_tex.jpg",
 "por": "face_white-cap_por.jpg",
-"skin": "#7e5948"
+"skin": "#d7a17a"
 },
 "selfie-cam": {
 "tex": "face_selfie-cam_tex.jpg",
 "por": "face_selfie-cam_por.jpg",
-"skin": "#cd907b"
+"skin": "#e6b58f"
 },
 "navy-cap": {
 "tex": "face_navy-cap_tex.jpg",
@@ -113,5 +113,10 @@
 "tex": "face_beau_tex.jpg",
 "por": "face_beau_por.jpg",
 "skin": "#c99a86"
+},
+"stephen": {
+"tex": "face_stephen_tex.jpg",
+"por": "face_stephen_por.jpg",
+"skin": "#96674e"
 }
 }
