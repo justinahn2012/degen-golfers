@@ -1759,7 +1759,8 @@ function curtainEl(){let el=$('holeCurtain');if(!el){el=document.createElement('
 #holeCurtain canvas{width:128px;height:200px;border-radius:14px;display:block;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 #holeCurtain .bar{position:absolute;left:50%;bottom:calc(16vh + env(safe-area-inset-bottom));width:120px;height:3px;margin-left:-60px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 #holeCurtain .bar i{display:block;height:100%;width:0;background:#f2c230;transition:width .2s}`;document.head.appendChild(st);}return el;}
-function startHole(){startHoleNow(false);}
+function startHole(){/* a short loading curtain before every hole: the tee's grass, the 3D trees and the whole flyover path are built
+  and warmed up behind it, so the hole then plays without hitches */try{startHoleCurtain();}catch(e){console.warn('curtain',e);startHoleNow(false);}}
 function startHoleCurtain(){const el=curtainEl();el.classList.remove('out','on');el.innerHTML='<div class="cc"><canvas width="256" height="400"></canvas><div><div class="hl"></div><div class="hn"></div><div class="cn"></div><div class="mt"></div></div></div><div class="bar"><i></i></div>';
   el.style.display='flex';requestAnimationFrame(()=>el.classList.add('on'));CURT={el,t0:performance.now()/1000,phase:0,i:0,poses:[],fts:[],lt:0};
   const hc=$('holeCard');if(hc)hc.classList.remove('on');}
