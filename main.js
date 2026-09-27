@@ -731,8 +731,8 @@ function makeClubs(){const env=getEnv(),S=o=>{const m=new THREE.MeshStandardMate
       x.fillStyle='#8a9096';x.fillRect(0,H*.12,W,10);x.fillRect(0,H*.82,W,6);x.fillStyle='#d23a2a';x.fillRect(0,H*.12+14,W,4);})};
     for(const k in window._clubTex){const t=window._clubTex[k];t.encoding=THREE.sRGBEncoding;}window._clubTex.carbon.wrapS=window._clubTex.carbon.wrapT=THREE.RepeatWrapping;window._clubTex.carbon.repeat.set(5,3);}
   const T=window._clubTex;
-  const satin=S({color:0xe6e9ec,metalness:.88,roughness:.3}),mirror=S({color:0xeef1f4,metalness:.95,roughness:.1}),steel=S({color:0xe2e5e9,metalness:.9,roughness:.2}),
-    faceM=S({map:T.face,color:0xffffff,metalness:1,roughness:.34,side:THREE.DoubleSide}),badgeM=S({map:T.badge,color:0xffffff,metalness:.75,roughness:.3,transparent:true}),
+  const satin=S({color:0xf1f4f7,metalness:1,roughness:.2,envMapIntensity:1.7}),mirror=S({color:0xf8fafc,metalness:1,roughness:.05,envMapIntensity:2}),steel=S({color:0xf0f3f6,metalness:1,roughness:.12,envMapIntensity:1.8}),
+    faceM=S({map:T.face,color:0xffffff,metalness:1,roughness:.24,envMapIntensity:1.6,side:THREE.DoubleSide}),badgeM=S({map:T.badge,color:0xffffff,metalness:.75,roughness:.3,transparent:true}),
     carbon=S({map:T.carbon,color:0xffffff,metalness:.3,roughness:.22}),blk=S({color:0x17181b,metalness:.6,roughness:.3}),ferr=S({color:0x0c0c0d,metalness:.2,roughness:.25}),
     gripM=S({map:T.grip,color:0xffffff,metalness:0,roughness:.8}),accent=S({color:0xd23a2a,metalness:.3,roughness:.35}),white=S({color:0xf4f4f4,metalness:0,roughness:.5});
   T.face.repeat.set(1/.084,1/.056);T.face.offset.set(-.002/.084,0);
@@ -1898,19 +1898,19 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
   const rot=(b,q)=>{if(b)setRelG(g,b,q.multiply(relQ(g,b)));};
   const shR=()=>gpG(g,B.upperarm_r),shL=()=>gpG(g,B.upperarm_l),pel=gpG(g,B.pelvis),sideL=pel.clone().add(V3(.26,-.05,.06)),sideR=pel.clone().add(V3(-.26,-.05,.06));
   if(A.kind==='pump'){/* Tiger's roar: quick load, then a wide stance, body opened toward the hole, right arm in a bicep-flex with the fist punched high, left arm out low to the side, head back and turned */
-    const crouch=ss(0,.1,u)*(1-ss(.1,.24,u)),pose=ss(.12,.26,u)*(1-ss(.9,1,u)),pump=u>.3&&u<.86?Math.sin((u-.3)/.56*Math.PI*4):0;
+    const crouch=ss(0,.1,u)*(1-ss(.1,.24,u)),pose=ss(.12,.26,u)*(1-ss(.92,1,u)),pump=0;
     const fl0=gpG(g,B.foot_l),fr0=gpG(g,B.foot_r),yaw=.55*pose,cy=Math.cos(yaw),sy=Math.sin(yaw);
     const pel=B.pelvis;if(pel){const pw=gpG(g,pel).add(V3(0,-.06*crouch-.085*pose+.012*Math.max(0,pump)*pose,0));g.updateMatrixWorld(true);const wpt=g.localToWorld(pw);pel.parent.updateMatrixWorld(true);pel.position.copy(pel.parent.worldToLocal(wpt));pel.updateMatrixWorld(true);setRelG(g,pel,Ry(yaw*.55).multiply(relQ(g,pel)));}
-    rot(B.spine_01,Rx(.22*crouch-.1*pose).multiply(Ry(yaw*.45)));rot(B.spine_03,new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),.1*pose));rot(B.neck_01,Ry(.4*pose).multiply(Rx(-.12*pose)));rot(B.Head,Ry(.55*pose).multiply(Rx(-.38*pose)));/* head turned hard toward the hole and thrown back in the roar */
+    rot(B.spine_01,Rx(.22*crouch-.1*pose).multiply(Ry(yaw*.45)));rot(B.spine_03,new THREE.Quaternion().setFromAxisAngle(V3(0,0,1),.1*pose));const look=ss(.22,.4,u)*(1-ss(.92,1,u));rot(B.neck_01,Ry(-.55*look).multiply(Rx(-.1*look)));rot(B.Head,Ry(-.7*look).multiply(Rx(-.3*look)));/* head turned to the fist as it goes up, chin up in the roar */
     /* wide stance: left foot out and a touch forward, right foot out and back */
     const ground=(q)=>{const w=g.localToWorld(q.clone());return q.y+(H(w.x,-w.z)-g.position.y)/(g.scale.y||1)-(H(g.localToWorld(fl0.clone()).x,-g.localToWorld(fl0.clone()).z)-g.position.y)/(g.scale.y||1);};
     const fl=fl0.clone().add(V3(.27*pose,0,.1*pose)),fr=fr0.clone().add(V3(-.24*pose,0,-.08*pose));fl.y=ground(fl);fr.y=ground(fr);legTo(g,'l',fl);legTo(g,'r',fr);
     const side=V3(-cy,0,sy),fwd=V3(sy,0,cy),up=V3(0,1,0),sideL=side.clone().negate();
     const load=gpG(g,B.pelvis).addScaledVector(side,.22).addScaledVector(fwd,.12);
     const flex=shR().addScaledVector(side,.27).addScaledVector(up,.29+.05*pump).addScaledVector(fwd,.03);/* upper arm out level with the shoulder, forearm straight up: the flex */
-    const mid=shR().addScaledVector(fwd,.38).addScaledVector(up,-.12).addScaledVector(side,.02),pk=ss(.12,.3,u),b0=(1-pk)*(1-pk),b1=2*pk*(1-pk),b2=pk*pk;/* the uppercut: hip -> in front of the chest -> punched up high */
+    const mid=shR().addScaledVector(fwd,.38).addScaledVector(up,-.12).addScaledVector(side,.02),pk=ss(.14,.38,u),b0=(1-pk)*(1-pk),b1=2*pk*(1-pk),b2=pk*pk;/* the uppercut: hip -> in front of the chest -> punched up high */
     const arc=load.clone().multiplyScalar(b0).addScaledVector(mid,b1).addScaledVector(flex,b2);
-    const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(arc,ss(.1,.14,u)).lerp(flex,ss(.3,.34,u));tR.lerp(gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)),ss(.9,1,u));
+    const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(arc,ss(.1,.14,u)).lerp(flex,ss(.38,.42,u));tR.lerp(gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)),ss(.92,1,u));/* one punch up, then held */
     armTo(g,'r',tR,shR().addScaledVector(side,.7).addScaledVector(up,-.1).addScaledVector(fwd,-.04));
     const tL=gpG(g,B.pelvis).addScaledVector(sideL,.26).add(V3(0,-.05,.06)).lerp(shL().addScaledVector(sideL,.5).addScaledVector(up,-.34).addScaledVector(fwd,.1),pose);
     armTo(g,'l',tL,shL().addScaledVector(sideL,.3).addScaledVector(up,-.5).addScaledVector(fwd,-.25));fistThumbs(g);}
