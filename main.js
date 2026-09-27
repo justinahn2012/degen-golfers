@@ -588,15 +588,26 @@ const flagG=new THREE.Group();
     const cm=new THREE.ShaderMaterial({uniforms:{uLin:LINQ},depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4,toneMapped:false,transparent:true,
       vertexShader:'varying vec3 vW;varying vec3 vC;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vC=(modelMatrix*vec4(0.,0.,0.,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
       fragmentShader:'uniform float uLin;varying vec3 vW;varying vec3 vC;'+
-       'void main(){const float R=.054,DEP=.102,SOIL=.024;vec3 p=vW-vC;float rr=length(p.xz);if(rr>.0575)discard;'+
-       ' if(rr>R){float e=(rr-R)/.0035;vec3 lip=mix(vec3(.30,.36,.18),vec3(.20,.26,.12),e);gl_FragColor=vec4(uLin>.5?pow(lip,vec3(2.2)):lip,1.-smoothstep(.6,1.,e));return;}'+
-       ' vec3 o=vec3(p.x,0.,p.z),d=normalize(vW-cameraPosition);if(d.y>-.02)d.y=-.02;d=normalize(d);'+
-       ' float a=dot(d.xz,d.xz),b=dot(o.xz,d.xz),c=dot(o.xz,o.xz)-R*R,t=(-b+sqrt(max(0.,b*b-a*c)))/max(a,1e-5);float hy=d.y*t;vec3 col;'+
-       ' if(-hy<DEP){float dd=-hy;vec2 hp=o.xz+d.xz*t;float ang=atan(hp.y,hp.x);'+
-       '  if(dd<SOIL){float n=fract(sin(ang*57.+dd*900.)*43758.5);col=mix(vec3(.24,.17,.11),vec3(.32,.23,.15),n)*mix(1.,.7,dd/SOIL);}'+
-       '  else{col=vec3(.86,.86,.83)*mix(.95,.42,(dd-SOIL)/(DEP-SOIL));}'+
-       '  col*=.72+.28*cos(ang-1.1);}'+
-       ' else{float tb=-DEP/d.y;vec2 bp=o.xz+d.xz*tb;col=vec3(.2,.18,.15)*(.55+.45*smoothstep(R,0.,length(bp)));if(length(bp)<.009)col*=.4;}'+
+       /* a regulation 4.25 in cup, ray-traced: cut turf edge, a thin band of soil, bright white liner walls, and the dark plastic floor
+          with radial ribs, drain slots and a centre socket - with the flagstick and its white ferrule running down into it */
+       'float hsh(float n){return fract(sin(n)*43758.5453);}'+
+       'void main(){const float R=.054,DEP=.102,SOIL=.006,RP=.0074,RF=.0118,FH=.07;vec3 L=normalize(vec3(.45,.85,.3));'+
+       ' vec3 p=vW-vC;float ang0=atan(p.z,p.x);float edge=R+.0012*(hsh(floor(ang0*40.))-.5)+.0006*sin(ang0*23.);float rr=length(p.xz);if(rr>edge+.0028)discard;'+
+       ' if(rr>edge){float e=(rr-edge)/.0028;vec3 lip=mix(vec3(.2,.25,.1),vec3(.34,.42,.18),e);float gb=hsh(floor(ang0*90.)+floor(e*3.));lip*=.85+.3*gb;gl_FragColor=vec4(uLin>.5?pow(lip,vec3(2.2)):lip,1.-smoothstep(.5,1.,e));return;}'+
+       ' vec3 o=vec3(p.x,0.,p.z),d=normalize(vW-cameraPosition);if(d.y>-.03)d.y=-.03;d=normalize(d);'+
+       ' float a=dot(d.xz,d.xz),b=dot(o.xz,d.xz),c=dot(o.xz,o.xz)-R*R,disc=max(0.,b*b-a*c),tw=(-b+sqrt(disc))/max(a,1e-6),tb=-DEP/d.y;'+
+       ' float tHit=min(tw,tb);vec3 col;bool done=false;'+
+       /* the flagstick and ferrule inside the cup */
+       ' for(int k=0;k<2;k++){float rc=k==0?RF:RP;float cc=dot(o.xz,o.xz)-rc*rc,ds=b*b-a*cc;if(ds>0.){float tp=(-b-sqrt(ds))/max(a,1e-6);if(tp>0.&&tp<tHit){vec3 hp=o+d*tp;float dep=-hp.y;bool ok=k==0?(dep>DEP-FH&&dep<DEP):(dep<DEP);'+
+       '   if(ok&&!done){vec3 n=normalize(vec3(hp.x,0.,hp.z));float lam=.72+.28*max(0.,dot(n,L));float ao=mix(1.,.72,dep/DEP);col=(k==0?vec3(.93,.92,.88):vec3(.95,.95,.93))*lam*ao;if(k==0&&abs(dep-(DEP-FH))<.003)col*=.7;done=true;}}}}'+
+       ' if(!done){if(tw<tb){vec3 hp=o+d*tw;float dd=-hp.y,ang=atan(hp.z,hp.x);vec3 n=-normalize(vec3(hp.x,0.,hp.z));float lam=.74+.26*max(0.,dot(n,L));'+
+       '   if(dd<SOIL){float nz=hsh(floor(ang*60.)+floor(dd*900.));col=mix(vec3(.17,.12,.08),vec3(.28,.2,.12),nz);if(dd<.0025)col=mix(vec3(.2,.27,.11),col,dd/.0025);col*=lam;}'+
+       '   else{float ao=mix(1.,.7,smoothstep(DEP*.6,DEP,dd));float streak=.98+.02*sin(ang*70.);col=vec3(.99,.99,.97)*lam*ao*streak;if(dd<SOIL+.002)col*=.75;}}'+
+       '  else{vec2 bp=o.xz+d.xz*tb;float r2=length(bp),ang=atan(bp.y,bp.x);float sp=fract(ang*16./6.28318);float rib=smoothstep(.1,0.,abs(sp-.5)-.38);'+
+       '   col=vec3(.17,.17,.18);'+
+       '   if(r2>.02&&r2<R-.003){col=mix(col,vec3(.3,.3,.31),rib*smoothstep(.02,.026,r2));if(r2<.04&&rib<.1&&sp>.2&&sp<.8)col*=.35;}'+
+       '   if(r2<.02&&r2>.0125)col=vec3(.24,.24,.25);if(r2<.0125)col=vec3(.04);'+
+       '   col*=mix(.55,1.,smoothstep(R,R-.01,r2));}}'+
        ' gl_FragColor=vec4(uLin>.5?pow(col,vec3(2.2)):col,1.);}'});
     const cup=new THREE.Mesh(cg,cm);cup.position.y=.004;cup.renderOrder=2;flagG.add(cup);}
  flagG.position.copy(V(PIN.x,PIN.y,H(PIN.x,PIN.y)));scene.add(flagG);}
