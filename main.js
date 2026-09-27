@@ -1758,7 +1758,7 @@ window.addEventListener('error',ev=>dgErr(ev.error||ev.message,'error'));window.
 const safe=(fn,where)=>()=>{try{fn();}catch(e){dgErr(e,where);}};
 function watchdog(now){if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;return;}const age=now-STATE_T0;
   try{if(state==='flight'&&age>30){dgErr(new Error('flight never finished'),'watchdog');STATE_T0=now;finishShot();}
-    else if(state==='result'&&age>12){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
+    else if(state==='result'&&age>22){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
     else if(state==='replay'&&age>25){STATE_T0=now;endReplay();}}catch(e){dgErr(e,'watchdog');}}
 
 /* ---------- celebrations: birdie or better = the fist-pump uppercut; double bogey or worse = hands on hips, head down, shaking ---------- */
@@ -1948,7 +1948,7 @@ function openEdit(r){editing=r;$('eImg').src=PORT[r.id]||'';$('eTitle').textCont
   $('edit').hidden=false;$('menu').hidden=true;}
 $('eCancel').onclick=()=>{$('edit').hidden=true;$('menu').hidden=false;};
 $('eSave').onclick=()=>{const r=editing;r.name=($('eName').value.trim()||r.name).slice(0,18);$('eStats').querySelectorAll('input').forEach(i=>r[i.dataset.k]=+i.value);r.ab=$('eAb').value;r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;saveRoster();$('edit').hidden=true;$('menu').hidden=false;buildMenu();};
-function modeLbl(){$('modeBtn').textContent=MODE==='swipe'?'Swing: swipe (Pure Strike style)':'Swing: classic 3-click';}{const gb=$('gfxBtn'),gl=()=>{if(gb)gb.textContent=GFX==='ultra'?'Graphics: Ultra (glow, film grade, sharper)':'Graphics: Smooth (faster on older phones)';};gl();if(gb)gb.onclick=()=>{GFX=GFX==='ultra'?'smooth':'ultra';try{localStorage.setItem('dg-gfx2',GFX);}catch(e){}renderer.setPixelRatio(basePR()*DRS);setupFX();resize();gl();};}
+function modeLbl(){$('modeBtn').textContent=MODE==='swipe'?'Swing: swipe (Pure Strike style)':'Swing: classic 3-click';}{const gb=$('gfxBtn'),gl=()=>{if(gb)gb.textContent=GFX==='ultra'?'Graphics: Ultra (glow, film grade, sharper)':'Graphics: Smooth (faster on older phones)';};gl();if(gb)gb.onclick=()=>{GFX=GFX==='ultra'?'smooth':'ultra';try{localStorage.setItem('dg-gfx2',GFX);}catch(e){}BOOST=false;STILL=0;applyPR();setupFX();resize();gl();};}
 modeLbl();$('modeBtn').onclick=()=>{MODE=MODE==='swipe'?'click':'swipe';try{localStorage.setItem('jp-swing-mode2',MODE);}catch(e){}modeLbl();};
 buildMenu();
 $('againBtn').onclick=()=>{if(ROUND&&state==='done'&&ROUND.k<ROUND.list.length-1){ROUND.k++;$('card').hidden=true;startHole();}else toRoster();};
@@ -2094,12 +2094,24 @@ function setupFX(){let vg=document.getElementById('vig');if(!vg){vg=document.cre
 addEventListener('resize',resize);resize();
 let PACE=1,paceSkip=false,paceT=0,paceN=0,paceAcc=0,paceSlow=0,paceHole=-1,PAN_PACE=0;
 function pacing(ts){return true;}
-function frame(ts){requestAnimationFrame(frame);if(!pacing(ts||performance.now()))return;try{perfTick();}catch(e){}try{frameInner();}catch(e){dgErr(e,'frame');}try{watchdog(performance.now()/1000);}catch(e){}}
+function frame(ts){requestAnimationFrame(frame);if(!pacing(ts||performance.now()))return;try{perfTick();}catch(e){}try{frameInner();}catch(e){dgErr(e,'frame');}try{stillCheck();}catch(e){}try{watchdog(performance.now()/1000);}catch(e){}}
 
 let OVH_ON=false;
+/* ---- sharp when still: aiming, reading putts, scorecards and celebrations are rendered at the screen's full resolution; the moment the
+   camera moves (pans, flights) it drops back to the normal, adaptive resolution so motion stays smooth ---- */
+let BOOST=false,STILL=0,_camP=null,_camQ=null,_stT=0;
+function normPR(){return basePR()*DRS*(OVH_ON&&typeof overhead!=='undefined'&&overhead?(MOBILE?.78:.88):1);}
+function stillPR(){return (GFX==='ultra'&&MOBILE)?Math.min(window.devicePixelRatio||1,3):normPR();}   /* phones only: desktops already render at 2x */
+function applyPR(){const pr=BOOST?Math.max(normPR(),stillPR()):normPR();if(Math.abs(renderer.getPixelRatio()-pr)>.01){renderer.setPixelRatio(pr);resize();}}
+function stillCheck(){const t=performance.now()/1000,dt=Math.min(.1,Math.max(.001,t-(_stT||t)));_stT=t;
+  if(!_camP){_camP=camera.position.clone();_camQ=camera.quaternion.clone();return;}
+  const dp=camera.position.distanceTo(_camP),dq=2*Math.acos(Math.min(1,Math.abs(camera.quaternion.dot(_camQ))));_camP.copy(camera.position);_camQ.copy(camera.quaternion);
+  const moving=dp>Math.max(.0015,.03*dt)||dq>Math.max(.0008,.012*dt)||document.visibilityState==='hidden';
+  if(moving){STILL=0;if(BOOST){BOOST=false;applyPR();FT=16;DRSnext=Math.max(DRSnext,t+2);}}
+  else{STILL+=dt;if(!BOOST&&STILL>.45&&stillPR()>normPR()+.05){BOOST=true;applyPR();}}}
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
-  const pr=basePR()*DRS*(on&&overhead?(MOBILE?.78:.88):1);if(Math.abs(renderer.getPixelRatio()-pr)>.01){renderer.setPixelRatio(pr);resize();}}catch(e){}}
-function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);renderer.setPixelRatio(basePR()*DRS);resize();DRSnext=now+3;}}}
+  applyPR();}catch(e){}}
+function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&!BOOST&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));applyPR();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);applyPR();DRSnext=now+3;}}}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
