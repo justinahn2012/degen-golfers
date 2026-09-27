@@ -1265,7 +1265,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
   if(T.k==='PRO_F'&&lk.cap&&lk.cap.style==='polocap'&&T.headNC){try{
     /* a classic unstructured six-panel "polo" cap: soft low crown with stitched panel seams and eyelets, top button, pre-curved bill
        with rows of stitching, and a small embroidered golfer on the front panel */
-    const P=T.headNC,col=new THREE.Color(lk.cap.color||'#1f2a44'),lc=lk.cap.logo||'#9b7fd6',cz=(P.zF+P.zB)/2,rx=P.halfW*1.06+.012,rz=(P.zF-P.zB)/2*1.03+.012,y0=P.eyeY+.056,CH=.086;
+    const P=T.headNC,col=new THREE.Color(lk.cap.color||'#1f2a44'),lc=lk.cap.logo||'#9b7fd6',cz=(P.zF+P.zB)/2,rx=P.halfW*1.03+.013,rz=(P.zF-P.zB)/2*1.0+.014,rzB=(P.zF-P.zB)/2*1.0+.024,y0=P.eyeY+.014,TL=.032,CT=P.top+.014,CH=CT-y0;
     const tx=document.createElement('canvas');tx.width=1024;tx.height=256;{const x=tx.getContext('2d');x.fillStyle='#'+col.getHexString();x.fillRect(0,0,1024,256);
       for(let i=0;i<9000;i++){x.fillStyle=Math.random()<.5?'rgba(255,255,255,.035)':'rgba(0,0,0,.06)';x.fillRect(Math.random()*1024,Math.random()*256,3,1);}   /* cotton twill grain */
       x.strokeStyle='rgba(0,0,0,.38)';x.lineWidth=3;for(let k=0;k<6;k++){const u=((k+.5)/6)*1024;x.beginPath();x.moveTo(u,0);x.lineTo(u,256);x.stroke();}   /* panel seams */
@@ -1275,15 +1275,20 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
     const cm=new THREE.MeshStandardMaterial({map:cT,roughness:.92,metalness:0,side:THREE.DoubleSide});
     /* crown: a soft dome that sits low over the forehead, a little lower and rounder at the front (unstructured) */
     const dg=new THREE.SphereGeometry(1,64,18,0,Math.PI*2,0,Math.PI/2),D=dg.attributes.position;
-    for(let i=0;i<D.count;i++){const x=D.getX(i),y=D.getY(i),z=D.getZ(i);const front=Math.max(0,z);D.setXYZ(i,x*rx,y0+y*CH*(1-.12*front*front)-(1-y)*.004,cz+z*rz);}
+    for(let i=0;i<D.count;i++){const x=D.getX(i),y=D.getY(i),z=D.getZ(i);const zz=z/Math.max(.001,Math.sqrt(Math.max(0,1-y*y)))||0,yb=y0+TL*Math.max(-1,Math.min(1,zz)),front=Math.max(0,z);D.setXYZ(i,x*rx,yb+y*(CT-yb)*(1-.06*front*front),cz+z*(z>0?rz:rzB));}
     dg.computeVertexNormals();const cap=new THREE.Group();cap.add(new THREE.Mesh(dg,cm));
-    /* button */const bt=new THREE.Mesh(new THREE.SphereGeometry(.009,16,8),cm);bt.scale.set(1,.45,1);bt.position.set(0,y0+CH-.002,cz);cap.add(bt);
+    /* hair tucked under the back of the cap: a hair-coloured band from the cap edge down over the back of the head, so no scalp ever shows between cap and hair */
+    {const hm=new THREE.MeshStandardMaterial({color:new THREE.Color(lk.hair||'#2a1d16'),roughness:.75,metalness:0,side:THREE.DoubleSide}),NA2=48,hp=[],hi=[];
+     for(let r=0;r<=3;r++)for(let k=0;k<=NA2;k++){const a=Math.PI*.3+Math.PI*1.4*k/NA2,sa=Math.sin(a),ca=Math.cos(a),yb=y0+TL*ca,dr=.985-.03*r/3;hp.push(sa*rx*dr,yb+.008-r*.022,cz+ca*(ca>0?rz:rzB)*dr);}
+     for(let r=0;r<3;r++)for(let k=0;k<NA2;k++){const a=r*(NA2+1)+k,b=a+NA2+1;hi.push(a,b,a+1,a+1,b,b+1);}
+     const hgeo=new THREE.BufferGeometry();hgeo.setAttribute('position',new THREE.Float32BufferAttribute(hp,3));hgeo.setIndex(hi);hgeo.computeVertexNormals();cap.add(new THREE.Mesh(hgeo,hm));}
+    /* button */const bt=new THREE.Mesh(new THREE.SphereGeometry(.009,16,8),cm);bt.scale.set(1,.45,1);bt.position.set(0,CT-.002,cz);cap.add(bt);
     /* bill: pre-curved (sides bent down), pitched slightly down, with stitched rows */
     const bx=document.createElement('canvas');bx.width=512;bx.height=128;{const x=bx.getContext('2d');x.fillStyle='#'+col.getHexString();x.fillRect(0,0,512,128);x.strokeStyle='rgba(255,255,255,.13)';x.lineWidth=1.3;x.setLineDash([5,4]);for(let r=0;r<8;r++){const y=18+r*13;x.beginPath();x.moveTo(0,y);x.lineTo(512,y);x.stroke();}}
     const bT=new THREE.CanvasTexture(bx);bT.encoding=THREE.sRGBEncoding;const bm=new THREE.MeshStandardMaterial({map:bT,roughness:.88,side:THREE.DoubleSide});
     const NA=36,NR=6,bp=[],bu=[],bi=[];for(let r=0;r<=NR;r++)for(let k=0;k<=NA;k++){const a=-1.25+2.5*k/NA,t=r/NR,sa=Math.sin(a),ca=Math.cos(a);
       const ex=sa*rx*1.0,ez=cz+ca*rz*1.0;const out=.088*t*Math.pow(Math.max(0,ca),.6);const side=Math.abs(sa);
-      bp.push(ex+sa*out*.35,y0+.002-out*.12-t*.02*side*side-.004*t,ez+ca*out);bu.push(k/NA,t);}
+      bp.push(ex+sa*out*.35,y0+TL*ca+.002-out*.12-t*.02*side*side-.004*t,ez+ca*out);bu.push(k/NA,t);}
     for(let r=0;r<NR;r++)for(let k=0;k<NA;k++){const a=r*(NA+1)+k,b=a+NA+1;bi.push(a,b,a+1,a+1,b,b+1);}
     const bg=new THREE.BufferGeometry();bg.setAttribute('position',new THREE.Float32BufferAttribute(bp,3));bg.setAttribute('uv',new THREE.Float32BufferAttribute(bu,2));bg.setIndex(bi);bg.computeVertexNormals();cap.add(new THREE.Mesh(bg,bm));
     /* the embroidered mark: a small golfer at the finish, raised satin stitching */
@@ -1294,7 +1299,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
       x.lineWidth=5;x.beginPath();x.moveTo(88,22);x.lineTo(40,12);x.stroke();                                                                               /* club */
       x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=1.5;for(let i=0;i<40;i++){const a=Math.random()*6.28,r=Math.random()*40;x.beginPath();x.moveTo(64+Math.cos(a)*r,64+Math.sin(a)*r);x.lineTo(64+Math.cos(a)*r+3,64+Math.sin(a)*r-2);x.stroke();}}
     const lT=new THREE.CanvasTexture(lx);lT.encoding=THREE.sRGBEncoding;const lg=new THREE.Mesh(new THREE.PlaneGeometry(.042,.042),new THREE.MeshStandardMaterial({map:lT,transparent:true,alphaTest:.3,roughness:.5,metalness:.1,polygonOffset:true,polygonOffsetFactor:-2}));
-    const la=0,lv=.36,ly=y0+CH*lv,lzr=Math.sqrt(Math.max(0,1-lv*lv));lg.position.set(0,ly,cz+rz*lzr+.0015);lg.rotation.x=-Math.asin(lv)*.9;cap.add(lg);
+    const la=0,lv=.36,lzr=Math.sqrt(Math.max(0,1-lv*lv)),ly=(y0+TL)+lv*(CT-(y0+TL));lg.position.set(0,ly,cz+rz*lzr+.0015);lg.rotation.x=-Math.asin(lv)*.9;cap.add(lg);
     cap.traverse(o=>{if(o.isMesh)o.castShadow=true;});attachRest(cap,B.Head,v3(0,0,0));}catch(e){console.warn('polocap',e);}}
   if(T.k==='PRO_F'&&lk.cap&&lk.cap.style==='cowboy'&&T.headNC){try{
     /* rodeo hat: cattleman crown with a centre crease and front pinches, brim rolled up at the sides, a studded band - the whole hat
