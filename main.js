@@ -130,7 +130,7 @@ function inOBX(x,y){if(!HOLE||typeof TREES==='undefined'||!TREES.length)return f
   return false;}
 
 /* ---------- ravines (course-specific): West Seattle hole 3 has a gulch at the foot of the tee - a hazard with dead wood and murky water ---------- */
-const GULCH_DEF={'west seattle':[{hole:'3',s0:10,s1:74,half:30}]};let GULCH=null;
+const GULCH_DEF={'west seattle':[{hole:'3',s0:10,s1:74,half:30},{hole:'12',s0:42,s1:96,half:28},{hole:'13',s0:18,s1:100,half:30}]};let GULCH=null;
 function gulchInit(){GULCH=[];const key=Object.keys(GULCH_DEF).find(k=>new RegExp(k,'i').test(D.name||''));if(!key)return;
   for(const d of GULCH_DEF[key]){const h=D.holes.find(x=>x.main&&x.ref===d.hole);if(!h)continue;const t=h.p[0],g=h.p[1],L=Math.hypot(g[0]-t[0],g[1]-t[1]),tx=(g[0]-t[0])/L,ty=(g[1]-t[1])/L,at=s=>[t[0]+tx*s,t[1]+ty*s];
     const lim=Math.min(H(t[0],t[1]),H(...at(d.s1+6)))-2.5;GULCH.push({t,tx,ty,s0:d.s0,s1:d.s1,half:d.half,lim});}}
@@ -143,7 +143,7 @@ function buildGulch(){if(!GULCH)gulchInit();if(!GULCH.length)return;let seed=91;
     pick(92,(x,y)=>{LG.push({x,y,len:5+R()*9,r:.16+R()*.28,rot:R()*6.28,tilt:(R()-.5)*.25,big:1});});   /* fallen dead trees */
     pick(240,(x,y)=>{LG.push({x,y,len:2+R()*7,r:.08+R()*.28,rot:R()*6.28,tilt:(R()-.5)*.4});});
     pick(520,(x,y)=>{LG.push({x,y,len:.6+R()*2.2,r:.025+R()*.045,rot:R()*6.28,tilt:(R()-.5)*.9});});}
-  const mk=(geo,mat,arr,fn)=>{const M=new THREE.InstancedMesh(geo,mat,arr.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();arr.forEach((o,i)=>{fn(o,m,q,e);M.setMatrixAt(i,m);});M.castShadow=true;M.receiveShadow=true;scene.add(M);};
+  const mk=(geo,mat,arr,fn)=>{const M=new THREE.InstancedMesh(geo,mat,arr.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler();arr.forEach((o,i)=>{fn(o,m,q,e);M.setMatrixAt(i,m);});M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;scene.add(M);};
   mk(log,bark,LG.filter(o=>o.big),(o,m,q,e)=>{e.set(0,o.rot,o.tilt);q.setFromEuler(e);m.compose(V(o.x,o.y,H(o.x,o.y)+o.r*.55),q,new THREE.Vector3(o.len/2,o.r,o.r));});
   mk(log,bark2,LG.filter(o=>!o.big),(o,m,q,e)=>{e.set(0,o.rot,o.tilt);q.setFromEuler(e);m.compose(V(o.x,o.y,H(o.x,o.y)+o.r*.6),q,new THREE.Vector3(o.len/2,o.r,o.r));});
   /* gulch floor: mud and leaf litter instead of mown grass */
@@ -153,6 +153,12 @@ function buildGulch(){if(!GULCH)gulchInit();if(!GULCH.length)return;let seed=91;
      for(let i=0;i<nS;i++)for(let j=0;j<nL;j++){const a=base+i*(nL+1)+j,b=a+1,c=a+nL+1,d=c+1,ia=a-base,ib=b-base,ic=c-base,id=d-base;if(grid[ia]&&grid[ib]&&grid[ic]&&grid[id])I.push(a,c,b,b,c,d);}}
    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.setIndex(I);g.computeVertexNormals();
    const fl=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2}));fl.receiveShadow=true;scene.add(fl);}
+  /* dead reeds: tall straw-coloured reed clumps along the wet ravine floor, thickest by the creek */
+  {const CL=[];const cr=(D.creek||[]).flat();const nearCreek=(x,y)=>{let m=1e9;for(let i=0;i<cr.length;i+=3){const q=cr[i];m=Math.min(m,Math.hypot(q[0]-x,q[1]-y));}return m;};
+   for(const G of GULCH){let k=0,tries=0;while(k<700&&tries<14000){tries++;const s=G.s0+R()*(G.s1-G.s0),l=(R()*2-1)*G.half,x=G.t[0]+G.tx*s+G.ty*l,y=G.t[1]+G.ty*s-G.tx*l;if(H(x,y)>=G.lim-.2)continue;const dc=cr.length?nearCreek(x,y):5;if(dc>14&&R()<.75)continue;CL.push([x,y]);k++;}}
+   if(CL.length){const PER=7,rm=IMC(new THREE.InstancedMesh(bladeGeo,new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),CL.length*PER)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),c=new THREE.Color();let n=0;
+     for(const [x0,y0] of CL)for(let j=0;j<PER;j++){const x=x0+(R()-.5)*.5,y=y0+(R()-.5)*.5;e.set((R()-.5)*.55,R()*6.28,(R()-.5)*.45);q.setFromEuler(e);m.compose(V(x,y,H(x,y)-.02),q,new THREE.Vector3(.028+R()*.02,.75+R()*.85,1));rm.setMatrixAt(n,m);c.setHSL(.1+R()*.03,.3+R()*.15,.42+R()*.14);rm.setColorAt(n,c);n++;}
+     rm.count=n;rm.frustumCulled=false;rm.castShadow=true;linearize(rm);scene.add(rm);}}
   /* murky water: a widened, dark, still channel along the creek through the gulch */
   const mat=new THREE.MeshStandardMaterial({color:0x3a3b24,roughness:.18,metalness:.05,transparent:true,opacity:.93});
   for(const c of (D.creek||[])){const pts=c.filter(p=>GULCH.some(G=>{const dx=p[0]-G.t[0],dy=p[1]-G.t[1],s=dx*G.tx+dy*G.ty,l=Math.abs(dx*G.ty-dy*G.tx);return s>G.s0-6&&s<G.s1+6&&l<G.half+8;}));if(pts.length<2)continue;
@@ -273,7 +279,7 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
       dock.position.copy(V(dx0,dy0,wz));dock.rotation.y=Math.atan2(-Math.cos(ai),Math.sin(ai));linearize(dock);scene.add(dock);
       const bd=ai-Math.PI/2,bm=new THREE.MeshStandardMaterial({color:0xf2f2ee,roughness:.5}),bg=new THREE.SphereGeometry(.3,10,8);
       for(let k=1;k<30;k++){const bx=I.x+Math.cos(bd)*(r+4+k*7),by=I.y+Math.sin(bd)*(r+4+k*7);if(lieAt(bx,by)!=='water')continue;const b=new THREE.Mesh(bg,bm);b.position.copy(V(bx,by,H(bx,by)+.6+.1));scene.add(b);}}}
-  {const HG=[];for(const r of['6','5']){const h=byRef(r);if(!h)continue;const T0=h.p[0],T1=h.p[1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0]);
+  {const HG=[];for(const r of[]){const h=byRef(r);if(!h)continue;const T0=h.p[0],T1=h.p[1],a0=Math.atan2(T1[1]-T0[1],T1[0]-T0[0]);
       for(const [al,rad,span] of[[7,9,1.4],[14,13,1.2]])for(let k=0;k<=36;k++){const a=a0-span/2+span*k/36,x=T0[0]+Math.cos(a0)*(al-rad)+Math.cos(a)*rad,y=T0[1]+Math.sin(a0)*(al-rad)+Math.sin(a)*rad;if(open(x,y))HG.push([x,y,a]);}}
     if(HG.length){const hm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x2f4a26}),HG.length),m=new THREE.Matrix4(),q=new THREE.Quaternion();
       HG.forEach((p,i)=>{q.setFromAxisAngle(new THREE.Vector3(0,1,0),p[2]);m.compose(V(p[0],p[1],H(p[0],p[1])+.45),q,new THREE.Vector3(1.1,.95,.85));hm.setMatrixAt(i,m);});hm.castShadow=true;linearize(hm);scene.add(hm);}}
@@ -396,8 +402,8 @@ function worldGrass(m){if(!HASA)return m;m.onBeforeCompile=sh=>{Object.assign(sh
   m.customProgramCacheKey=()=>'worldgrass';return m;}
 const DMIN=Math.min(...DM.z),HZ=DM.z.reduce((a,b)=>a+b,0)/DM.z.length;
 {const g=new THREE.PlaneGeometry((DM.nx-1)*DM.st,(DM.ny-1)*DM.st,DM.nx-1,DM.ny-1);g.rotateX(-Math.PI/2);const pos=g.attributes.position,cx=DM.x0+(DM.nx-1)*DM.st/2,cy=DM.y0+(DM.ny-1)*DM.st/2;
- for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)-cy;pos.setX(i,x);pos.setZ(i,z);pos.setY(i,demH(x,-z)-2.6);}g.computeVertexNormals();scene.add(new THREE.Mesh(g,worldGrass(new THREE.MeshLambertMaterial({color:0x42602c}))));}
-const outer=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),worldGrass(new THREE.MeshLambertMaterial({color:0x3e5a2a})));outer.rotation.x=-Math.PI/2;outer.position.set((X0+X1)/2,DMIN-4,-(Y0+Y1)/2);if(D.island){let lk=1e9;for(const f of D.f)if(f.k==='water'&&f.c&&f.p.length>20)for(const q of f.p)lk=Math.min(lk,baseH(q[0],q[1]));if(lk<1e8)outer.position.y=Math.min(outer.position.y,lk-4);}/* keep the far ground plane under a lake's surface */scene.add(outer);
+ for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)-cy;pos.setX(i,x);pos.setZ(i,z);let hh=demH(x,-z);try{hh=Math.min(hh,H(x,-z));}catch(e){}pos.setY(i,hh-2.6);}g.computeVertexNormals();scene.add(new THREE.Mesh(g,worldGrass(new THREE.MeshLambertMaterial({color:0x42602c}))));}
+const outer=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),worldGrass(new THREE.MeshLambertMaterial({color:0x3e5a2a})));outer.rotation.x=-Math.PI/2;let HMIN=DMIN;try{for(let x=X0;x<=X1;x+=6)for(let y=Y0;y<=Y1;y+=6)HMIN=Math.min(HMIN,H(x,y));}catch(e){}outer.position.set((X0+X1)/2,HMIN-4,-(Y0+Y1)/2);if(D.island){let lk=1e9;for(const f of D.f)if(f.k==='water'&&f.c&&f.p.length>20)for(const q of f.p)lk=Math.min(lk,baseH(q[0],q[1]));if(lk<1e8)outer.position.y=Math.min(outer.position.y,lk-4);}/* keep the far ground plane under a lake's surface */scene.add(outer);
 
 const WT={value:0};
 function swayMat(mt,amp){mt.onBeforeCompile=sh=>{sh.uniforms.uTime=WT;sh.vertexShader='uniform float uTime;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat ph=instanceMatrix[3].x*.21+instanceMatrix[3].z*.17;float yy=max(position.y,0.);transformed.x+=sin(uTime*1.3+ph)*'+amp.toFixed(3)+'*yy*yy;transformed.z+=cos(uTime*1.05+ph*1.3)*'+(amp*.7).toFixed(3)+'*yy*yy;\n#endif');};mt.customProgramCacheKey=()=>'sway'+amp;}
@@ -573,13 +579,26 @@ function treeHit(x,y,z){const a=THASH.get(Math.floor(x/10)+','+Math.floor(y/10))
 
 /* flag, cup, markers */
 const flagG=new THREE.Group();
-{const pole=new THREE.Mesh(new THREE.CylinderGeometry(.013,.017,2.32,12),new THREE.MeshStandardMaterial({color:0xf4f3ee,roughness:.35,metalness:.1}));pole.position.y=1.16;pole.castShadow=true;flagG.add(pole);
- const FW=.78,FH=.5,fg=new THREE.PlaneGeometry(FW,FH,30,12);fg.translate(FW/2,-FH/2,0);fg.userData.rest=fg.attributes.position.array.slice();
+{const pole=new THREE.Mesh(new THREE.CylinderGeometry(.0064,.0085,2.32,12),new THREE.MeshStandardMaterial({color:0xf4f3ee,roughness:.35,metalness:.1}));pole.position.y=1.16;pole.castShadow=true;flagG.add(pole);
+ const FW=.56,FH=.38,fg=new THREE.PlaneGeometry(FW,FH,30,12);fg.translate(FW/2,-FH/2,0);fg.userData.rest=fg.attributes.position.array.slice();
  const fc=document.createElement('canvas');fc.width=512;fc.height=328;const ftex=new THREE.CanvasTexture(fc);ftex.encoding=THREE.sRGBEncoding;ftex.anisotropy=4;
  const fm=new THREE.MeshStandardMaterial({map:ftex,side:THREE.DoubleSide,roughness:.72,metalness:0});fm.userData.lin=1;fm.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <map_fragment>','vec2 fUv=gl_FrontFacing?vUv:vec2(1.-vUv.x,vUv.y);vec4 texelColor=texture2D(map,fUv);texelColor=mapTexelToLinear(texelColor);diffuseColor*=texelColor;');};fm.customProgramCacheKey=()=>'flag2s';
  const fl=new THREE.Mesh(fg,fm);fl.position.y=2.3;fl.castShadow=true;flagG.add(fl);flagG.userData.fl=fl;flagG.userData.fc=fc;flagG.userData.ftex=ftex;
- const liner=new THREE.Mesh(new THREE.RingGeometry(.052,.058,28),new THREE.MeshBasicMaterial({color:0xf2f2ee}));liner.rotation.x=-Math.PI/2;liner.position.y=.013;flagG.add(liner);
- const cup=new THREE.Mesh(new THREE.CircleGeometry(.056,24),new THREE.MeshBasicMaterial({color:0x1a1a1a}));cup.rotation.x=-Math.PI/2;cup.position.y=.012;flagG.add(cup);
+ {const cg=new THREE.CircleGeometry(.0575,48);cg.rotateX(-Math.PI/2);
+    const cm=new THREE.ShaderMaterial({uniforms:{uLin:LINQ},depthWrite:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4,toneMapped:false,transparent:true,
+      vertexShader:'varying vec3 vW;varying vec3 vC;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;vC=(modelMatrix*vec4(0.,0.,0.,1.)).xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+      fragmentShader:'uniform float uLin;varying vec3 vW;varying vec3 vC;'+
+       'void main(){const float R=.054,DEP=.102,SOIL=.024;vec3 p=vW-vC;float rr=length(p.xz);if(rr>.0575)discard;'+
+       ' if(rr>R){float e=(rr-R)/.0035;vec3 lip=mix(vec3(.30,.36,.18),vec3(.20,.26,.12),e);gl_FragColor=vec4(uLin>.5?pow(lip,vec3(2.2)):lip,1.-smoothstep(.6,1.,e));return;}'+
+       ' vec3 o=vec3(p.x,0.,p.z),d=normalize(vW-cameraPosition);if(d.y>-.02)d.y=-.02;d=normalize(d);'+
+       ' float a=dot(d.xz,d.xz),b=dot(o.xz,d.xz),c=dot(o.xz,o.xz)-R*R,t=(-b+sqrt(max(0.,b*b-a*c)))/max(a,1e-5);float hy=d.y*t;vec3 col;'+
+       ' if(-hy<DEP){float dd=-hy;vec2 hp=o.xz+d.xz*t;float ang=atan(hp.y,hp.x);'+
+       '  if(dd<SOIL){float n=fract(sin(ang*57.+dd*900.)*43758.5);col=mix(vec3(.24,.17,.11),vec3(.32,.23,.15),n)*mix(1.,.7,dd/SOIL);}'+
+       '  else{col=vec3(.86,.86,.83)*mix(.95,.42,(dd-SOIL)/(DEP-SOIL));}'+
+       '  col*=.72+.28*cos(ang-1.1);}'+
+       ' else{float tb=-DEP/d.y;vec2 bp=o.xz+d.xz*tb;col=vec3(.2,.18,.15)*(.55+.45*smoothstep(R,0.,length(bp)));if(length(bp)<.009)col*=.4;}'+
+       ' gl_FragColor=vec4(uLin>.5?pow(col,vec3(2.2)):col,1.);}'});
+    const cup=new THREE.Mesh(cg,cm);cup.position.y=.004;cup.renderOrder=2;flagG.add(cup);}
  flagG.position.copy(V(PIN.x,PIN.y,H(PIN.x,PIN.y)));scene.add(flagG);}
 
 /* flag artwork: deep red with a gold edge, a cream roundel and the hole number */
@@ -588,8 +607,8 @@ function drawFlag(n){const c=flagG.userData.fc,x=c.getContext('2d'),W=c.width,H2
   const cx=W*.5,cy=H2*.52,r=H2*.3;x.fillStyle='#f6f1e4';x.beginPath();x.arc(cx,cy,r,0,7);x.fill();
   x.fillStyle='#9d1320';x.font='800 '+Math.round(r*1.25)+'px "Barlow Condensed","Arial Narrow",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(String(n),cx,cy+r*.06);flagG.userData.ftex.needsUpdate=true;}
 /* cloth motion: in calm air the flag hangs against the pole; with wind it streams out, with travelling ripples that grow toward the fly end */
-function animFlag(now){const fl=flagG.userData.fl;if(!fl)return;const g=fl.geometry,P=g.attributes.position,R=g.userData.rest,W=.78,sp=Math.max(0,wind.sp||0),lift=Math.min(1,sp/13),hang=(1-lift)*1.25+.06,ch=Math.cos(hang),shn=Math.sin(hang),amp=.025+.045*lift,w1=3.2+sp*.28,w2=5.1+sp*.35;
-  for(let i=0;i<P.count;i++){const x=R[i*3],y=R[i*3+1],u=x/W,a=Math.pow(u,1.15);let px=x*ch,py=y-x*shn;
+function animFlag(now){const fl=flagG.userData.fl;if(!fl)return;const g=fl.geometry,P=g.attributes.position,R=g.userData.rest,W=.56,sp=Math.max(0,wind.sp||0),lift=Math.min(1,sp/13),hang=(1-lift)*1.25+.06,ch=Math.cos(hang),shn=Math.sin(hang),amp=.025+.045*lift,w1=3.2+sp*.28,w2=5.1+sp*.35;
+  for(let i=0;i<P.count;i++){const x=R[i*3],y=R[i*3+1],u=Math.max(0,x/W),a=Math.pow(u,1.15);let px=x*ch,py=y-x*shn;
     const z=amp*a*(Math.sin(u*9-now*w1)+.45*Math.sin(u*15.3-now*w2+y*7)+.25*Math.sin(u*23-now*(w2*1.3)+1.3));py+=a*.02*Math.sin(u*11-now*w1+.7)*lift;px-=Math.abs(z)*.35*u;P.setXYZ(i,px,py,z);}
   P.needsUpdate=true;g.computeVertexNormals();}
 function spriteTex(draw){const c=document.createElement('canvas');c.width=c.height=64;draw(c.getContext('2d'));return new THREE.CanvasTexture(c);}
@@ -1434,7 +1453,8 @@ function autoSetup(p){const d=dist(p);let tx=PIN.x,ty=PIN.y;
   if(p.lie==='green'||(p.lie==='fringe'&&d<20)||(p.lie!=='bunker'&&p.lie!=='rough'&&d<6))p.club=PUTTER;
   else{const al=clubsFor(p).filter(i=>i!==PUTTER);let pick=al[0];for(const i of al)if(carryOf(p,i)>=d*.97)pick=i;p.club=pick;
     const reach=carryOf(p,pick)*1.12;if(d>reach+25){const pt=plAt(H1,plProj(H1,p.x,p.y)+reach);tx=pt.x;ty=pt.y;}}
-  p.aim=Math.atan2(ty-p.y,tx-p.x);p.pmax=Math.max(2.5,Math.min(40,d*1.3+.8));}
+  p.aim=Math.atan2(ty-p.y,tx-p.x);let de=d;if(p.club===PUTTER&&d>.5){const rise=H(PIN.x,PIN.y)-H(p.x,p.y),gr=rise/d,mu=FR.green/7;   /* same rolling resistance and slope pull as the putt physics */de=d*Math.max(.8,(mu+gr)/mu);}
+  p.pmax=Math.max(2.5,Math.min(55,de*1.55+1.2));}
 
 /* ---------- shot planning ---------- */
 function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;const pts=[];const dt=1/90;let holed=false,oob=false;const t0=t,hist=[];
@@ -1534,7 +1554,8 @@ function scaleBalls(){for(const p of players){const d=camera.position.distanceTo
 
 /* ---------- game flow ---------- */
 let ROUND=null;
-function setHole(i){computeHole(i);FXC.grp.clear();FXC.list.length=0;const z=H(PIN.x,PIN.y);flagG.position.copy(V(PIN.x,PIN.y,z));try{drawFlag(HOLE.ref);}catch(e){}pinMark.position.copy(V(PIN.x,PIN.y,z+2.6));placeTeeDeco();
+function groundY(x,y){const z=H(x,y);try{const rc=new THREE.Raycaster(V(x,y,z+3),new THREE.Vector3(0,-1,0),0,6);const ms=[];scene.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&o.visible&&o.geometry&&o.geometry.attributes.position&&o.geometry.attributes.position.count>5000)ms.push(o);});const h=rc.intersectObjects(ms,false)[0];if(h&&Math.abs(h.point.y-z)<.3)return Math.max(z,h.point.y);}catch(e){}return z;}
+function setHole(i){computeHole(i);FXC.grp.clear();FXC.list.length=0;const z=H(PIN.x,PIN.y);flagG.position.copy(V(PIN.x,PIN.y,z));flagG.position.y=groundY(PIN.x,PIN.y);try{drawFlag(HOLE.ref);}catch(e){}pinMark.position.copy(V(PIN.x,PIN.y,z+2.6));placeTeeDeco();
   $('hN').textContent=HOLE.ref;$('hC').textContent=D.short;$('holeMeta').textContent='Par '+PAR+'   '+Math.round(HOLE_LEN*TOYD)+' yds'+(HOLE.hcp?'   Hcp '+HOLE.hcp:'');}
 function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.b,p.ball.sh,p.av);}
   const n=HOLES.length,idx=[...Array(n).keys()],list=len==='f9'?idx.slice(0,9):len==='b9'?idx.slice(9):idx;ROUND={list:list.length?list:idx,k:0,len};
@@ -1602,7 +1623,8 @@ function buildPuttGrid(p){if(PG){scene.remove(PG.g);PG.g.traverse(o=>{if(o.geome
   const g=new THREE.Group(),lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(P,3));lg.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
   g.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.62,depthWrite:false,toneMapped:false})));
   const N=150,dp=new Float32Array(N*3),seed=[];for(let i=0;i<N;i++)seed.push({x:cx+(Math.random()*2-1)*R,y:cy+(Math.random()*2-1)*R,a:Math.random()});
-  const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dp,3));const dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0xffffff,size:.055,transparent:true,opacity:.85,depthWrite:false,toneMapped:false}));dots.frustumCulled=false;g.add(dots);
+  const dg=new THREE.BufferGeometry();dg.setAttribute('position',new THREE.BufferAttribute(dp,3));const dotTex=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');const gr=x.createRadialGradient(32,32,0,32,32,30);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(.6,'rgba(255,255,255,.95)');gr.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=gr;x.beginPath();x.arc(32,32,30,0,7);x.fill();return new THREE.CanvasTexture(c);})();
+  const dots=new THREE.Points(dg,new THREE.PointsMaterial({color:0xffffff,map:dotTex,size:5,sizeAttenuation:false,transparent:true,opacity:.85,alphaTest:.05,depthWrite:false,toneMapped:false}));dots.frustumCulled=false;g.add(dots);
   scene.add(g);PG={g,dots,seed,cx,cy,R,onG};}
 function updPuttGrid(dt){if(!PG)return;const on=!!(cur&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&(cur.lie==='green'||cur.lie==='fringe'));PG.g.visible=on;if(!on)return;const a=PG.dots.geometry.attributes.position.array;
   PG.seed.forEach((s,i)=>{const g0=grad(s.x,s.y),m=Math.hypot(g0[0],g0[1])||1e-6;s.x-=g0[0]/m*dt*(.2+m*16);s.y-=g0[1]/m*dt*(.2+m*16);s.a+=dt*.45;
@@ -2101,21 +2123,21 @@ function setupFX(){let vg=document.getElementById('vig');if(!vg){vg=document.cre
 addEventListener('resize',resize);resize();
 let PACE=1,paceSkip=false,paceT=0,paceN=0,paceAcc=0,paceSlow=0,paceHole=-1,PAN_PACE=0;
 function pacing(ts){return true;}
-function frame(ts){requestAnimationFrame(frame);if(!pacing(ts||performance.now()))return;try{perfTick();}catch(e){}try{frameInner();}catch(e){dgErr(e,'frame');}try{stillCheck();}catch(e){}try{watchdog(performance.now()/1000);}catch(e){}}
+function frame(ts){requestAnimationFrame(frame);if(!pacing(ts||performance.now()))return;try{perfTick();}catch(e){}if(PR_DIRTY){PR_DIRTY=false;try{applyPR();}catch(e){}}try{frameInner();}catch(e){dgErr(e,'frame');}try{stillCheck();}catch(e){}try{watchdog(performance.now()/1000);}catch(e){}}
 
 let OVH_ON=false;
 /* ---- sharp when still: aiming, reading putts, scorecards and celebrations are rendered at the screen's full resolution; the moment the
    camera moves (pans, flights) it drops back to the normal, adaptive resolution so motion stays smooth ---- */
-let BOOST=false,STILL=0,_camP=null,_camQ=null,_stT=0;
+let BOOST=false,STILL=0,_camP=null,_camQ=null,_stT=0,PR_DIRTY=false,MOVEF=0,UNB_T=0;
 function normPR(){return basePR()*DRS*(OVH_ON&&typeof overhead!=='undefined'&&overhead?(MOBILE?.78:.88):1);}
 function stillPR(){return (GFX==='ultra'&&MOBILE)?Math.min(window.devicePixelRatio||1,3):normPR();}   /* phones only: desktops already render at 2x */
 function applyPR(){const pr=BOOST?Math.max(normPR(),stillPR()):normPR();if(Math.abs(renderer.getPixelRatio()-pr)>.01){renderer.setPixelRatio(pr);resize();}}
 function stillCheck(){const t=performance.now()/1000,dt=Math.min(.1,Math.max(.001,t-(_stT||t)));_stT=t;
   if(!_camP){_camP=camera.position.clone();_camQ=camera.quaternion.clone();return;}
   const dp=camera.position.distanceTo(_camP),dq=2*Math.acos(Math.min(1,Math.abs(camera.quaternion.dot(_camQ))));_camP.copy(camera.position);_camQ.copy(camera.quaternion);
-  const moving=dp>Math.max(.0015,.03*dt)||dq>Math.max(.0008,.012*dt)||document.visibilityState==='hidden';
-  if(moving){STILL=0;if(BOOST){BOOST=false;applyPR();FT=16;DRSnext=Math.max(DRSnext,t+2);}}
-  else{STILL+=dt;if(!BOOST&&STILL>.45&&stillPR()>normPR()+.05){BOOST=true;applyPR();}}}
+  const moving=dp>Math.max(.004,.06*dt)||dq>Math.max(.002,.03*dt)||document.visibilityState==='hidden';
+  if(moving){STILL=0;MOVEF++;if(BOOST&&(MOVEF>=2||dp>.05||dq>.02)){BOOST=false;PR_DIRTY=true;UNB_T=t;FT=16;DRSnext=Math.max(DRSnext,t+2);}}
+  else{MOVEF=0;STILL+=dt;if(!BOOST&&STILL>.6&&t-UNB_T>1.2&&stillPR()>normPR()+.05){BOOST=true;PR_DIRTY=true;}}}
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
   applyPR();}catch(e){}}
 function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&!BOOST&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));applyPR();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);applyPR();DRSnext=now+3;}}}
