@@ -1,6 +1,10 @@
 {
   "name": "degen-golfers",
+  "main": "worker.js",
   "compatibility_date": "2026-09-25",
   "observability": { "enabled": true },
-  "assets": { "directory": "." }
+  "assets": { "directory": ".", "binding": "ASSETS" },
+  "kv_namespaces": [
+    { "binding": "SCORES", "id": "bc5119d3634c4d1bac821658b58e311d" }
+  ]
 }
