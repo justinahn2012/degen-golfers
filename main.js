@@ -107,7 +107,7 @@ function lieAt(x,y){
   return'rough';}
 
 /* ---------- extra out-of-bounds lines (course-specific): Jefferson Park hole 2 - the tree line down the entire right side is OB ---------- */
-const OBX_DEF={jefferson:[{hole:'2',side:'right'}],'west seattle':[{hole:'2',side:'right'}]};let OBX=null,OBX_BUILT=false;
+const OBX_DEF={jefferson:[{hole:'1',side:'right',fence:true},{hole:'2',side:'right',fence:true}],'west seattle':[{hole:'2',side:'right'}]};let OBX=null,OBX_BUILT=false;
 function buildOBX(){OBX_BUILT=true;OBX=[];const key=Object.keys(OBX_DEF).find(k=>new RegExp(k,'i').test(D.name||''));if(!key)return;
   for(const d of OBX_DEF[key]){const h=HOLES.find(x=>x.ref===d.hole);if(!h)continue;const P=h.p,seg=[];let L=0;for(let i=1;i<P.length;i++){const l=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);seg.push({a:P[i-1],b:P[i],l0:L,l});L+=l;}
     const at=s=>{let q=seg[seg.length-1];for(const sg of seg)if(s<=sg.l0+sg.l){q=sg;break;}const u=(s-q.l0)/q.l,tx=(q.b[0]-q.a[0])/q.l,ty=(q.b[1]-q.a[1])/q.l;return{x:q.a[0]+(q.b[0]-q.a[0])*u,y:q.a[1]+(q.b[1]-q.a[1])*u,tx,ty};};
@@ -119,6 +119,11 @@ function buildOBX(){OBX_BUILT=true;OBX=[];const key=Object.keys(OBX_DEF).find(k=
     let sm=off.map((v,i)=>{const w=off.slice(Math.max(0,i-2),i+3).sort((a,b)=>a-b);return Math.max(12,w[Math.floor(w.length/2)]-1);});
     /* never inside the fairway: the line stays at least 3 m outside the fairway's edge on that side */
     sm=sm.map((v,i)=>{const s=-10+i*st,q=at(Math.max(0,Math.min(L,s))),rx=q.ty*sd,ry=-q.tx*sd;let edge=0;for(let l=0;l<45;l+=1){const x=q.x+rx*l,y=q.y+ry*l;if(FAIRWAYS.some(f=>inP(f,x,y))||GREENS.some(g=>inP(g,x,y))||TEES.some(t=>inP(t,x,y)))edge=l;else if(l>edge+4)break;}return Math.max(v,edge+3);});
+    /* fence holes: the line follows the course boundary (the mapped golf-course outline), a metre inside it */
+    if(d.fence){const B=(D.f||[]).filter(f=>f.k==='golf_course').map(f=>f.p);
+      sm=sm.map((v,i)=>{const s=-10+i*st,q=at(Math.max(0,Math.min(L,s))),rx=q.ty*sd,ry=-q.tx*sd,px=q.x+q.tx*(s-Math.max(0,Math.min(L,s))),py=q.y+q.ty*(s-Math.max(0,Math.min(L,s)));let best=null;
+        for(const poly of B)for(let k=1;k<poly.length;k++){const ax=poly[k-1][0],ay=poly[k-1][1],ex=poly[k][0]-ax,ey=poly[k][1]-ay,den=rx*ey-ry*ex;if(Math.abs(den)<1e-9)continue;const t=((ax-px)*ey-(ay-py)*ex)/den,u=((ax-px)*ry-(ay-py)*rx)/den;if(t>0&&u>=0&&u<=1)best=best==null?t:Math.min(best,t);}
+        return best!=null&&best<120?Math.max(v,best-1):v;});}
     OBX.push({hole:d.hole,sd,at,L,st,off:sm});}
   /* white stakes along each line */
   try{const pos=[];for(const o of OBX){for(let s=-10,i=0;s<=o.L+30;s+=o.st,i++){const q=o.at(Math.max(0,Math.min(o.L,s))),rx=q.ty*o.sd,ry=-q.tx*o.sd,x=q.x+q.tx*(s-Math.max(0,Math.min(o.L,s)))+rx*o.off[i],y=q.y+q.ty*(s-Math.max(0,Math.min(o.L,s)))+ry*o.off[i];pos.push([x,y]);}}
@@ -486,6 +491,12 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
   const keep=[];for(const t of TREES){let bad=!t.isle&&(!!(TPOS&&Math.hypot(t.x-TPOS[0],t.y-TPOS[1])<14+t.r)||blocks(t));/* a glade around the fox totem; nothing standing between each tee and its green (par 3) or landing area */for(const h of D.holes){if(!h.main)continue;const P=h.p;let acc=0;for(let i=1;i<P.length&&!bad;i++){const ax=P[i-1][0],ay=P[i-1][1],dx=P[i][0]-ax,dy=P[i][1]-ay,l=Math.hypot(dx,dy)||1,u=((t.x-ax)*dx+(t.y-ay)*dy)/(l*l),s=acc+u*l;
       if(u>=-.08*(i===1)&&u<=1&&s>-8&&s<90){const lat=Math.abs(((t.x-ax)*dy-(t.y-ay)*dx)/l);if(lat-t.r*.9<7+Math.max(0,s)*.09)bad=true;}acc+=l;}if(bad)break;}if(!bad)keep.push(t);}
    if(keep.length!==TREES.length){TREES.length=0;TREES.push(...keep);THASH.clear();for(const t of TREES){const R2=Math.ceil(t.r/10)+1,cx=Math.floor(t.x/10),cy=Math.floor(t.y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}}}
+ /* course-specific clearings: spots where the tree map puts trees the real course doesn't have */
+ {const CLEAR={jefferson:[{hole:'1',s0:150,s1:232,side:1,lat0:0,lat1:19}]},ck=Object.keys(CLEAR).find(k=>new RegExp(k,'i').test(D.name||''));
+  if(ck){const drop=new Set();for(const c of CLEAR[ck]){const h=D.holes.find(x=>x.ref===c.hole);if(!h)continue;const P=h.p;let acc=0;
+      for(let i=1;i<P.length;i++){const ax=P[i-1][0],ay=P[i-1][1],l=Math.hypot(P[i][0]-ax,P[i][1]-ay),tx=(P[i][0]-ax)/l,ty=(P[i][1]-ay)/l;
+        for(const t of TREES){const dx=t.x-ax,dy=t.y-ay,al=dx*tx+dy*ty;if(al<0||al>l)continue;const s=acc+al,lat=(dx*ty-dy*tx)*c.side;if(s>=c.s0&&s<=c.s1&&lat>=c.lat0&&lat<=c.lat1)drop.add(t);}acc+=l;}}
+    if(drop.size){const keep=TREES.filter(t=>!drop.has(t));TREES.length=0;TREES.push(...keep);THASH.clear();for(const t of TREES){const R2=Math.ceil(t.r/10)+1,cx=Math.floor(t.x/10),cy=Math.floor(t.y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}console.log('[trees] cleared',drop.size);}}}
  if(D.trees==='ponderosa'){for(const t of TREES)if(!t.fir&&rnd()<.8){t.fir=true;t.r=t.h*.17;}
    if(D.island&&D.island.p){const I=D.island,P=I.p;const far=P.map(q=>[q[0],q[1],Math.hypot(q[0]-(D.holes.find(h=>h.ref==='14')||{p:[[0,0]]}).p[0][0],q[1]-(D.holes.find(h=>h.ref==='14')||{p:[[0,0]]}).p[0][1])]).sort((a,b)=>b[2]-a[2]);
      for(const k of[0,Math.floor(P.length*.08),Math.floor(P.length*.16)]){const q=far[Math.min(k,far.length-1)],x=I.x+(q[0]-I.x)*.78,y=I.y+(q[1]-I.y)*.78,t={x,y,gz:H(x,y),fir:true,h:15+rnd()*4,r:2.2,v:Math.floor(rnd()*12),isle:1};TREES.push(t);
