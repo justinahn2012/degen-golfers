@@ -1665,9 +1665,9 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
       if(g.userData.rig.pro&&type==='putter'){const s1=g.userData.rig.B.spine_01;if(s1)setRelG(g,s1,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.26).multiply(relQ(g,s1)));}/* putting: bend a little more from the hips (eyes over the ball) so the hands reach the shorter putter with the shoulders square */
       if(g.userData.rig.pro){const B2=g.userData.rig.B,sp=B2.spine_02;if(sp&&B2.upperarm_l&&B2.upperarm_r&&B2.spine_03&&B2.spine_01){const want=type==='putter'?-1:.065;
         for(let it=0;it<2;it++){const L1=gpG(g,B2.upperarm_l),R1=gpG(g,B2.upperarm_r),up=gpG(g,B2.spine_03).sub(gpG(g,B2.spine_01)).normalize(),ax=new THREE.Vector3().crossVectors(up,L1.clone().sub(R1)).normalize(),drop=L1.y-R1.y;if(drop>=want-.004)break;
-          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}leadExtend(g,g.userData.rig._topW||0);const wA0=type==='putter'?0:(ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}
+          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}leadExtend(g,g.userData.rig._topW||0);try{clubPath(g,ck,type,ph,u,p);}catch(e){}const wA0=type==='putter'?0:(ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}
       {const R2=g.userData.rig;if(R2._topHdT){/* second pass: the trail hand lands wherever the grip puts it; nudge both hands so it lands on the planned spot */
-        const B2=R2.B,err=R2._topHdT.clone().sub(gpG(g,B2.hand_r));if(err.length()>.008){const hq=relQ(g,B2.hand_l);armTo(g,'l',gpG(g,B2.hand_l).add(err),gpG(g,B2.lowerarm_l).add(new THREE.Vector3(0,-.1,0)));setRelG(g,B2.hand_l,hq);animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}}}}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
+        const B2=R2.B,err=R2._topHdT.clone().sub(gpG(g,B2.hand_r)).multiplyScalar(R2._topW||0);if(err.length()>.008){const hq=relQ(g,B2.hand_l);armTo(g,'l',gpG(g,B2.hand_l).add(err),gpG(g,B2.lowerarm_l).add(new THREE.Vector3(0,-.1,0)));setRelG(g,B2.hand_l,hq);const cg2=R2.clubs&&R2.clubs[type];if(cg2){cg2.position.add(err);cg2.updateMatrixWorld(true);}try{gripFix(g,type);}catch(e){}}}}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
 function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);return g;}
 
@@ -2003,6 +2003,23 @@ function beerCan(){/* brushed silver can, a picture of Mount Rainier across the 
   const al=new THREE.MeshStandardMaterial({color:0xcfd5db,metalness:.9,roughness:.25});const top=new THREE.Mesh(new THREE.CylinderGeometry(.028,.033,.012,24),al);top.position.y=.061;g.add(top);const bot=new THREE.Mesh(new THREE.CylinderGeometry(.033,.029,.01,24),al);bot.position.y=-.06;g.add(bot);
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 function aimBoneG(g,b,child,tgt){const o=gpG(g,b),cur=gpG(g,child).sub(o).normalize(),des=tgt.clone().sub(o).normalize();setRelG(g,b,new THREE.Quaternion().setFromUnitVectors(cur,des).multiply(relQ(g,b)));}
+function clubPath(g,ck,type,ph,u,p){/* full swings (driver, woods, irons): steer the shaft through the textbook checkpoints -
+  takeaway: parallel to the ground pointing away from the target; halfway back (lead arm level): straight up; top: parallel over the head
+  pointing at the target (irons a touch short of parallel); early downswing: 45 deg up behind; delivery: parallel again; release: parallel
+  toward the target; follow-through: straight up; finish: across the back of the shoulders. Address and impact stay as captured. Golfer frame: +x target, +y up, +z ball. */
+  if(!(type==='driver'||type==='wood'||type==='iron'))return;const R=g.userData.rig,B=R.B;if(!B.hand_l)return;
+  const V3=(x,y,z)=>new THREE.Vector3(x,y,z).normalize(),ir=type==='iron';
+  const K=[null,V3(-1,.05,0),V3(0,1,-.25),ir?V3(.9,.3,-.1):V3(1,-.03,-.1),V3(-.6,.8,-.2),V3(-1,.12,.1),null,V3(1,.12,.1),V3(.15,1,-.2),V3(-.65,-.25,.7)];
+  const ss=x=>x*x*(3-2*x),sB=q=>q<.3?q/.3:q<.62?1+(q-.3)/.32:2+(q-.62)/.38;
+  const at=s=>{const i=Math.max(0,Math.min(8,Math.floor(s))),f=Math.max(0,Math.min(1,s-i)),A=K[i],Bk=K[i+1];if(A&&Bk)return[A.clone().lerp(Bk,ss(f)).normalize(),1];if(A)return[A.clone(),1-ss(f)];if(Bk)return[Bk.clone(),ss(f)];return[new THREE.Vector3(0,1,0),0];};
+  let D,w;if(ph==='back'){[D,w]=at(sB(p));}
+  else{const full=ph==='thru'?Math.min(1,.4+p*.6):Math.max(0,Math.min(1,(p-.55)/.35));const s=ph==='down'?(u<.4?3+u/.4:u<.72?4+(u-.4)/.32:5+(u-.72)/.28):(u<.22?6+u/.22:u<.55?7+(u-.22)/.33:8+Math.min(1,(u-.55)/.85));
+    const [D1,w1]=at(s),acc=D1.clone().multiplyScalar(w1*full);let ws=w1*full;
+    if(ph==='down'&&full<1){const [D2,w2]=at(sB(p)),k=(1-full)*Math.pow(1-Math.min(1,u/.5),2)*w2;acc.addScaledVector(D2,k);ws+=k;}
+    if(acc.lengthSq()<1e-8)return;D=acc.normalize();w=Math.min(1,ws);}
+  if(w<.001)return;
+  const cal=animCal(g,ck,type),hq=relQ(g,B.hand_l),sh=cal.dL.clone().applyQuaternion(hq).normalize(),Dw=sh.clone().lerp(D,w).normalize();
+  setRelG(g,B.hand_l,new THREE.Quaternion().setFromUnitVectors(sh,Dw).multiply(hq));}
 function leadExtend(g,w){/* top of the backswing (full swings): set the hands so the trail arm can sit in a proper "tray" position -
   trail upper arm level with the ground, pointing away from the target, forearm up to the hands - and the lead arm long across the chest.
   Trail elbow, lead shoulder and hands then make a clear triangle. The lead hand keeps its angle, so the club just moves with it. */
