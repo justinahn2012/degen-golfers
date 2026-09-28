@@ -2261,6 +2261,10 @@ function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of playe
 #scLegend .scm{font-size:11px;min-width:1.7em;height:1.7em}`;document.head.appendChild(st);})();
 function scoreMark(s,d){const c=d<=-2?'e':d===-1?'b':d===1?'bo':d>=2?'db':'';return'<span class="scm'+(c?' '+c:'')+'">'+s+'</span>';}
 function toRoster(){state='menu';$('card').hidden=true;$('courses').hidden=true;$('menu').hidden=false;for(const p of players){p.av.visible=false;p.done=true;}cur=null;ROUND=null;setRibbon([]);buildMenu();}
+/* is a tree standing on the aim line within ~22 m (trunk or low canopy in the ball's path)? */
+function treeAhead(p){if(!p||!TREES.length)return false;const k=p.x.toFixed(1)+','+p.y.toFixed(1)+','+p.aim.toFixed(3);if(p._taK===k)return p._taV;
+  const dx=Math.cos(p.aim),dy=Math.sin(p.aim);let hit=false;for(const t of TREES){const rx=t.x-p.x,ry=t.y-p.y,al=rx*dx+ry*dy;if(al<1.5||al>22)continue;const lat=Math.abs(rx*dy-ry*dx);if(lat<Math.max(1.2,t.r*.55)){hit=true;break;}}
+  p._taK=k;p._taV=hit;return hit;}
 let toastTimer,TOAST_PEND=null;function toast(b,s){if(CURT||performance.now()/1000<flyUntil){TOAST_PEND=[b,s];return;}$('tB').textContent=b;$('tS').textContent=s;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),1900);}
 
 /* ---------- HUD ---------- */
@@ -2276,7 +2280,7 @@ function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p
   $('swing').disabled=!(state==='aim'||state==='s1'||state==='s2'||state==='sw');const sb=$('shapeBtn');sb.textContent=p.shape||'Straight';sb.disabled=state!=='aim'||!!c.putt;sb.setAttribute('aria-pressed',String((p.shape||'Straight')!=='Straight'));
   let L='',R='';if(c.putt){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),mx=p.x+dx*d/2,my=p.y+dy*d/2,g=grad(mx,my),up=g[0]*dx+g[1]*dy,side=g[0]*-dy+g[1]*dx;
       L=(Math.abs(up)<.003?'Flat':(up>0?'Uphill ':'Downhill ')+(Math.abs(up)*100).toFixed(1)+'%');R=Math.abs(side)<.003?'Straight':'Breaks '+(side>0?'right':'left')+' '+(Math.abs(side)*100).toFixed(1)+'%';}
-  else{L='Lie: <b>'+LIE_NAME[p.lie]+'</b>'+(MODE==='swipe'&&state==='aim'?'  Swipe down on the course, then up':'');R=p.boost?'<b>'+p.abName+'</b> ready':(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2?'<b>Consistency King</b> active':'');}
+  else{L='Lie: <b>'+LIE_NAME[p.lie]+'</b>'+(treeAhead(p)?'  <b style="color:#f2c230">Tree in the way</b>':'')+(MODE==='swipe'&&state==='aim'?'  Swipe down on the course, then up':'');R=p.boost?'<b>'+p.abName+'</b> ready':(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2?'<b>Consistency King</b> active':'');}
   $('iL').innerHTML=L;$('iR').innerHTML=R;updAim();}
 function pct(u){return(u+.15)/1.25*100;}
 /* ---- silky swing bar: while the bar sweeps, the phone's compositor animates it (Web Animations on transform), so it stays perfectly
@@ -2579,7 +2583,12 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
       if(p){const w=Math.max(0,Math.min(1,(v-.62)/.38)),k2=w*w*(3-2*w),dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),aw=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),al=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);want.lerp(aw,k2);look.lerp(al,k2);}}}
   if(CELEB&&state==='result'&&now>=CELEB.t0-.2&&CELEB.p.av){const g=CELEB.p.av,c=g.userData.rig.B.spine_03.getWorldPosition(new THREE.Vector3()),f=g.localToWorld(new THREE.Vector3(0,0,1)).sub(g.position).setY(0).normalize(),sd=new THREE.Vector3(-f.z,0,f.x);
     want=c.clone().addScaledVector(f,3.1).addScaledVector(sd,CELEB.kind==='pump'?-1.6:.9).add(new THREE.Vector3(0,CELEB.kind==='pump'?.05:.15,0));look=c.clone().add(new THREE.Vector3(0,CELEB.kind==='pump'?.15:.05,0));}
-  if(want&&look&&!fly&&state!=='menu'){for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}
+  if(want&&look&&!fly&&state!=='menu'){
+    if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2')&&!overhead){
+      /* behind the golfer: dodge UP (and only a little closer), never forward past them - the tree in front of them stays in view */
+      const G=p.av.position;for(let i=0;i<12;i++){if(!treeHit(want.x,-want.z,want.y))break;const d=Math.hypot(want.x-G.x,want.z-G.z);if(d>3.2){want.x+=(G.x-want.x)*.08;want.z+=(G.z-want.z)*.08;}want.y+=.45;}
+      if(want.y>look.y){const dz=want.y-look.y;look.y-=Math.min(.8,dz*.15);}}
+    else{for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:(INTRO_D>3?3+Math.min(4,INTRO_D/12):3)));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
   camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
