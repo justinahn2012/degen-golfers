@@ -1662,7 +1662,7 @@ const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot'},dial:{n:'Dia
 const B=(pow,acc,sg,put,rec)=>({pow,acc,sg,put,rec});
 const BASE=[
  {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{putter:'blackout',skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
- {id:'red-brim',name:'David Chen',hcp:36,st:[32,57,42,58,42],ab:'read',color:'#e74c3c',look:{putter:'blackout',skin:'#e3b48e',cap:{style:'fwd',color:'#1b1b1d',brim:'#b8352b'},top:{type:'tee',color:'#e4e4e1'},legs:{color:'#2b2f36'}}},
+ {id:'red-brim',name:'David Chen',hcp:36,st:[52,52,37,53,37],ab:'read',color:'#e74c3c',look:{putter:'blackout',skin:'#e3b48e',cap:{style:'fwd',color:'#1b1b1d',brim:'#b8352b'},top:{type:'tee',color:'#e4e4e1'},legs:{color:'#2b2f36'}}},
  {id:'ramble-on',name:'Benja B',hcp:15,st:[89,68,71,70,70],ab:'rip',color:'#f1c40f',look:{skin:'#e8b893',tall:1.06,cap:{style:'fwd',color:'#1b1b1d',patch:'#d9892b'},top:{type:'polo',color:'#24345c',arms:'#5a7299'},legs:{color:'#1d1d20'},shoes:'#2a2a2e'}},
  {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{skin:'#d9a47c',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
@@ -1681,12 +1681,13 @@ const BASE=[
 {id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
 {id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
- {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[62,69,63,63,65],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
+ {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
  {id:'erik',name:'Erik Miller',hcp:32,st:[45,65,49,56,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
 const SKEY='jp-golf-roster-v3';let saved={};try{saved=JSON.parse(localStorage.getItem(SKEY)||'{}')||{};}catch(e){saved={};}
 if(saved['navy-cap']&&saved['navy-cap'].name==='Navy Cap')delete saved['navy-cap'].name;if(saved['shaka']&&saved['shaka'].name==='Brendan')delete saved['shaka'].name;for(const [id,o] of [['brendan-ws','Brendan Wesley Smith'],['andrea','Andrea Wesley Smith']])if(saved[id]&&saved[id].name===o)delete saved[id].name;
+try{if(!localStorage.getItem('dg-stat-mig-2')){for(const id of ['red-brim','brendan-ws'])if(saved[id])for(const k of ['pow','acc','sg','put','rec'])delete saved[id][k];localStorage.setItem('dg-stat-mig-2','1');localStorage.setItem(SKEY,JSON.stringify(saved));}}catch(e){}
 const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st),saved[b.id]||{}));
 ROSTER.sort((a,b)=>a.name.localeCompare(b.name));ROSTER.forEach(r=>{r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;});
 function saveRoster(){const o={};for(const r of ROSTER)o[r.id]={name:r.name,pow:r.pow,acc:r.acc,sg:r.sg,put:r.put,rec:r.rec,ab:r.ab};try{localStorage.setItem(SKEY,JSON.stringify(o));}catch(e){}}
@@ -2056,7 +2057,7 @@ function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.a
       if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(H(gx2+sx,gy2+sy)+H(gx2-sx,gy2-sy)+H(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
   applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
-function fmtDist(m,lie){return(lie==='green'||lie==='fringe'||m<18)?Math.round(m*TOFT)+' ft':Math.round(m*TOYD)+' yds';}
+function fmtDist(m,lie){return lie==='green'?Math.round(m*TOFT)+' ft':Math.max(1,Math.round(m*TOYD))+' yds';}
 
 function press(){if(CURT)return;if(performance.now()/1000<flyUntil){flyUntil=0;if(cur)cur.intro=performance.now()/1000+1.8;return;}if(state==='aim'){if(cur)cur.intro=0;state='s1';swingU=0;overhead=false;if(cur)meterS1(cur);$('viewBtn').setAttribute('aria-pressed','false');}
   else if(state==='s1'){swingPow=Math.max(.04,swingU);state='s2';if(cur)meterS2(cur);}
@@ -2275,7 +2276,7 @@ function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p
   $('wSpd').textContent=Math.round(wind.sp*2.237);
   if(c.putt){$('cName').innerHTML='Putter<small>Full power '+Math.round(p.pmax*TOFT)+' ft</small>';}
   else if(p.shape==='Bump & run'&&bumpOK(p.club)){const b=bumpCarry(p,p.club);$('cName').innerHTML=c.n+'<small>Bump '+Math.round(b*TOYD)+' + run '+Math.round(Math.min(b*bumpRatio(p.club),90/TOYD)*TOYD)+' yds</small>';}
-  else{if(p.shape==='Bump & run')p.shape='Straight';$('cName').innerHTML=c.n+'<small>Carry '+Math.round(carryOf(p,p.club)*(p.boost==='rip'?1.12:p.boost==='hl'?1.1:1)*TOYD)+' yds</small>';}
+  else{if(p.shape==='Bump & run')p.shape='Straight';$('cName').innerHTML=c.n+'<small>Carry '+Math.round(c.c*YD*powMult(p)*TOYD)+' yds</small>';}
   const ab=$('abBtn'),pas=ABIL[p.ab].passive;ab.textContent=p.abName;ab.disabled=pas||p.abUsed||state!=='aim';ab.setAttribute('aria-pressed',String(!!p.boost||(p.ab==='read'&&readOn)||(pas&&Math.abs(p.lastErr||0)>1.2)));
   $('swing').disabled=!(state==='aim'||state==='s1'||state==='s2'||state==='sw');const sb=$('shapeBtn');sb.textContent=p.shape||'Straight';sb.disabled=state!=='aim'||!!c.putt;sb.setAttribute('aria-pressed',String((p.shape||'Straight')!=='Straight'));
   let L='',R='';if(c.putt){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),mx=p.x+dx*d/2,my=p.y+dy*d/2,g=grad(mx,my),up=g[0]*dx+g[1]*dy,side=g[0]*-dy+g[1]*dx;
