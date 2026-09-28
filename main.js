@@ -1836,7 +1836,7 @@ function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.
 let CURT=null;
 function curtainEl(){let el=$('holeCurtain');if(!el){el=document.createElement('div');el.id='holeCurtain';document.body.appendChild(el);const st=document.createElement('style');st.textContent=`
 #holeCurtain{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 42%,rgba(20,44,32,.96),rgba(6,14,11,.985));color:#fff;opacity:0;transition:opacity .3s,transform .6s cubic-bezier(.2,.8,.2,1);pointer-events:none}
-#holeCurtain.on{opacity:1}#holeCurtain.out{opacity:0;transform:scale(.6) translateY(-20vh);transition:opacity .45s .12s,transform .6s cubic-bezier(.3,.7,.2,1)}
+#holeCurtain.on{opacity:1}#holeCurtain.out{opacity:0;transform:none;transition:opacity .9s cubic-bezier(.4,0,.2,1)}
 #holeCurtain .cc{display:grid;grid-template-columns:auto auto;gap:22px;align-items:center;padding:0 20px}
 #holeCurtain .hl{font:600 14px/1.2 Barlow,sans-serif;opacity:.65;text-transform:uppercase;letter-spacing:.18em}
 #holeCurtain .hn{font:800 128px/.84 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:-.02em;margin:4px 0 2px}
@@ -1856,7 +1856,7 @@ function updCurtain(now){const C=CURT;if(!C)return;const bar=C.el.querySelector(
     try{for(const u of[0,.2,.4,.6,.8,1])C.poses.push(flyPose(u));const p=cur;if(p){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y);C.poses.push([V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2)]);C.poses.push([V(PIN.x+dx*18,PIN.y+dy*18,H(PIN.x,PIN.y)+6),V(PIN.x,PIN.y,H(PIN.x,PIN.y))]);}}catch(e){}
     if(bar)bar.style.width='12%';return;}
   if(C.phase===2){if(C.lt)C.fts.push(now-C.lt);C.lt=now;const el=now-C.t0,last=C.fts.slice(-8),calm=last.length>=10&&last.every(d=>d<.024);if(bar)bar.style.width=Math.min(100,55+45*Math.min(1,el/1.6))+'%';
-    if((el>1.5&&calm)||el>3.8||(el>2.2&&C.fts.length>=14)){const f=C.fts.slice(2).sort((a,b)=>a-b),med=f.length?f[Math.floor(f.length*.6)]:0;PAN_PACE=MOBILE&&med>.0185?2:1;C.phase=3;C.el.classList.add('out');const E=C.el;setTimeout(()=>{if(E.classList.contains('out'))E.style.display='none';},700);
+    if((el>1.5&&calm)||el>3.8||(el>2.2&&C.fts.length>=14)){const f=C.fts.slice(2).sort((a,b)=>a-b),med=f.length?f[Math.floor(f.length*.6)]:0;PAN_PACE=MOBILE&&med>.0185?2:1;C.phase=3;C.el.classList.add('out');const E=C.el;setTimeout(()=>{if(E.classList.contains('out'))E.style.display='none';},1000);
       flyStart=now;flyUntil=now+5.5;if(cur)cur.intro=flyUntil+3.4;CURT=null;}}}
 function curtainCam(){const C=CURT;if(!C||C.phase<1)return;const bar=C.el.querySelector('.bar i');
   if(C.phase===1){const P=C.poses[Math.min(C.i,C.poses.length-1)];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}C.i++;if(bar)bar.style.width=(12+43*C.i/Math.max(1,C.poses.length))+'%';if(C.i>=C.poses.length){C.phase=2;C.lt=0;}}
@@ -2261,7 +2261,7 @@ function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of playe
 #scLegend .scm{font-size:11px;min-width:1.7em;height:1.7em}`;document.head.appendChild(st);})();
 function scoreMark(s,d){const c=d<=-2?'e':d===-1?'b':d===1?'bo':d>=2?'db':'';return'<span class="scm'+(c?' '+c:'')+'">'+s+'</span>';}
 function toRoster(){state='menu';$('card').hidden=true;$('courses').hidden=true;$('menu').hidden=false;for(const p of players){p.av.visible=false;p.done=true;}cur=null;ROUND=null;setRibbon([]);buildMenu();}
-let toastTimer;function toast(b,s){$('tB').textContent=b;$('tS').textContent=s;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),1900);}
+let toastTimer,TOAST_PEND=null;function toast(b,s){if(CURT||performance.now()/1000<flyUntil){TOAST_PEND=[b,s];return;}$('tB').textContent=b;$('tS').textContent=s;$('toast').classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('on'),1900);}
 
 /* ---------- HUD ---------- */
 
@@ -2534,6 +2534,7 @@ function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.vis
 function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&!BOOST&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));applyPR();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);applyPR();DRSnext=now+3;}}}
   if(GRASS.job&&state!=='s1'&&state!=='s2'){try{grassStep(MOBILE?3:4);}catch(e){console.warn('grass',e);GRASS.job=null;}}
   if(GRASS.ready&&cur&&state==='aim'&&GRASS.key===grassKey(cur.x,cur.y,cur.lie==='tee')){try{grassUse(cur.x,cur.y,cur.lie==='tee');}catch(e){console.warn('grass',e);}}
+  if(TOAST_PEND&&!CURT&&now>=flyUntil){const t=TOAST_PEND;TOAST_PEND=null;toast(t[0],t[1]);}
   let want=null,look=null;const fly=now<flyUntil;
   const p=cur;
   if(state==='menu'){const a=now*.05,cx=PIN.x-60,cy=PIN.y+140;want=V(cx+Math.cos(a)*160,cy+Math.sin(a)*160,90);look=V(cx,cy,0);}
