@@ -1764,15 +1764,15 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   let cmp=null,leaf=0,inLeaf=false,lat=0;const pathAt=s=>{if(!cmp){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}
     if(s<=cmp.se){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}const u=Math.min(1,(s-cmp.se)/(1-cmp.se)),s2=cmp.se+(s-cmp.se)*cmp.f,q=baseXY(s2);
     return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+cmp.b*u+cmp.c*u*u];};
-  const pts=[],N=110;let hit=null,prev=null;
+  const pts=[],N=110,TEV=[];let hit=null,prev=null;
   for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS;
-    if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};break;}const tp=treePart(px,py,pz);
-      if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};break;}
-      if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};break;}}
+    if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};TEV.push({t,k:'trunk',x:ts.x,y:ts.y,z:ts.z});break;}const tp=treePart(px,py,pz);
+      if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};TEV.push({t,k:'trunk',x:px,y:py,z:pz});break;}
+      if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;if(!inLeaf)TEV.push({t,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};TEV.push({t,k:'limb',fir:tp.t.fir,x:px,y:py,z:pz},{t:t+.12,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});break;}}
       else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){const f=Math.max(.3,1-.055*leaf),se=s,sL=se+(1-se)*f,q=baseXY(sL);lat=(Math.random()-.5)*Math.min(4,leaf*.5);
         const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
-  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX};
+  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV};
   if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
     Object.assign(res,{x:fx,y:fy,tree:true,treeKind:'limb',holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   if(hit){res.treeKind='trunk';const fx=hit.x-dx*.8,fy=hit.y-dy*.8,gz=H(fx,fy)+.021;pts.push({t:hit.t+.05,x:fx,y:fy,z:hit.z});pts.push({t:hit.t+.35,x:fx,y:fy,z:(hit.z+gz)/2});pts.push({t:hit.t+.6,x:fx,y:fy,z:gz});
@@ -1857,7 +1857,7 @@ function updCurtain(now){const C=CURT;if(!C)return;const bar=C.el.querySelector(
     if(bar)bar.style.width='12%';return;}
   if(C.phase===2){if(C.lt)C.fts.push(now-C.lt);C.lt=now;const el=now-C.t0,last=C.fts.slice(-8),calm=last.length>=10&&last.every(d=>d<.024);if(bar)bar.style.width=Math.min(100,55+45*Math.min(1,el/1.6))+'%';
     if((el>1.5&&calm)||el>3.8||(el>2.2&&C.fts.length>=14)){const f=C.fts.slice(2).sort((a,b)=>a-b),med=f.length?f[Math.floor(f.length*.6)]:0;PAN_PACE=MOBILE&&med>.0185?2:1;C.phase=3;C.el.classList.add('out');const E=C.el;setTimeout(()=>{if(E.classList.contains('out'))E.style.display='none';},1000);
-      flyStart=now;flyUntil=now+5.5;if(cur)cur.intro=flyUntil+3.4;CURT=null;}}}
+      flyStart=now;flyUntil=now+FLY_OUT+FLY_BACK;if(cur)cur.intro=flyUntil+3.4;CURT=null;}}}
 function curtainCam(){const C=CURT;if(!C||C.phase<1)return;const bar=C.el.querySelector('.bar i');
   if(C.phase===1){const P=C.poses[Math.min(C.i,C.poses.length-1)];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}C.i++;if(bar)bar.style.width=(12+43*C.i/Math.max(1,C.poses.length))+'%';if(C.i>=C.poses.length){C.phase=2;C.lt=0;}}
   else if(C.phase===2){const n=Math.min(6,C.poses.length),k=C.j=(C.j||0)+1,P=C.poses[k%n];if(P){camera.position.copy(P[0]);camera.lookAt(P[1]);}if(C.fts.length>=12&&k%n!==0){}}}
@@ -2068,7 +2068,7 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
   err=Math.max(-3,Math.min(3,err));p.lastErr=err;p.prev={x:p.x,y:p.y};
   plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
   p.strokes++;if(p.boost){p.boost=null;}if(p.buzz>0)p.buzz--;
-  state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;swingAnim={p,t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(c.putt?Math.max(.28,DS*(.8+.35*Math.min(1,swingPow))):(_K.fin-_K.imp)/ANIM.fps*Math.max(.35,(()=>{const t=clubType(p.club),pw=Math.min(1,swingPow);return t==='wedge'?.4+.6*pw:.6+.4*pw;})())):0,type:clubType(p.club)};/* shorter follow-through takes proportionally less time, so the tempo stays natural */
+  state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;try{SND.whoosh(clubType(p.club),swingPow,DS);}catch(e){}swingAnim={p,t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(c.putt?Math.max(.28,DS*(.8+.35*Math.min(1,swingPow))):(_K.fin-_K.imp)/ANIM.fps*Math.max(.35,(()=>{const t=clubType(p.club),pw=Math.min(1,swingPow);return t==='wedge'?.4+.6*pw:.6+.4*pw;})())):0,type:clubType(p.club)};/* shorter follow-through takes proportionally less time, so the tempo stays natural */
   ring.visible=false;aimLine.visible=false;readLine.visible=false;trailPts=[];setRibbon([]);refresh();}
 function contactWord(e){const a=Math.abs(e);if(a<.35)return'Pure';const s=e>0?'draw':'fade';if(a<1)return'Slight '+s;if(a<2)return s[0].toUpperCase()+s.slice(1);return e>0?'Hook':'Slice';}
 
@@ -2461,18 +2461,63 @@ const SND=(()=>{let ac=null,out=null,on=true,noise=null;try{on=localStorage.getI
     const n=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=n.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;noise=n;amb();}catch(e){ac=null;}}
   const nz=(t,dur,f,q,g,type)=>{const s=ac.createBufferSource();s.buffer=noise;const b=ac.createBiquadFilter();b.type=type||'bandpass';b.frequency.value=f;b.Q.value=q;const e=ac.createGain();e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.002);e.gain.exponentialRampToValueAtTime(.0005,t+dur);s.connect(b);b.connect(e);e.connect(out);s.start(t,Math.random());s.stop(t+dur+.05);};
   const tone=(t,f0,f1,dur,g,type)=>{const o=ac.createOscillator();o.type=type||'sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);const e=ac.createGain();e.gain.setValueAtTime(0,t);e.gain.linearRampToValueAtTime(g,t+.003);e.gain.exponentialRampToValueAtTime(.0005,t+dur);o.connect(e);e.connect(out);o.start(t);o.stop(t+dur+.05);};
-  function strike(type,pw,lie){if(!ac)return;if(ac.state==='suspended')ac.resume();const t=ac.currentTime+.005,k=Math.min(1.1,Math.max(.25,pw||.8));
-    if(type==='driver'||type==='wood'){nz(t,.09,3200,1.1,.9*k);tone(t,2600,1900,.22,.16*k,'triangle');tone(t,5200,4100,.12,.05*k);nz(t,.03,900,.7,.5*k,'lowpass');}
+  /* grainy noise: a filtered hiss chopped by a fast ramp so it sounds like particles (sand spray, grass blades) */
+  const grain=(t0,dur,f,q,amp,rate)=>{const s=ac.createBufferSource();s.buffer=noise;const b=ac.createBiquadFilter();b.type='bandpass';b.frequency.value=f;b.Q.value=q;
+    const ch=ac.createGain();ch.gain.value=.55;const l=ac.createOscillator();l.type='sawtooth';l.frequency.value=rate;const lg=ac.createGain();lg.gain.value=.45;l.connect(lg);lg.connect(ch.gain);
+    const e=ac.createGain();e.gain.setValueAtTime(.0001,t0);e.gain.exponentialRampToValueAtTime(amp,t0+.02);e.gain.exponentialRampToValueAtTime(amp*.4,t0+dur*.4);e.gain.exponentialRampToValueAtTime(.0005,t0+dur);
+    s.connect(b);b.connect(ch);ch.connect(e);e.connect(out);s.start(t0,Math.random());l.start(t0);s.stop(t0+dur+.05);l.stop(t0+dur+.05);};
+  /* what the ground does at impact: sand explodes, rough tears and swishes, fairway takes a crisp divot */
+  function lieFX(t,lie,k){if(lie==='bunker'){tone(t,95,50,.2,.32*k);nz(t,.13,480,.7,.55*k,'lowpass');grain(t+.01,.65,3200,.6,.3*k,47);grain(t+.05,.5,5200,.8,.12*k,71);for(let i=0;i<6;i++)nz(t+.08+Math.random()*.45,.015,6000,2,.12*k);}
+    else if(lie==='rough'){nz(t,.07,340,.8,.3*k,'lowpass');grain(t,.24,1700,1.1,.34*k,63);grain(t+.02,.18,3100,1.4,.14*k,89);}
+    else if(lie==='fairway'||lie==='fringe'){nz(t+.005,.06,520,.9,.3*k,'lowpass');nz(t+.004,.025,2600,1.8,.2*k);}}
+  function strike(type,pw,lie){if(!ac)return;if(ac.state==='suspended')ac.resume();const t=ac.currentTime+.005,k=Math.min(1.1,Math.max(.25,pw||.8));const sand=lie==='bunker',mu=sand?.45:lie==='rough'?.75:1;
+    if(type==='driver'||type==='wood'){nz(t,.09,3200,1.1,.9*k*mu);tone(t,2600,1900,.22,.16*k*mu,'triangle');tone(t,5200,4100,.12,.05*k*mu);nz(t,.03,900,.7,.5*k,'lowpass');if(lie!=='tee')lieFX(t,lie,k);}
     else if(type==='putter'){nz(t,.05,1500,4,.35*k);tone(t,1100,900,.06,.1*k);}
-    else{nz(t,.045,4200,1.6,.8*k);tone(t,3400,3000,.05,.07*k);if(lie!=='tee'&&lie!=='green')nz(t+.01,.16,700,.8,.45*k,'lowpass');if(lie==='bunker')nz(t+.005,.35,2400,.5,.5);}}
+    else{nz(t,.045,4200,1.6,.8*k*mu);tone(t,3400,3000,.05,.07*k*mu);if(lie!=='tee'&&lie!=='green')lieFX(t,lie,k);}}
   function land(l){if(!ac)return;const t=ac.currentTime;if(l==='bunker')nz(t,.18,1800,.6,.25);else if(l==='water'){nz(t,.35,900,.5,.4);tone(t,420,160,.25,.08);}else nz(t,.07,380,.9,.3,'lowpass');}
   function cup(){if(!ac)return;const t=ac.currentTime;for(let i=0;i<3;i++){nz(t+i*.07,.05,2300-i*200,5,.3-.07*i);tone(t+i*.07,1800-i*150,1500,.06,.07);}}
   function amb(){const s=ac.createBufferSource();s.buffer=noise;s.loop=true;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=420;const g=ac.createGain();g.gain.value=.035;const lfo=ac.createOscillator();lfo.frequency.value=.08;const lg=ac.createGain();lg.gain.value=.02;lfo.connect(lg);lg.connect(g.gain);s.connect(f);f.connect(g);g.connect(out);s.start();lfo.start();
-    const bird=()=>{if(!ac)return;const t=ac.currentTime+.05,n=2+Math.floor(Math.random()*4),b=2600+Math.random()*1800;for(let i=0;i<n;i++)tone(t+i*.13,b,b*(1.25+Math.random()*.3),.09,.03);setTimeout(bird,5000+Math.random()*11000);};setTimeout(bird,3000);}
+    const bird=()=>{if(!ac)return;const t=ac.currentTime+.05,n=2+Math.floor(Math.random()*4),b=2600+Math.random()*1800;for(let i=0;i<n;i++)tone(t+i*.13,b,b*(1.25+Math.random()*.3),.09,.03);setTimeout(bird,5000+Math.random()*11000);};setTimeout(bird,3000);
+    const quiet=()=>typeof state!=='undefined'&&(state==='s1'||state==='s2');   /* never start a fly-by while the swing bar is running */
+    const flock=()=>{if(quiet()){setTimeout(flock,3000);return;}try{birdsBy();}catch(e){}setTimeout(flock,25000+Math.random()*40000);};setTimeout(flock,12000+Math.random()*15000);
+    const jet=()=>{if(quiet()){setTimeout(jet,3000);return;}const busy=/jefferson|west seattle/i.test((typeof D!=='undefined'&&D&&D.name)||'');try{planeBy();}catch(e){}setTimeout(jet,(busy?90000:220000)+Math.random()*(busy?90000:180000));};setTimeout(jet,40000+Math.random()*60000);}
+  const panNode=(p0,p1,t0,t1)=>{try{const p=ac.createStereoPanner();p.pan.setValueAtTime(p0,t0);p.pan.linearRampToValueAtTime(p1,t1);p.connect(out);return p;}catch(e){return out;}};
+  /* the swing whoosh: filtered air that builds through the downswing and peaks at impact (driver/woods deeper and longer, irons sharper) */
+  function whoosh(type,pw,ds){if(!ac||type==='putter')return;if(ac.state==='suspended')ac.resume();const k=Math.min(1.1,Math.max(.3,pw||.8)),big=type==='driver'||type==='wood',
+      t=ac.currentTime+.01,d=Math.max(.14,ds||.24),pk=t+d,s=ac.createBufferSource();s.buffer=noise;const b=ac.createBiquadFilter();b.type='bandpass';b.Q.value=big?.9:1.3;
+    b.frequency.setValueAtTime(big?260:420,t);b.frequency.exponentialRampToValueAtTime(big?1500:2300,pk);b.frequency.exponentialRampToValueAtTime(big?700:1100,pk+.12);
+    const e=ac.createGain();e.gain.setValueAtTime(.0001,t);e.gain.exponentialRampToValueAtTime(.05*k,t+d*.55);e.gain.exponentialRampToValueAtTime((big?.34:.26)*k,pk);e.gain.exponentialRampToValueAtTime(.0005,pk+(big?.2:.13));
+    s.connect(b);b.connect(e);e.connect(out);s.start(t,Math.random());s.stop(pk+.3);}
+  /* a pair of birds flying past: wing beats and chirps that travel from one ear to the other */
+  function birdsBy(){if(!ac||!on)return;const t=ac.currentTime+.05,dur=2.2+Math.random()*1.4,dir=Math.random()<.5?1:-1,P=panNode(-.9*dir,.9*dir,t,t+dur);
+    const G=ac.createGain();G.gain.setValueAtTime(.0001,t);G.gain.exponentialRampToValueAtTime(1,t+dur*.45);G.gain.exponentialRampToValueAtTime(.0001,t+dur);G.connect(P);
+    /* wing beats: one noise voice gated by a ~10 Hz flutter (a handful of audio nodes, whatever the length) */
+    const s=ac.createBufferSource();s.buffer=noise;s.loop=true;const b=ac.createBiquadFilter();b.type='bandpass';b.frequency.value=820;b.Q.value=1.3;const gate=ac.createGain();gate.gain.value=0;
+    const lfo=ac.createOscillator();lfo.type='square';lfo.frequency.setValueAtTime(9.5+Math.random()*2.5,t);const lg=ac.createGain();lg.gain.value=.03;lfo.connect(lg);lg.connect(gate.gain);
+    s.connect(b);b.connect(gate);gate.connect(G);s.start(t,Math.random());lfo.start(t);s.stop(t+dur+.05);lfo.stop(t+dur+.05);
+    const chirp=(tt,f)=>{const o=ac.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,tt);o.frequency.exponentialRampToValueAtTime(f*1.35,tt+.07);const e=ac.createGain();e.gain.setValueAtTime(0,tt);e.gain.linearRampToValueAtTime(.035,tt+.01);e.gain.exponentialRampToValueAtTime(.0005,tt+.09);o.connect(e);e.connect(G);o.start(tt);o.stop(tt+.12);};
+    for(let i=0;i<3+Math.floor(Math.random()*3);i++)chirp(t+.3+Math.random()*(dur-.6),2800+Math.random()*1500);}
+  /* a jet passing over: low rumble that builds, crosses from one side to the other with a slight pitch drop, and fades */
+  function planeBy(){if(!ac||!on)return;const t=ac.currentTime+.05,dur=13+Math.random()*5,mid=t+dur*.45,dir=Math.random()<.5?1:-1,P=panNode(-.7*dir,.7*dir,t,t+dur);
+    const s=ac.createBufferSource();s.buffer=noise;s.loop=true;const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(260,t);lp.frequency.linearRampToValueAtTime(520,mid);lp.frequency.linearRampToValueAtTime(220,t+dur);lp.Q.value=.6;
+    const e=ac.createGain();e.gain.setValueAtTime(.0001,t);e.gain.exponentialRampToValueAtTime(.16,mid);e.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(lp);lp.connect(e);e.connect(P);s.start(t,Math.random());s.stop(t+dur+.1);
+    const o=ac.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(1180,t);o.frequency.linearRampToValueAtTime(1150,mid-1);o.frequency.linearRampToValueAtTime(1040,mid+1.5);o.frequency.linearRampToValueAtTime(1020,t+dur);
+    const ob=ac.createBiquadFilter();ob.type='bandpass';ob.frequency.value=1100;ob.Q.value=6;const oe=ac.createGain();oe.gain.setValueAtTime(.0001,t);oe.gain.exponentialRampToValueAtTime(.006,mid);oe.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(ob);ob.connect(oe);oe.connect(P);o.start(t);o.stop(t+dur+.1);}
+  /* ball meets a tree: 'trunk' = a solid wooden thock, 'limb' = a thinner branch crack, 'leaf' = rustling through the boughs (fine needles
+     for firs, broader leaves for broadleaf); v = loudness by distance */
+  function tree(k,fir,v){if(!ac||!on)return;if(ac.state==='suspended')ac.resume();const t=ac.currentTime+.005,g=Math.max(.15,Math.min(1,v||1));
+    const rustle=(t0,dur,amp)=>{const s=ac.createBufferSource();s.buffer=noise;const b=ac.createBiquadFilter();b.type='bandpass';b.frequency.value=fir?3800:2200;b.Q.value=fir?.9:.7;
+      const e=ac.createGain();e.gain.setValueAtTime(.0001,t0);e.gain.exponentialRampToValueAtTime(amp,t0+.025);e.gain.exponentialRampToValueAtTime(amp*.35,t0+dur*.45);e.gain.exponentialRampToValueAtTime(.0005,t0+dur);
+      const tr=ac.createGain();tr.gain.value=.6;const lfo=ac.createOscillator();lfo.type='sawtooth';lfo.frequency.value=fir?31:19;const lg=ac.createGain();lg.gain.value=.4;lfo.connect(lg);lg.connect(tr.gain);
+      s.connect(b);b.connect(tr);tr.connect(e);e.connect(out);s.start(t0,Math.random());lfo.start(t0);s.stop(t0+dur+.05);lfo.stop(t0+dur+.05);
+      for(let i=0;i<4;i++)nz(t0+Math.random()*dur*.7,.018,fir?5200:3300,3,amp*.9);};                                   /* twig ticks */
+    if(k==='trunk'){tone(t,210,150,.09,.38*g);nz(t,.045,950,2.2,.55*g);nz(t,.012,3200,1.5,.35*g);rustle(t+.03,.35,.06*g);}
+    else if(k==='limb'){tone(t,420,300,.05,.2*g);nz(t,.035,1900,2.5,.4*g);nz(t,.01,4200,1.5,.25*g);rustle(t+.02,.6,.12*g);}
+    else rustle(t,.5+Math.random()*.25,.16*g);}
   function crack(sh){if(!ac)return;const t=ac.currentTime;nz(t,.05,6000,1.2,.5);nz(t+.03,sh?.5:.25,3000,.5,sh?.35:.18);}
   function gulp(){if(!ac)return;const t=ac.currentTime;tone(t,220,120,.12,.12);nz(t,.08,500,1,.12,'lowpass');}
   function toggle(){on=!on;try{localStorage.setItem('dg-snd',on?'on':'off');}catch(e){}if(out)out.gain.value=on?.9:0;return on;}
-  return{init,strike,land,cup,toggle,crack,gulp,get on(){return on;}};})();
+  return{init,strike,land,cup,toggle,crack,gulp,whoosh,birdsBy,planeBy,tree,get on(){return on;}};})();
 document.addEventListener('pointerdown',()=>SND.init());
 {const sp=$('sndPill');if(sp){const sl=()=>{sp.textContent=SND.on?'Sound on':'Sound off';sp.setAttribute('aria-pressed',String(SND.on));};sl();sp.onclick=()=>{SND.init();SND.toggle();sl();};}}
 /* ambient life: a few crows now and then, and the odd jet crossing the sky */
@@ -2554,6 +2599,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
     else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
+    if(state==='flight'&&plan.treeEv)for(const e of plan.treeEv)if(!e.done&&t>=e.t){e.done=1;try{const d=camera.position.distanceTo(V(e.x,e.y,e.z));SND.tree(e.k,e.fir,1.25-d/110);}catch(err){}}
     if(state==='flight'&&t>0){if(!plan.landSnd&&!plan.putt&&plan.club&&t>=plan.club.T*TS*(.5+.5*Math.min(1,swingPow))){plan.landSnd=1;SND.land(lieAt(pos.x,pos.y));grassPrepareNext(plan);}if(plan.putt&&!plan.grassPrep&&t>.3){plan.grassPrep=1;grassPrepareNext(plan);}if(t<2.6)flightSparks(p.ball.b.position,camera.position.distanceTo(p.ball.b.position));trailPts.push(V(pos.x,pos.y,pos.z));if(trailPts.length>690)trailPts.shift();setRibbon(trailPts);}
     else if(state==='result'&&trailPts.length>1)setRibbon(trailPts);
     const dx=Math.cos(plan.dir),dy=Math.sin(plan.dir),lastT=plan.pts[plan.pts.length-1].t,land=plan.pts.length>1?plan.pts[Math.min(plan.pts.length-1,111)]:pos;
