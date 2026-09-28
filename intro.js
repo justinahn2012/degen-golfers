@@ -33,8 +33,12 @@
  const slow=matchMedia('(prefers-reduced-motion: reduce)').matches;const t0=performance.now();
  function size(){const W=innerWidth,H=innerHeight;R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();const visH=2*15*Math.tan(THREE.MathUtils.degToRad(16)),vis=visH*cam.aspect;const k=Math.min(1,vis*.9/(w+.4),visH*.44/4.6);spin.scale.setScalar(k);
    /* seat the leaderboard midway between the bottom of the logo and the start button */
-   const lb=document.getElementById('introLB'),btn=document.getElementById('iGo');if(lb&&btn){const wpp=visH/H,logoBot=H/2-(1.55-2.45*k)/wpp,bt=btn.getBoundingClientRect().top,hgt=lb.offsetHeight||152;lb.style.bottom='auto';lb.style.top=Math.round(Math.max(logoBot+8,(logoBot+bt)/2-hgt/2+10))+'px';}}
- size();addEventListener('resize',size);setTimeout(size,60);setTimeout(size,2400);
+   const lb=document.getElementById('introLB'),btn=document.getElementById('iGo');if(lb&&btn){const wpp=visH/H,logoBot=H/2-(1.55-2.45*k)/wpp,bt=btn.getBoundingClientRect().top,hgt=lb.offsetHeight||152;
+   /* the start button always wins: if the board doesn't fit between the logo and the button it shrinks (to 60% at most),
+      and if it still doesn't fit it tucks up under the logo rather than sitting on the button */
+   const room=bt-12-(logoBot+8),s=Math.max(.6,Math.min(1,room/hgt)),h2=hgt*s;let top=Math.max(logoBot+8,(logoBot+bt)/2-h2/2+10);top=Math.min(top,bt-12-h2);
+   lb.style.bottom='auto';lb.style.transformOrigin='50% 0';lb.style.transform='translateX(-50%) scale('+s.toFixed(3)+')';lb.style.top=Math.round(top)+'px';}}
+ size();addEventListener('resize',size);try{new MutationObserver(()=>size()).observe(document.getElementById('introLB'),{childList:true});document.fonts&&document.fonts.ready.then(()=>size());}catch(e){}setTimeout(size,60);setTimeout(size,2400);
  (function loop(){if(!alive)return;const t=(performance.now()-t0)/1000;const e=Math.min(1,Math.max(0,(t-.7)/1.3)),pop=e<1?1-Math.pow(1-e,3)*Math.cos(e*7):1;
    logo.scale.setScalar(Math.max(.001,pop));const om=1.2,ph=Math.max(0,t-.7)*om;spin.rotation.y=slow?Math.sin(t*.4)*.35:(ph-Math.sin(ph))+Math.PI*2*(1-e);spin.position.y=1.55+Math.sin(t*1.3)*.08;
    const a=-t*1.4;ball.position.set(Math.cos(a)*4.35,Math.sin(a)*4.35,0);ball.rotation.set(t*2.1,t*1.4,0);
