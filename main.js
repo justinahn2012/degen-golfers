@@ -1684,7 +1684,7 @@ const BASE=[
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,58,45,51,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
- {id:'erik',name:'Erik Miller',hcp:32,st:[45,65,49,56,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
+ {id:'erik',name:'Erik Miller',hcp:32,st:[65,56,49,45,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
 /* golfers' stats, names and abilities are set here only; any old edits saved on a phone are cleared and never used */
 try{localStorage.removeItem('jp-golf-roster-v3');localStorage.removeItem('dg-stat-mig-2');}catch(e){}
 const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st)));
