@@ -810,19 +810,25 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
       /* DF3 from the product photo (free image-to-3D, cleaned, ~6k triangles). Laid out like the reference photo at address: blade facing
          the target, round back with the ball-sized hole behind it, shaft entering right behind the middle of the blade. Matte black with a
          white T on top of the blade; milled face. The whole head is shifted so its centre sits under the shaft. */
-      const body=S({color:0x07080c,metalness:.12,roughness:.55,envMapIntensity:.3});
+      /* finish of the hand-built version: the same black, a white sightline along the top of the blade and a short white line on the
+         back of the ring, milled face */
+      const body=S({color:0x0a0b0d,metalness:.4,roughness:.36,envMapIntensity:.4});
       body.onBeforeCompile=sh=>{sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;varying vec3 vNL;').replace('#include <begin_vertex>','#include <begin_vertex>\nvLP=position;vNL=normal;');
         sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;varying vec3 vNL;').replace('#include <map_fragment>',`#include <map_fragment>
           float front=smoothstep(.55,.75,vNL.x)*step(.012,vLP.x);float mill=.74+.07*sin(vLP.z*2600.);
-          float topb=smoothstep(.35,.6,vNL.y)*step(.017,vLP.y)*step(-.008,vLP.x);
-          float stem=topb*(1.-smoothstep(.0014,.0019,abs(vLP.z-.049)))*step(-.004,vLP.x)*(1.-step(.0145,vLP.x));      /* along the target line */
-          float bar=topb*(1.-smoothstep(.0014,.0019,abs(vLP.x-.0122)))*(1.-step(.016,abs(vLP.z-.049)));               /* across, near the face */
-          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(mill),front);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.95),max(stem,bar));`);};body.customProgramCacheKey=()=>'df3v2';
+          float up=smoothstep(.35,.6,vNL.y)*step(.017,vLP.y),cz=abs(vLP.z-.049);
+          float sl=up*(1.-smoothstep(.0009,.0013,cz))*step(-.0035,vLP.x)*(1.-step(.0162,vLP.x));    /* sightline on the blade */
+          float bk=up*(1.-smoothstep(.0009,.0013,cz))*step(-.0975,vLP.x)*(1.-step(-.0845,vLP.x));  /* line on the back of the ring */
+          diffuseColor.rgb=mix(diffuseColor.rgb,vec3(mill),front);`);};body.customProgramCacheKey=()=>'df3v4';
       /* shaft goes in at the junction of the blade and the round piece (8 mm behind the blade's back... i.e. the step at x=-.008 on the
          model), centred heel to toe (model z=.049), on top of the junction (y=.022) */
       hb.userData.axisMount={xj:.008,zc:.049,y:.0222};hb.userData.hm=[];
       window._df3P=window._df3P||new Promise(res=>new THREE.GLTFLoader().load('putter_df3.glb',res,undefined,()=>res(null)));
-      window._df3P.then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,body);m.castShadow=true;hb.add(m);hb.userData.hm.push(m);});fitPutterNeck(hb);});
+      window._df3P.then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,body);m.castShadow=true;hb.add(m);hb.userData.hm.push(m);});
+        /* white markings as inlays sitting on the surface (in the model's own coordinates, so they move with the head) */
+        const wht=S({color:0xf3f3f0,roughness:.45});
+        for(const [len,x,y] of [[.0195,.0063,.02475],[.013,-.091,.0221]]){const gg=new THREE.BoxGeometry(len,.0005,.0022);gg.translate(x,y,.049);const m=new THREE.Mesh(gg,wht);hb.add(m);hb.userData.hm.push(m);}
+        fitPutterNeck(hb);});
     } else if(PSTYLE==='spider'){
       /* the Spider: a mesh generated from the product photos (free image-to-3D), cleaned up, cut to ~5k triangles and coloured like the
          black Tour X - black frame, white top plate with two black sightlines (no names or logos) */
