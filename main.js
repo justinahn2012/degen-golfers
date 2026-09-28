@@ -1296,6 +1296,7 @@ function buildFace3D(p,T,B){const FD=window.FACE3D&&FACE3D.faces&&FACE3D.faces[p
     m.onBeforeCompile=sh2=>{sh2.vertexShader=sh2.vertexShader.replace('#include <common>','#include <common>\nattribute float aA;varying float vA;').replace('#include <begin_vertex>','#include <begin_vertex>\nvA=aA;');
       sh2.fragmentShader=sh2.fragmentShader.replace('#include <common>','#include <common>\nvarying float vA;').replace('#include <alphamap_fragment>','#include <alphamap_fragment>\ndiffuseColor.a*=vA;');};m.customProgramCacheKey=()=>'face3d';
     const mesh=new THREE.Mesh(geo,m);mesh.renderOrder=2;attachRest(mesh,B.Head,v3(0,0,0));return true;}catch(e){console.warn('face3d',e);return false;}}
+const MESHHEADS={"grey-snap":{"file":"head_sherif.glb","m":{"rotX":0.06109,"rotY":-0.10472,"rotZ":0.14131,"eyeX":-0.00811,"eyeY":0.10841,"eyeD":0.06022,"zF":0.12646,"top":0.23695}},"selfie-cam":{"file":"head_andrew.glb","m":{"rotX":0.13963,"rotY":-0.10472,"rotZ":-0.14693,"eyeX":0.00889,"eyeY":0.0718,"eyeD":0.05824,"zF":0.14104,"top":0.22724}},"green-fleece":{"file":"head_justin.glb","m":{"rotX":0.11781,"rotY":-0.0,"rotZ":0.22123,"eyeX":-0.0026,"eyeY":0.12596,"eyeD":0.06269,"zF":0.13311,"top":0.27296}},"red-brim":{"file":"head_david.glb","m":{"rotX":0.00436,"rotY":0.31416,"rotZ":-0.09361,"eyeX":0.00172,"eyeY":0.09745,"eyeD":0.05723,"zF":0.10138,"top":0.25032}},"navy-cap":{"file":"head_mo.glb","m":{"rotX":0.048,"rotY":-0.0,"rotZ":0.00102,"eyeX":-0.00209,"eyeY":0.11036,"eyeD":0.06985,"zF":0.06425,"top":0.25214}},"the-bay":{"file":"head_roby.glb","m":{"rotX":0.07418,"rotY":-0.10472,"rotZ":-0.17747,"eyeX":0.00472,"eyeY":0.10766,"eyeD":0.05989,"zF":0.12308,"top":0.25094}},"beau":{"file":"head_beau.glb","m":{"rotX":0.13963,"rotY":-0.10472,"rotZ":-0.05303,"eyeX":-0.00813,"eyeY":0.11191,"eyeD":0.05844,"zF":0.1393,"top":0.26055}},"peter":{"file":"head_peter.glb","m":{"rotX":0.1789,"rotY":-0.0,"rotZ":0.02082,"eyeX":-0.02028,"eyeY":0.09639,"eyeD":0.0633,"zF":0.20749,"top":0.25104}}};
 function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look,F?F.skin:p.look.skin),T=(p.look.rb&&TPL['RB_'+p.look.rb])||(FEMALE.has(p.id)?TPL.PRO_F:TPL.PRO_M)||TPL[FEMALE.has(p.id)?'F':'M'];
   const g=new THREE.Group(),root=THREE.SkeletonUtils.clone(T.scene);g.add(root);root.updateMatrixWorld(true);
   let body=null;const capOn=!!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'&&lk.cap.style!=='band');root.traverse(o=>{if(o.isMesh){if(o.isSkinnedMesh&&o.name===T.bodyName)body=o;else if(T.rb&&/Hair/.test(o.name)&&!capOn){o.visible=true;o.frustumCulled=false;o.castShadow=true;}else o.visible=false;}});
@@ -1460,6 +1461,18 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
       const vg=new THREE.Group();vg.add(band);vg.add(peak);vg.traverse(o=>{if(o.isMesh)o.castShadow=true;});attachRest(vg,B.Head,v3(0,0,0));}catch(e){console.warn('visor',e);}}
   if(!T.pro){try{buildAttire(p,lk,T,B,g,R);}catch(e){console.warn('attire',e);}}
   try{const bag=makeBag(p);bag.position.set(1.25,0,2.55);bag.rotation.y=-Math.PI/2;g.add(bag);g.userData.bag=bag;}catch(e){console.warn('bag',e);}
+  /* a full 3D head (sculpted by Meshy from his photo): the model's own head, cap and face photo are hidden and the 3D head is fitted by
+     the same measurements the game takes of every head (width at the eyes, eye height, face front) */
+  /* full 3D heads (textured, scanned-style): the body's own head and cap fold away into the head bone (the neck stays) and the 3D head
+     is turned to face straight ahead with level eyes, sized by the distance between the eyes and set at the model's eye line */
+  {const MH=MESHHEADS[p.id];if(MH&&T.headNC){try{
+      const P=T.headNC,m=MH.m,s=(T.eyeX?2*T.eyeX:.064)/m.eyeD,holder=new THREE.Group();attachRest(holder,B.Head,v3(0,0,0));
+      const hg=new THREE.Group();hg.scale.setScalar(s);hg.position.set(-m.eyeX*s,P.eyeY-m.eyeY*s,P.zF-m.zF*s);const inner=new THREE.Group();inner.rotation.set(m.rotX||0,m.rotY,m.rotZ,'XZY');hg.add(inner);holder.add(hg);
+      window._mhP=window._mhP||{};window._mhP[MH.file]=window._mhP[MH.file]||new Promise(res=>new THREE.GLTFLoader().load(MH.file,res,undefined,()=>res(null)));
+      /* the golfer keeps his usual head until the 3D one has loaded, then it swaps in at once (never headless) */
+      window._mhP[MH.file].then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;let mat=o.material;if(MH.noNormal&&mat.normalMap){mat=mat.clone();mat.normalMap=null;mat.needsUpdate=true;}const mm=new THREE.Mesh(o.geometry,mat);mm.castShadow=true;o.updateMatrixWorld(true);mm.applyMatrix4(o.matrixWorld);inner.add(mm);});
+        for(const c of B.Head.children)if(c!==holder)c.visible=false;const k=500;B.Head.scale.setScalar(1/k);holder.position.multiplyScalar(k);holder.scale.multiplyScalar(k);});
+    }catch(e){console.warn('mesh head',e);}}}
   R.clubs=makeClubs(lk);for(const kk in R.clubs)g.add(R.clubs[kk]);
   g.scale.setScalar(lk.tall||1);if(lk.lefty)g.scale.z*=-1;g.traverse(o=>{if(o.isMesh)o.castShadow=true;});applyPose(g,swingPose('addr',0,0,false),'iron');return g;}
 const _Y=v3(0,1,0),_X=v3(1,0,0),_gq=new THREE.Quaternion(),_tq=new THREE.Quaternion(),_tv=new THREE.Vector3();
