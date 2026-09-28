@@ -1682,15 +1682,13 @@ const BASE=[
 {id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
- {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,63,45,46,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
+ {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,58,45,51,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
  {id:'erik',name:'Erik Miller',hcp:32,st:[45,65,49,56,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
-const SKEY='jp-golf-roster-v3';let saved={};try{saved=JSON.parse(localStorage.getItem(SKEY)||'{}')||{};}catch(e){saved={};}
-if(saved['navy-cap']&&saved['navy-cap'].name==='Navy Cap')delete saved['navy-cap'].name;if(saved['shaka']&&saved['shaka'].name==='Brendan')delete saved['shaka'].name;for(const [id,o] of [['brendan-ws','Brendan Wesley Smith'],['andrea','Andrea Wesley Smith']])if(saved[id]&&saved[id].name===o)delete saved[id].name;
-try{if(!localStorage.getItem('dg-stat-mig-2')){for(const id of ['red-brim','brendan-ws'])if(saved[id])for(const k of ['pow','acc','sg','put','rec'])delete saved[id][k];localStorage.setItem('dg-stat-mig-2','1');localStorage.setItem(SKEY,JSON.stringify(saved));}}catch(e){}
-const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st),saved[b.id]||{}));
+/* golfers' stats, names and abilities are set here only; any old edits saved on a phone are cleared and never used */
+try{localStorage.removeItem('jp-golf-roster-v3');localStorage.removeItem('dg-stat-mig-2');}catch(e){}
+const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st)));
 ROSTER.sort((a,b)=>a.name.localeCompare(b.name));ROSTER.forEach(r=>{r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;});
-function saveRoster(){const o={};for(const r of ROSTER)o[r.id]={name:r.name,pow:r.pow,acc:r.acc,sg:r.sg,put:r.put,rec:r.rec,ab:r.ab};try{localStorage.setItem(SKEY,JSON.stringify(o));}catch(e){}}
 const CLUBS=[
  {n:'Driver',c:245,apex:30,T:6.4,roll:.13},{n:'3 wood',c:225,apex:29,T:6.2,roll:.10},{n:'5 wood',c:210,apex:29,T:6.0,roll:.08},
  {n:'4 hybrid',c:195,apex:28,T:5.8,roll:.07},{n:'5 iron',c:182,apex:28,T:5.7,roll:.06},{n:'6 iron',c:172,apex:29,T:5.6,roll:.05},
@@ -1765,15 +1763,19 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   let cmp=null,leaf=0,inLeaf=false,lat=0;const pathAt=s=>{if(!cmp){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}
     if(s<=cmp.se){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}const u=Math.min(1,(s-cmp.se)/(1-cmp.se)),s2=cmp.se+(s-cmp.se)*cmp.f,q=baseXY(s2);
     return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+cmp.b*u+cmp.c*u*u];};
-  const pts=[],N=110,TEV=[];let hit=null,prev=null;
+  const pts=[],N=110,TEV=[];let hit=null,prev=null,TREEM=1;
   for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS;
     if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};TEV.push({t,k:'trunk',x:ts.x,y:ts.y,z:ts.z});break;}const tp=treePart(px,py,pz);
       if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};TEV.push({t,k:'trunk',x:px,y:py,z:pz});break;}
       if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;if(!inLeaf)TEV.push({t,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};TEV.push({t,k:'limb',fir:tp.t.fir,x:px,y:py,z:pz},{t:t+.12,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});break;}}
-      else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){const f=Math.max(.3,1-.055*leaf),se=s,sL=se+(1-se)*f,q=baseXY(sL);lat=(Math.random()-.5)*Math.min(4,leaf*.5);
+      else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){
+        /* through the branches: usually the shot ends up at ~45-75% of its distance (denser foliage takes more), about 1 in 8 squeezes
+           through nearly clean; on average ~40% comes off. A late clip (most of the flight already done) naturally costs less. */
+        const clean=Math.random()<.12,m=clean?.88+Math.random()*.1:Math.max(.32,.765-Math.min(.2,leaf*.02)-Math.random()*.18),
+          f=Math.max(.04,Math.min(1,(m-s)/Math.max(.02,1-s))),se=s,sL=se+(1-se)*f,q=baseXY(sL);TREEM=se+(1-se)*f;lat=(Math.random()-.5)*Math.min(4,leaf*.5);
         const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
-  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV};
+  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV,treeMult:TREEM};
   if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
     Object.assign(res,{x:fx,y:fy,tree:true,treeKind:'limb',holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   if(hit){res.treeKind='trunk';const fx=hit.x-dx*.8,fy=hit.y-dy*.8,gz=H(fx,fy)+.021;pts.push({t:hit.t+.05,x:fx,y:fy,z:hit.z});pts.push({t:hit.t+.35,x:fx,y:fy,z:(hit.z+gz)/2});pts.push({t:hit.t+.6,x:fx,y:fy,z:gz});
@@ -2365,14 +2367,6 @@ function buildMenu(){try{hsLoad();}catch(e){}const w=$('picks');w.innerHTML='';c
     STATS2.map(s=>'<div class="sr" title="'+s[2]+' '+r[s[0]]+'"><span class="sl">'+s[1]+'</span><span class="sv">'+r[s[0]]+'</span>'+segBar(r[s[0]])+'</div>').join('')+(on?'<span class="pk">'+(order.indexOf(r.id)+1)+'</span>':'');
   d.onclick=()=>{if(picked.has(r.id))picked.delete(r.id);else if(picked.size<MAXP)picked.add(r.id);buildMenu();};w.appendChild(d);}
   $('cnt').textContent=picked.size?picked.size+' of '+MAXP+' golfers picked':'Pick up to '+MAXP+' golfers for this round';$('goBtn').disabled=picked.size===0;}
-let editing=null;
-function openEdit(r){editing=r;$('eImg').src=PORT[r.id]||'';$('eTitle').textContent=r.name;$('eName').value=r.name;
-  $('eStats').innerHTML=STATN.map(s=>'<label class="rg">'+s[1]+'<input type="range" min="30" max="99" value="'+r[s[0]]+'" data-k="'+s[0]+'"><output>'+r[s[0]]+'</output></label>').join('');
-  $('eStats').querySelectorAll('input').forEach(i=>i.oninput=()=>{i.nextElementSibling.textContent=i.value;});
-  $('eAb').innerHTML=Object.keys(ABIL).map(k=>'<option value="'+k+'"'+(k===r.ab?' selected':'')+'>'+ABIL[k].n+': '+ABIL[k].d+'</option>').join('');
-  $('edit').hidden=false;$('menu').hidden=true;}
-$('eCancel').onclick=()=>{$('edit').hidden=true;$('menu').hidden=false;};
-$('eSave').onclick=()=>{const r=editing;r.name=($('eName').value.trim()||r.name).slice(0,18);$('eStats').querySelectorAll('input').forEach(i=>r[i.dataset.k]=+i.value);r.ab=$('eAb').value;r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;saveRoster();$('edit').hidden=true;$('menu').hidden=false;buildMenu();};
 function modeLbl(){$('modeBtn').textContent=MODE==='swipe'?'Swing: swipe (Pure Strike style)':'Swing: classic 3-click';}{const gb=$('gfxBtn'),gl=()=>{if(gb)gb.textContent=GFX==='ultra'?'Graphics: Ultra (glow, film grade, sharper)':'Graphics: Smooth (faster on older phones)';};gl();if(gb)gb.onclick=()=>{GFX=GFX==='ultra'?'smooth':'ultra';try{localStorage.setItem('dg-gfx2',GFX);}catch(e){}BOOST=false;STILL=0;applyPR();setupFX();resize();gl();};}
 modeLbl();$('modeBtn').onclick=()=>{MODE=MODE==='swipe'?'click':'swipe';try{localStorage.setItem('jp-swing-mode2',MODE);}catch(e){}modeLbl();};
 buildMenu();
