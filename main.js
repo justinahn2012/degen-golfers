@@ -1812,7 +1812,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
 function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace is pulled toward a firm, holeable speed, the line tightens and the break softens, more so for better putters */
   const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=(D0<=1.25?1-.25*D0/1.25:.75*Math.pow(Math.max(0,1-(D0-1.25)/1.6),2))*(p.lie==='green'?1:.6);
   let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.35+.6*sk);
-  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.02*(1.3-ST(p,'put')*.007),v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
+  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.01*(1.3-ST(p,'put')*.007)/* half the old start-line miss per unit of meter error: reading the greens is hard enough */,v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
   const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.35+.55*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
 
 /* ---------- balls ---------- */
