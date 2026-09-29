@@ -1697,7 +1697,7 @@ const BASE=[
 {id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
 {id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
- {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
+ {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{putter:'blackout',skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,58,45,51,43],ab:'dial',color:'#fd79a8',look:{skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
  {id:'erik',name:'Erick Miller',hcp:32,st:[65,56,49,45,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
@@ -1812,7 +1812,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
 function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace is pulled toward a firm, holeable speed, the line tightens and the break softens, more so for better putters */
   const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=(D0<=1.25?1-.25*D0/1.25:.75*Math.pow(Math.max(0,1-(D0-1.25)/1.6),2))*(p.lie==='green'?1:.6);
   let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.35+.6*sk);
-  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.01*(1.3-ST(p,'put')*.007)/* half the old start-line miss per unit of meter error: reading the greens is hard enough */,v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
+  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.005*(1.3-ST(p,'put')*.007)/* a quarter of the original start-line miss per unit of meter error: reading the greens is hard enough */,v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
   const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.35+.55*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
 
 /* ---------- balls ---------- */
