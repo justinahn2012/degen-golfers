@@ -266,7 +266,7 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
       const cnt=3+Math.floor(R()*6);for(let c=0;c<cnt;c++){const qx=x+(R()-.5)*4,qy=y+(R()-.5)*4;if(open(qx,qy))JP.push([qx,qy,.9+R()*1.1]);}}}
   /* spreading juniper: a low mound clothed in a fine scale-leaf foliage texture (blue-green sprays with darker hollows), its outline broken
      up by feathery spray cards, so each bank reads as dense, textured shrub rather than a smooth blob */
-  const cvs=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;};
+  const cvs=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;t.anisotropy=4;return t;};
   const JCOL=['#3f6149','#4d735a','#587f63','#35523d','#6a9274','#2c4533'];
   const spray=(x,cx,cy,len,ang,w)=>{x.save();x.translate(cx,cy);x.rotate(ang);x.lineCap='round';x.lineWidth=w;x.beginPath();x.moveTo(0,0);x.quadraticCurveTo(len*.5,len*.12,len,0);x.stroke();
      for(let k=1;k<6;k++){const t=k/6*len;x.lineWidth=w*.7;x.beginPath();x.moveTo(t,0);x.lineTo(t+len*.14,-len*.12);x.moveTo(t,0);x.lineTo(t+len*.14,len*.12);x.stroke();}x.restore();};
@@ -1699,12 +1699,12 @@ const BASE=[
  {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
  {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{shaft:{body:['#f6f7f9','#e4e7eb','#f7f8fa'],band:'#9aa2ab'},driverHead:{tint:'#8ea3bb',sole:'#4f6b87',accent:'#e8871e',face:'#2a2c30'},skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
 {id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
-{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#96674e',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
+{id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#835a44',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{shaft:{band:'#7a0a0e'},skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},driverHead:{c:'#8d9298',m:.75,r:.28},putter:'blackout',skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,58,45,51,43],ab:'dial',color:'#fd79a8',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},driverHead:{c:'#8d9298',m:.75,r:.28},skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
- {id:'erik',name:'Erick Miller',hcp:32,st:[65,56,49,45,42],ab:'dial',color:'#686de0',look:{skin:'#6a4230',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
+ {id:'erik',name:'Erick Miller',hcp:32,st:[65,56,49,45,42],ab:'dial',color:'#686de0',look:{skin:'#4a3024',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
 /* golfers' stats, names and abilities are set here only; any old edits saved on a phone are cleared and never used */
 try{localStorage.removeItem('jp-golf-roster-v3');localStorage.removeItem('dg-stat-mig-2');}catch(e){}
 const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st)));
@@ -1999,13 +1999,13 @@ function updNearTrees(x,y){if(!IMPS.length)return;if(!NEAR)NEAR=IMPS.map(M=>({M,
 /* ---------- beer animation: chug or shotgun ---------- */
 let BEERA=null;
 function beerCan(){/* brushed silver can, a picture of Mount Rainier across the front, "Degens" in script */
-  const g=new THREE.Group(),c=document.createElement('canvas');c.width=512;c.height=256;const x=c.getContext('2d');
+  const g=new THREE.Group(),c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');
   const paint=img=>{const W=c.width,H=c.height;const gr=x.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#9ea6ae');gr.addColorStop(.25,'#e9edf1');gr.addColorStop(.5,'#c3cad1');gr.addColorStop(.75,'#f1f4f6');gr.addColorStop(1,'#a3abb3');x.fillStyle=gr;x.fillRect(0,0,W,H);
     for(let y=0;y<H;y+=2){x.fillStyle='rgba(255,255,255,'+(Math.random()*.06)+')';x.fillRect(0,y,W,1);}                       /* brushed aluminium */
     for(const cx of[W*.25,W*.75]){/* the design twice round the can, so a label always faces the camera */
-      if(img){const iw=img.width,ih=img.height,dw=W*.36,dh=dw*ih/iw;x.save();x.globalAlpha=.95;x.drawImage(img,cx-dw/2,H*.42-dh*.5,dw,dh);x.restore();}
-      x.fillStyle='#c8102e';x.strokeStyle='#c8102e';x.lineWidth=2.6;x.lineJoin='round';x.font='italic 700 58px "Brush Script MT","Segoe Script","Snell Roundhand",cursive';x.textAlign='center';x.textBaseline='middle';x.shadowColor='rgba(255,255,255,.7)';x.shadowBlur=3;x.strokeText('Degens',cx,H*.8);x.fillText('Degens',cx,H*.8);x.shadowBlur=0;/* red, and a stroke to fatten the brush script (the font has no heavier weight) */
-      x.fillStyle='rgba(29,43,36,.75)';x.font='700 13px "Barlow Condensed",sans-serif';x.fillText('PACIFIC NORTHWEST · COLD LAGER',cx,H*.1);}t.needsUpdate=true;};
+      if(img){const iw=img.width,ih=img.height,dw=W*.36,dh=dw*ih/iw;x.save();x.globalAlpha=.95;x.drawImage(img,cx-dw/2,H*.6-dh*.5,dw,dh);x.restore();}
+      x.fillStyle='#c8102e';x.strokeStyle='#c8102e';x.lineWidth=5;x.lineJoin='round';x.font='italic 700 116px "Brush Script MT","Segoe Script","Snell Roundhand",cursive';x.textAlign='center';x.textBaseline='middle';x.strokeText('Degens',cx,H*.23);x.fillText('Degens',cx,H*.23);/* red script on top, drawn at double resolution so it stays crisp; the mountain sits below it *//* red, and a stroke to fatten the brush script (the font has no heavier weight) */
+      x.fillStyle='rgba(29,43,36,.75)';x.font='700 26px "Barlow Condensed",sans-serif';x.fillText('PACIFIC NORTHWEST · COLD LAGER',cx,H*.9);}t.needsUpdate=true;};
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
   if(!window._canImg){const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{window._canImg=im;(window._canPaints||[]).forEach(f=>f(im));};im.src=ASSETS.rainier||'rainier.webp';window._canImg=null;window._canPaints=[];}
   paint(window._canImg);if(!window._canImg)window._canPaints.push(paint);
