@@ -802,7 +802,9 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
   {/* look.driverHead: a painted head instead of carbon - a colour string, or {c: colour, m: metalness, r: roughness, hosel: colour} */
     const DH=lk&&lk.driverHead,dh=typeof DH==='string'?{c:DH}:DH;
     mk('driver',wood(1,dh&&dh.tint&&!dh.c?S({map:T.carbon,color:new THREE.Color(dh.tint),metalness:.55,roughness:.26}):dh&&dh.c?S({color:new THREE.Color(dh.c),metalness:dh.m!=null?dh.m:.22,roughness:dh.r!=null?dh.r:.3}):null,dh&&dh.hosel?S({color:new THREE.Color(dh.hosel),metalness:.1,roughness:.3}):null,dh&&dh.face?(()=>{const m=faceM.clone();m.color=new THREE.Color(dh.face);m.polygonOffset=true;m.polygonOffsetFactor=-4;m.polygonOffsetUnits=-4;return m;})():null,dh?{accent:dh.accent,rim:dh.rim,sole:dh.sole}:null));}mk('wood',wood(.8));mk('iron',blade(.5,1));mk('wedge',blade(.92,1.05));
-  mk('putter',(hg,hb)=>{const sat=PSTYLE==='blackout'?S({color:0x151618,metalness:.3,roughness:.72,envMapIntensity:.5}):S({color:0xd6dadf,metalness:.92,roughness:.3}),dk=S({color:0x1a1b1e,metalness:.5,roughness:.35}),red=S({color:0xc8202c,metalness:.2,roughness:.35});
+  mk('putter',(hg,hb)=>{const oil=PSTYLE==='oilslick';
+    if(oil&&!window._oilTex){window._oilTex=cv(256,16,(x,W,H)=>{const g=x.createLinearGradient(0,0,W,0);for(const [s,c] of [[0,'#3b6fd8'],[.22,'#6a5fd6'],[.4,'#9a6cc9'],[.5,'#e2b45a'],[.6,'#9a6cc9'],[.78,'#6a5fd6'],[1,'#3b6fd8']])g.addColorStop(s,c);x.fillStyle=g;x.fillRect(0,0,W,H);});window._oilTex.encoding=THREE.sRGBEncoding;}
+    const sat=PSTYLE==='blackout'?S({color:0x151618,metalness:.3,roughness:.72,envMapIntensity:.5}):oil?S({color:0x6c78d6,metalness:.95,roughness:.24,envMapIntensity:1.2}):S({color:0xd6dadf,metalness:.92,roughness:.3}),dk=oil?S({map:window._oilTex,metalness:.9,roughness:.18,envMapIntensity:1.3}):S({color:0x1a1b1e,metalness:.5,roughness:.35}),red=S({color:0xc8202c,metalness:.2,roughness:.35});/* oilslick: blue-purple metallic blade, the cavity sweeps blue > purple > gold > purple > blue heel to toe */
     /* top-view outline extruded upward: shape x = forward (face at +x), shape y = -z (heel at z=0, toe at z~.1) */
     const topShape=(pts,r0)=>{let P=pts.map(q=>new THREE.Vector2(q[0],-q[1]));if(THREE.ShapeUtils.isClockWise(P))P=P.reverse();const s=new THREE.Shape(P);return s;};
     const holePath=(cx,cz,r,n)=>{let P=[];for(let k=0;k<n;k++){const a=k/n*Math.PI*2;P.push(new THREE.Vector2(cx+Math.cos(a)*r,-(cz+Math.sin(a)*r)));}if(!THREE.ShapeUtils.isClockWise(P))P=P.reverse();return new THREE.Path(P);};
@@ -877,9 +879,9 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'blade';const env=getEnv(),
     const fg=new THREE.ExtrudeGeometry(rr(.012,.025,.0035),{depth:.088,bevelEnabled:true,bevelThickness:.002,bevelSize:.0012,bevelSegments:3,curveSegments:6});const fb=new THREE.Mesh(fg,sat);fb.position.set(.009,.0135,.004);blade.add(fb);
     /* flange behind the face, lower, with the sightline and two cherry dots */
     const flg=new THREE.ExtrudeGeometry(rr(.026,.082,.007),{depth:.0085,bevelEnabled:true,bevelThickness:.0012,bevelSize:.0012,bevelSegments:2,curveSegments:6});flg.rotateX(Math.PI/2);flg.translate(0,.0097,0);const fl=new THREE.Mesh(flg,sat);fl.position.set(-.008,0,.049);blade.add(fl);
-    const cav=new THREE.Mesh(new THREE.BoxGeometry(.01,.0012,.058),dk);cav.position.set(-.001,.0108,.049);blade.add(cav);
+    const cav=new THREE.Mesh(oil?new THREE.BoxGeometry(.014,.0014,.066):new THREE.BoxGeometry(.01,.0012,.058),dk);cav.position.set(-.001,.0108,.049);if(oil){const uv=cav.geometry.attributes.uv,P=cav.geometry.attributes.position;for(let k=0;k<uv.count;k++)uv.setXY(k,(P.getZ(k)+.033)/.066,.5);}blade.add(cav);
     const sl=new THREE.Mesh(new THREE.BoxGeometry(.016,.0008,.0022),S({color:0xf4f4f2,roughness:.4}));sl.position.set(-.013,.0103,.049);blade.add(sl);
-    for(const z of[.028,.07]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.0024,.0024,.0008,14),red);d.position.set(-.012,.0104,z);blade.add(d);}
+    if(!oil)for(const z of[.028,.07]){const d=new THREE.Mesh(new THREE.CylinderGeometry(.0024,.0024,.0008,14),red);d.position.set(-.012,.0104,z);blade.add(d);}
     const fc=new THREE.Mesh(new THREE.PlaneGeometry(.084,.02),PSTYLE==='blackout'?S({color:0x2a2c30,metalness:.5,roughness:.6}):S({color:0xc9ced4,metalness:.85,roughness:.5}));fc.rotation.y=Math.PI/2;fc.position.set(.0172,.0135,.049);blade.add(fc);
     hb.add(blade);
     /* plumber's neck: up from the heel, a short jog, then into the shaft (re-fitted whenever the lie changes) */
@@ -1325,17 +1327,17 @@ function proShape(body,geo,lk,src){
   for(let i=0;i<n;i++){const sd=Math.sign(X(i))||1;let x=X(i),y=Y(i),z=Z(i);
     if(wU[i]>.05&&arm[sd]){let f=1+(gL-1)*wU[i];if(mi[i]===iA&&!cut&&Math.abs(x-cT.a)<hem-.01)f*=1-.14*wU[i];/* arm skin under the sleeve tucked in */const C=arm[sd];y=C.a+(y-C.a)*f;z=C.b+(z-C.b)*f;}
     if(wH[i]>.05&&gL!==1&&thi[sd]){const C=thi[sd],f=1+(gL-1)*wH[i];x=C.a+(x-C.a)*f;z=C.b+(z-C.b)*f;}
-    if(boot&&mi[i]===iP&&wC[i]>.05&&calf[sd]){const C=calf[sd],t=Math.max(0,Math.min(1,(C.y1-y)/Math.max(.01,C.y1-C.y0))),f=1+.3*Math.pow(t,1.4)*wC[i];x=C.a+(x-C.a)*f;z=C.b+(z-C.b)*f;}
+    if(boot&&mi[i]===iP&&wC[i]>.05&&calf[sd]){const C=calf[sd],t=Math.max(0,Math.min(1,(C.y1-y)/Math.max(.01,C.y1-C.y0))),f=1+.55*Math.pow(t,1.3)*wC[i];x=C.a+(x-C.a)*f;z=C.b+(z-C.b)*f;}
     if(wT[i]>.05&&gT!==1){x=cT.a+(x-cT.a)*(1+(gT-1)*wT[i]);z=cT.b+(z-cT.b)*(1+(gT-1)*1.15*wT[i]);}
     pos.setXYZ(i,x,y,z);}
   pos.needsUpdate=true;
   if(cut&&iT>=0){/* sleeveless (a cut-off top): the shirt's sleeves are dropped from where the arm's own skin begins, leaving a short
        cut edge at the shoulder; the arm underneath is the model's real, textured arm */
-    let armIn=1e9;for(let i=0;i<n;i++)if(mi[i]===iA)armIn=Math.min(armIn,Math.abs(X(i)-cT.a));const lim=armIn+.012,out=[],G=[];
+    let armIn=1e9;for(let i=0;i<n;i++)if(mi[i]===iA)armIn=Math.min(armIn,Math.abs(X(i)-cT.a));const lim=armIn+.004,out=[],G=[];
     for(const g of geo.groups){const tri=[];for(let t=g.start;t<g.start+g.count;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2];
-      if(g.materialIndex===iT&&Math.abs(X(a)-cT.a)>lim&&Math.abs(X(b)-cT.a)>lim&&Math.abs(X(c)-cT.a)>lim)continue;tri.push(a,b,c);}G.push([g.materialIndex,tri]);}
+      if(g.materialIndex===iT&&(Math.abs(X(a)-cT.a)>lim||Math.abs(X(b)-cT.a)>lim||Math.abs(X(c)-cT.a)>lim))continue;tri.push(a,b,c);}G.push([g.materialIndex,tri]);}
     geo.clearGroups();for(const [m,tri] of G){geo.addGroup(out.length,tri.length,m);out.push(...tri);}geo.setIndex(out);}
-  geo.computeVertexNormals();}
+  /* the model's own normals are kept: recomputing them folds the fine crease detail at the knees into dark patches */}
 function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look,F?F.skin:p.look.skin),T=(p.look.rb&&TPL['RB_'+p.look.rb])||(FEMALE.has(p.id)?TPL.PRO_F:TPL.PRO_M)||TPL[FEMALE.has(p.id)?'F':'M'];
   const g=new THREE.Group(),root=THREE.SkeletonUtils.clone(T.scene);g.add(root);root.updateMatrixWorld(true);
   let body=null;const capOn=!!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'&&lk.cap.style!=='band');root.traverse(o=>{if(o.isMesh){if(o.isSkinnedMesh&&o.name===T.bodyName)body=o;else if(T.rb&&/Hair/.test(o.name)&&!capOn){o.visible=true;o.frustumCulled=false;o.castShadow=true;}else o.visible=false;}});
@@ -1368,7 +1370,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
   if(T.pro){try{proShape(body,geo,lk,T.rbMats);}catch(e){console.warn('proShape',e);}const src=T.rbMats,skin=new THREE.Color(lk.skin||'#c89170'),base=new THREE.Color(.86,.64,.53),tintS=new THREE.Color(Math.min(1.5,skin.r/base.r),Math.min(1.5,skin.g/base.g),Math.min(1.5,skin.b/base.b));
     const top=new THREE.Color(lk.top&&lk.top.color||'#ffffff'),pants=new THREE.Color(lk.legs&&lk.legs.color||'#2b2f36').multiplyScalar(T.k==='PRO_F'?1:2.6);if(T.k==='PRO_F'){top.convertSRGBToLinear();pants.convertSRGBToLinear();}const _pf=0,capC=new THREE.Color(lk.cap&&lk.cap.color||p.color||'#1f2a44').multiplyScalar(2.4);
     body.material=src.map(m=>{const n=m.clone();n.userData.lin=1;const nm=n.name||'';if(/TSHIRT/.test(nm)){n.color.copy(top);if(lk.top&&lk.top.pat){const pt=hawaiiTex(lk.top.pat,true);pt.repeat.set(3.2,3.2);n.onBeforeCompile=sh=>{sh.uniforms.uPat={value:pt};sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uPat;').replace('#include <map_fragment>','#include <map_fragment>\n{float l=dot(diffuseColor.rgb,vec3(.3,.59,.11));vec3 pc=texture2D(uPat,vUv*3.2).rgb;pc=pow(pc,vec3(2.2));diffuseColor.rgb=pc*clamp(l*1.25,0.,1.2);}');};const ck2='protshirt_'+p.id;n.customProgramCacheKey=()=>ck2;n.color.setRGB(1,1,1);}}
-      else if(/PANT/.test(nm))n.color.copy(pants);else if(/SHOE/.test(nm)&&lk.boots){n.color.set(lk.boots);n.roughness=.8;}else if(/CAP/.test(nm)){n.color.copy(capC);if(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'))n.visible=false;}else if(/LASH/.test(nm)){n.visible=false;}else if(/HEAD|ARM|LEG|BODY|NAILS/.test(nm)){n.color.copy(tintS);if(/HEAD/.test(nm)){/* the model's scalp/forehead under its cap is left unpainted (white): fill it with the golfer's skin */const sk=skin.clone();
+      else if(/PANT/.test(nm)){if(lk.legs&&lk.legs.jeans){n.map=null;n.normalMap=null;n.color=new THREE.Color(lk.legs.jeans).convertSRGBToLinear();n.roughness=.9;}else n.color.copy(pants);}else if(/SHOE/.test(nm)&&lk.boots){n.map=null;n.color=new THREE.Color(lk.boots).convertSRGBToLinear();n.roughness=.72;n.metalness=0;}else if(/CAP/.test(nm)){n.color.copy(capC);if(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'))n.visible=false;}else if(/LASH/.test(nm)){n.visible=false;}else if(/HEAD|ARM|LEG|BODY|NAILS/.test(nm)){n.color.copy(tintS);if(/HEAD/.test(nm)){/* the model's scalp/forehead under its cap is left unpainted (white): fill it with the golfer's skin */const sk=skin.clone();
         const hairOn=!!(T.hairPlane&&lk.hairMesh&&(!(lk.cap&&lk.cap.style&&lk.cap.style!=='none')||(T.k==='PRO_F'&&(lk.cap.style==='visor'||lk.cap.style==='cowboy'||lk.cap.style==='polocap')))),hc=new THREE.Color(lk.hair||'#1b1512').convertSRGBToLinear();
         n.onBeforeCompile=sh=>{sh.uniforms.uSk={value:sk};sh.uniforms.uHairOn={value:hairOn?1:0};sh.uniforms.uHairC={value:new THREE.Vector3(hc.r,hc.g,hc.b)};sh.uniforms.uHairP={value:hairOn?T.hairPlane.p0:new THREE.Vector3()};sh.uniforms.uHairU={value:hairOn?T.hairPlane.u:new THREE.Vector3(0,1,0)};
           sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vPosL;').replace('#include <begin_vertex>','#include <begin_vertex>\nvPosL=position;');
@@ -1722,7 +1724,7 @@ const BASE=[
  {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},skin:'#be906e',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
  {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{driverHead:{face:'#2a2c30',accent:'#2ea8e6',rim:'#f2f3f4'},skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
- {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
+ {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{putter:'oilslick',skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
  {id:'back-row',name:'Jacqueline Hwang',hcp:34,st:[36,68,48,47,45],ab:'dial',color:'#00cec9',look:{skin:'#c99c82',hair:'#2a1d16',hairMesh:'long',cap:{style:'polocap',color:'#1f2a44',logo:'#9b7fd6'},top:{type:'polo',color:'#4E2A84'},legs:{color:'#1f2a44',skirt:true},shoes:'#f4f4f2'}},
  {id:'green-fleece',name:'Justin Ahn',hcp:29,st:[67,42,70,42,55],ab:'hl',color:'#6ab04c',look:{putter:'lab',skin:'#dcaa82',hairMesh:'parted',hair:'#141112',glove:true,top:{type:'fleece',color:'#5d6b4c'},legs:{color:'#1c1c1e',shorts:true},shoes:'#2a2a2e'}},
  {id:'shaka',name:'Brandon Kuntz',hcp:18,st:[79,75,64,64,66],ab:'rip',color:'#fd9644',look:{skin:'#f0c4a4',cap:{style:'fwd',color:'#1b1b1d'},top:{type:'polo',color:'#1b2640'},legs:{color:'#1d1d20'},shoes:'#f2f2f2'}},
@@ -1734,7 +1736,7 @@ const BASE=[
  {id:'peter',name:'Peter Merkel',hcp:18,st:[67,70,68,66,77],ab:'bounce',color:'#4b7bec',look:{skin:'#d9a089',hairMesh:'parted',hair:'#a07a4a',top:{type:'polo',color:'#4a4e55'},legs:{color:'#b3a585'}}},
  {id:'dillon',name:'Dillon Williams',hcp:2,st:[97,90,90,88,88],ab:'rip',color:'#e67e22',look:{shaft:{body:['#f6f7f9','#e4e7eb','#f7f8fa'],band:'#9aa2ab'},driverHead:{tint:'#8ea3bb',sole:'#4f6b87',accent:'#e8871e',face:'#2a2c30'},skin:'#c08a72',hairMesh:'parted',hair:'#5a3a22',top:{type:'polo',color:'#3b4150'},legs:{color:'#1f2b3b'}}},
 {id:'beau',name:'Beau Garrett',hcp:16,st:[86,72,58,62,78],ab:'bounce',color:'#16a085',look:{skin:'#c99a86',hair:'#6b4128',hairMesh:'parted',cap:{style:'fwd',color:'#17181b',patch:'#ecebe6'},top:{type:'polo',color:'#f2f2ee'},legs:{color:'#2a3140'}}},
-{id:'ephram',name:'Ephram Harsh',hcp:36,st:[70,30,60,44,28],ab:'rip',color:'#badc58',look:{skin:'#d9a58e',hair:'#3b2a20',hairMesh:'buzz',build:{torso:1.24,limbs:1.1},top:{type:'polo',color:'#56595c',cutoff:true},legs:{color:'#253a57',bootcut:true},shoes:'#3a2718',boots:'#4a3322'}},
+{id:'ephram',name:'Ephram Harsh',hcp:36,st:[70,30,60,44,28],ab:'rip',color:'#badc58',look:{skin:'#d9a58e',hair:'#3b2a20',hairMesh:'buzz',build:{torso:1.24,limbs:1.1},top:{type:'polo',color:'#56595c'},legs:{color:'#253a57',jeans:'#8aa8cb',bootcut:true},shoes:'#3a2718',boots:'#4a2f1b'}},
  {id:'landon',name:'Landon Glasscock',hcp:36,st:[64,56,30,56,28],ab:'read',color:'#22a6b3',look:{skin:'#df9f6a',hair:'#3a2518',hairMesh:'parted',top:{type:'polo',color:'#0b1426'},legs:{color:'#d8d6d0'},shoes:'#f2f2f2'}},
  {id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#835a44',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
 {id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{shaft:{band:'#7a0a0e'},skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
@@ -2202,7 +2204,7 @@ function dgErr(e,where){const msg=(where?where+': ':'')+(e&&e.message?e.message:
   b.textContent='Bug ('+DGERR.length+')';}
 window.addEventListener('error',ev=>dgErr(ev.error||ev.message,'error'));window.addEventListener('unhandledrejection',ev=>dgErr(ev.reason,'promise'));
 const safe=(fn,where)=>()=>{try{fn();}catch(e){dgErr(e,where);}};
-function watchdog(now){if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;return;}const age=now-STATE_T0;
+let WD_LAST=0;function watchdog(now){if(WD_LAST&&now-WD_LAST>1.5)STATE_T0+=now-WD_LAST;/* frames stop while the page is hidden: don't count that gap */WD_LAST=now;if(state!==STATE_LAST){STATE_LAST=state;STATE_T0=now;return;}const age=now-STATE_T0;
   try{if(state==='flight'&&age>30){dgErr(new Error('flight never finished'),'watchdog');STATE_T0=now;finishShot();}
     else if(state==='result'&&age>22){dgErr(new Error('stuck after the shot'),'watchdog');STATE_T0=now;startTurn();}
     else if(state==='replay'&&age>25){STATE_T0=now;endReplay();}}catch(e){dgErr(e,'watchdog');}}
