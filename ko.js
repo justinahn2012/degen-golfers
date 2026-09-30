@@ -169,8 +169,8 @@ X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.c
   console.log('[ko] lidar trees',TR.length,Object.fromEntries(SP.map(s=>[s,L[s].length])));return true;};
 
 /* ---------- light: high tropical sun, blue sky fill, clear air ---------- */
-X.tod=function(g,A){if(g)return;A.sun.color.set(0xfff3dc);A.sun.intensity=2.3;A.HEMI.color.set(0xd2e5f5);A.HEMI.groundColor.set(0x52713a);A.HEMI.intensity=.74;
-  A.scene.fog.color.set(A.D.fogC);A.renderer.toneMappingExposure=1.0;};
+X.tod=function(g,A){if(g)return;A.sun.color.set(0xffefd6);A.sun.intensity=1.85;A.HEMI.color.set(0xc6daee);A.HEMI.groundColor.set(0x45632f);A.HEMI.intensity=.64;/* toned down: the full tropical sun washed the course out */
+  A.scene.fog.color.set(A.D.fogC);A.renderer.toneMappingExposure=.9;};
 
 /* ---------- the Pacific: turquoise over the lagoons' sand, deepening to cobalt offshore, sun glitter, surf line on the shore ---------- */
 X.farWater=function(w,A){const T=A.THREE,D=A.D,S=D.sea,WM=window.__WM;
