@@ -439,6 +439,23 @@ const ground=new THREE.Mesh(gGeo,gmat);ground.receiveShadow=true;scene.add(groun
   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=x0+i*st,y=y0+j*st,k=j*nx+i;P[k*3]=x;P[k*3+1]=H(x,y);P[k*3+2]=-y;U[k*2]=(x-X0)/WW;U[k*2+1]=(y-Y0)/HH;if(i<nx-1&&j<ny-1)I.push(k,k+1,k+nx,k+1,k+nx+1,k+nx);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const mm=new THREE.Mesh(g,gB);mm.receiveShadow=true;scene.add(mm);}}
 
+/* greens get their own fine mesh as well: the coarse ground grid (2-3 m) cuts straight across a green's contours, so a ball resting on the
+   true surface could sit under the drawn green. The coarse ground under and around each green is tucked away beneath the fine mesh. */
+const GMESH=[];
+{const gp=gGeo.attributes.position,ring=G=>G.p.concat([G.p[0]]),near=(G,x,y,m)=>x>=G.x0-m&&x<=G.x1+m&&y>=G.y0-m&&y<=G.y1+m&&(inP(G,x,y)||dPL(x,y,ring(G))<m);
+ const GR=GREENS.filter(G=>G.cx>X0&&G.cx<X1&&G.cy>Y0&&G.cy<Y1&&HOLES.some(h=>dPL(G.cx,G.cy,h.p)<60));
+ for(let i=0;i<gp.count;i++){const x=gp.getX(i),y=-gp.getZ(i);for(const G of GR){if(near(G,x,y,1.5)){gp.setY(i,gp.getY(i)-.35);break;}}}gp.needsUpdate=true;gGeo.computeVertexNormals();
+ const gG=gmat.clone();gG.onBeforeCompile=gmat.onBeforeCompile;gG.customProgramCacheKey=gmat.customProgramCacheKey;gG.polygonOffset=true;gG.polygonOffsetFactor=-1;gG.polygonOffsetUnits=-2;
+ for(const G of GR){const st=.7,m=GS+2.2,x0=G.x0-m,y0=G.y0-m,nx=Math.ceil((G.x1-G.x0+2*m)/st)+1,ny=Math.ceil((G.y1-G.y0+2*m)/st)+1,P=new Float32Array(nx*ny*3),U=new Float32Array(nx*ny*2),I=[];
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=x0+i*st,y=y0+j*st,k=j*nx+i;P[k*3]=x;P[k*3+1]=H(x,y);P[k*3+2]=-y;U[k*2]=(x-X0)/WW;U[k*2+1]=(y-Y0)/HH;
+    if(i<nx-1&&j<ny-1&&near(G,x+st/2,y+st/2,m))I.push(k,k+1,k+nx,k+1,k+nx+1,k+nx);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const mm=new THREE.Mesh(g,gG);mm.receiveShadow=true;scene.add(mm);GMESH.push(mm);}}
+
+/* the drawn (coarse) ground height at any point, triangle for triangle as rendered: a ball resting on a fairway is shown on this surface
+   wherever the drawn ground sits above the true ground, so it never looks buried (greens and bunkers have their own fine meshes) */
+const GGRID=(()=>{const P=gGeo.attributes.position,NX=Math.round(WW/GS),RW=NX+1,NY=Math.round(HH/GS),x0=P.getX(0),y0=-P.getZ(0),dy=(-P.getZ(RW))-y0;return{P,NX,NY,RW,x0,y0,dx:P.getX(1)-x0,dy};})();
+function HDRAW(x,y){const G=GGRID,fi=(x-G.x0)/G.dx,fj=(y-G.y0)/G.dy,i=Math.floor(fi),j=Math.floor(fj);if(i<0||j<0||i>=G.NX||j>=G.NY)return -1e9;const u=fi-i,v=fj-j,a=j*G.RW+i,P=G.P;
+  const ha=P.getY(a),hb=P.getY(a+1),hc=P.getY(a+G.RW),hd=P.getY(a+G.RW+1);return u+v<=1?ha+(hb-ha)*u+(hc-ha)*v:hd+(hc-hd)*(1-u)+(hb-hd)*(1-v);}
 /* terrain drawn as tiles: only tiles in view are drawn, and far tiles use every other grid line */
 const TERR=[];
 {const NX=Math.round(WW/GS),NY=Math.round(HH/GS),RW=NX+1,T=Math.max(4,Math.round(Math.max(WW,HH)/180)),si=Math.ceil(NX/T/2)*2,sj=Math.ceil(NY/T/2)*2,P=gGeo.attributes.position;
@@ -1896,10 +1913,21 @@ function ballPrint(p){const c=document.createElement('canvas');c.width=1024;c.he
 function makeBall(p){const b=new THREE.Mesh(ballGeo,new THREE.MeshStandardMaterial({color:0xffffff,map:ballPrint(p),emissive:0x1c1c1c,roughness:.28,metalness:0,bumpMap:makeDimples(),bumpScale:.0019,envMapIntensity:.9}));b.userData.lin=1;b.castShadow=true;
   const sh=new THREE.Mesh(shadowGeo,new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:.34,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));sh.rotation.x=-Math.PI/2;
   const mk=new THREE.Mesh(new THREE.RingGeometry(.036,.041,40),new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.9,depthWrite:false}));mk.position.z=.001;sh.add(mk);scene.add(b,sh);return{b,sh};}
-function placeBall(p,x,y,z){const b=p.ball.b,np=V(x,y,z),lp=b.userData.lp;
+
+/* the landing camera must see the ball come down, land and finish: test the sight lines against the ground and any rock or wall objects,
+   and lift the camera (backing off on approaches) until they are clear */
+let OCCL=null;
+function sightClear(c,tp){const n=32,L=c.distanceTo(tp);for(let k=1;k<n;k++){const u=k/n;if(u*L<2||(1-u)*L<5)continue;const q=c.clone().lerp(tp,u),x=q.x,y=-q.z;if(H(x,y)+.3>q.y)return false;}
+  if(!OCCL){OCCL=[];scene.traverse(o=>{if(o.userData&&o.userData.occluder)OCCL.push(o);});}
+  if(OCCL.length){const d=tp.clone().sub(c),L=d.length();const rc=new THREE.Raycaster(c,d.normalize(),.5,Math.max(.5,L-.8));if(rc.intersectObjects(OCCL,false).length)return false;}return true;}
+function clearCam(cp,plan,back){const P=plan.pts,lastT=P[P.length-1].t,land=P[Math.min(P.length-1,111)],tg=[land,P[P.length-1],interp(P,lastT*.8)].map(q=>V(q.x,q.y,q.z+.25));
+  const ok=c=>tg.every(t=>sightClear(c,t));if(ok(cp))return cp;
+  for(let s=1;s<=14;s++){const c=cp.clone();c.y+=2.5*s;if(back){c.x-=back.dx*1.2*s;c.z+=back.dy*1.2*s;}if(ok(c))return c;}
+  const q=P[P.length-1];return V(q.x-Math.cos(plan.dir)*18,q.y-Math.sin(plan.dir)*18,H(q.x,q.y)+38);}
+function placeBall(p,x,y,z){const g0=H(x,y);if(z<g0+.6){const hd=HDRAW(x,y);if(hd>g0)z+=(hd-g0)*Math.max(0,1-(z-g0)/.6);}const b=p.ball.b,np=V(x,y,z),lp=b.userData.lp;
   if(lp){const mx=np.x-lp.x,mz=np.z-lp.z,d=Math.hypot(mx,mz);if(d>1e-5&&d<40){const g=H(x,y),onGround=z<g+.045,ax=new THREE.Vector3(mz/d,0,-mx/d);
       if(!onGround)ax.negate();b.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(ax,Math.min(2.4,d/.0214*(onGround?1:.08))));}}
-  b.userData.lp=np.clone();b.position.copy(np);p.ball.sh.position.copy(V(x,y,H(x,y)+.006));}
+  b.userData.lp=np.clone();b.position.copy(np);p.ball.sh.position.copy(V(x,y,Math.max(H(x,y),HDRAW(x,y))+.006));}
 function scaleBalls(){for(const p of players){const d=camera.position.distanceTo(p.ball.b.position),s=p===cur?Math.max(1,Math.min(3.5,d*.0021/.0214)):Math.max(1,Math.min(1.6,d*.0009/.0214));   /* gentle: only enough to find a ball, never a beach ball */p.ball.b.scale.setScalar(s);p.ball.sh.scale.set(s,s,1);p.ball.b.visible=p.ball.sh.visible=(!p.done&&!(p.strokes===0&&p!==cur))||(state==='replay'&&RP&&RP.p===p);}}
 
 /* ---------- game flow ---------- */
@@ -2449,11 +2477,19 @@ function meterS1(p){mStop();const rate=(CLUBS[p.club].putt?.75*PUTT_MS:1)*meterS
 }
 function meterS2(p){mStop();const rate=1.45*(CLUBS[p.club].putt?PUTT_MS:1)*meterSpd(p),u0=swingU;S2={t0:performance.now()/1000,rate,u0};S1=null;$('mFill').style.transform='scaleX('+fillK(swingPow)+')';
 }
+
+/* where the putting line sits: the strength that rolls the ball to the hole (and a foot past) along the current aim, uphill, downhill and
+   across slopes included, found with the same roll physics the putt uses. The old marker used the flat distance, so it lied on slopes. */
+function puttNeed(p){const key=p.x.toFixed(2)+','+p.y.toFixed(2)+','+p.aim.toFixed(3)+','+p.lie+','+PIN.x.toFixed(2);if(p._pn&&p._pn.k===key)return p._pn.d;
+  const D0=dist(p),ca=Math.cos(p.aim),sa=Math.sin(p.aim),fr=FR[p.lie]||FR.green,tgt=D0+.3;
+  const reach=d=>{const v0=Math.sqrt(2*fr*Math.max(.05,d)),r=simRoll(p.x,p.y,ca*v0,sa*v0,0,false,false,1);return Math.hypot(r.x-p.x,r.y-p.y);};
+  let lo=.05,hi=Math.max(2,D0*4+3),d=D0;try{for(let it=0;it<18;it++){const m=(lo+hi)/2;if(reach(m)<tgt)lo=m;else hi=m;}d=(lo+hi)/2;}catch(e){d=D0;}
+  p._pn={k:key,d};return d;}
 function updMeter(){const p=cur;if(!p)return;const c=CLUBS[p.club],tol=tolFor(p,c);
   const sw=$('mSweet');sw.style.left=pct(-tol)+'%';sw.style.width=(pct(tol)-pct(-tol))+'%';
   const pw=(state==='s1'||state==='sw')?swingU:(state==='s2'||state==='flight'?swingPow:0);if(!MA.cur)$('mCur').style.transform='translateX('+pct(swingU)+'%)';if(!MA.fill)$('mFill').style.transform='scaleX('+fillK(pw)+')';
   if(state!=='s1'&&state!=='s2'&&(MA.cur||MA.fill)){mStop();$('mCur').style.transform='translateX('+pct(swingU)+'%)';$('mFill').style.transform='scaleX('+fillK(pw)+')';}
-  const mk=$('mMark');if(c.putt&&(state==='aim'||state==='s1'||state==='s2')){mk.style.display='block';mk.style.left=pct(Math.min(1.1,dist(p)/p.pmax))+'%';}else mk.style.display='none';
+  const mk=$('mMark');if(c.putt&&(state==='aim'||state==='s1'||state==='s2')){mk.style.display='block';mk.style.left=pct(Math.min(1.1,puttNeed(p)/p.pmax))+'%';}else mk.style.display='none';
   $('mLbl').textContent=pw>0?Math.round(pw*100)+'%':(c.putt?'Line marks the hole':'');}
 function updAim(){const p=cur;if(!p||state!=='aim'){ring.visible=aimLine.visible=readLine.visible=false;return;}const c=CLUBS[p.club],dx=Math.cos(p.aim),dy=Math.sin(p.aim);
   if(c.putt){ring.visible=false;const d=dist(p),pts=[];for(let i=0;i<=30;i++){const s=d*i/30;pts.push(V(p.x+dx*s,p.y+dy*s,H(p.x+dx*s,p.y+dy*s)+.03));}setLine(aimLine,pts);aimLine.visible=true;
@@ -2766,7 +2802,8 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
     else{const TT=plan.club.T*TS;if(!plan.cam)plan.cam={};
       if(plan.carry<=45||t<Math.min(1.15,TT*.32)){want=V(pos.x-dx*12,pos.y-dy*12,pos.z+4.5);look=V(pos.x+dx*10,pos.y+dy*10,pos.z);}
       else{if(!plan.cam.p){const appr=Math.hypot(land.x-PIN.x,land.y-PIN.y)<45&&plan.carry>40;plan.cam.snap=1;
-          if(appr){const gx=PIN.x-dx*7-dy*15,gy=PIN.y-dy*7+dx*15;plan.cam.p=V(gx,gy,H(gx,gy)+1.7);}else{const lx=land.x+dx*24-dy*12,ly=land.y+dy*24+dx*12;plan.cam.p=V(lx,ly,H(lx,ly)+5.5);}}
+          if(appr){const gx=PIN.x-dx*7-dy*15,gy=PIN.y-dy*7+dx*15;plan.cam.p=V(gx,gy,H(gx,gy)+1.7);}else{const lx=land.x+dx*24-dy*12,ly=land.y+dy*24+dx*12;plan.cam.p=V(lx,ly,H(lx,ly)+5.5);}
+          try{plan.cam.p=clearCam(plan.cam.p,plan,appr?{dx,dy}:null);}catch(e){console.warn('clearCam',e);}}
         want=plan.cam.p.clone();look=V(pos.x,pos.y,pos.z);}}
     if(state==='flight'&&t>lastT+.25)finishShot();}
   if(state==='replay'&&RP){const R0=RP,r=R0.r,t=(now-R0.t0)*R0.sp,pos=interp(r.pts,t),lastT=r.pts[r.pts.length-1].t,dx=Math.cos(r.dir),dy=Math.sin(r.dir);placeBall(R0.p,pos.x,pos.y,pos.z);
