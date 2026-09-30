@@ -143,6 +143,17 @@ function edgePointNear(w,x,y){let best=null,bd=1e9;const P=w.p;for(let i=0;i<P.l
    crown's shape and setting (coconut palm, monkeypod, Cook pine, tropical broadleaf, plumeria, kiawe scrub), each drawn from its own
    baked 8- or 4-angle impostor atlas ---------- */
 X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.clear();const L={};SP.forEach(s=>L[s]=[]);
+  /* the flyovers show the roads beside 12-16 screened by a row of trees; the lidar found few there, so the carriageway sat in full view.
+     Plant a row of dark broadleaves on the course side of any road within 70 m of a hole, in the rough, never nearer than 18 m to a line of play */
+  if(!D._screened){D._screened=1;const LN=(A.HOLES||[]).map(h=>h.p),G=new Map();for(const q of D.tl){const k=Math.floor(q[0]/10)+','+Math.floor(q[1]/10);(G.get(k)||G.set(k,[]).get(k)).push(q);}
+    const dSeg=(x,y,ax,ay,bx,by)=>{const vx=bx-ax,vy=by-ay,l2=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((x-ax)*vx+(y-ay)*vy)/l2));return Math.hypot(x-ax-vx*t,y-ay-vy*t);};
+    const dL=(x,y)=>{let b=1e9;for(const P of LN)for(let i=1;i<P.length;i++)b=Math.min(b,dSeg(x,y,P[i-1][0],P[i-1][1],P[i][0],P[i][1]));return b;};
+    const near=(x,y,rad)=>{const cx=Math.floor(x/10),cy=Math.floor(y/10);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){for(const q of G.get((cx+i)+','+(cy+j))||[])if(Math.hypot(q[0]-x,q[1]-y)<rad)return true;}return false;};
+    const add=[];for(const r of D.roads||[]){if(r.w<6)continue;const P=r.p;for(let i=1;i<P.length;i++){const ax=P[i-1][0],ay=P[i-1][1],bx=P[i][0],by=P[i][1],Ls=Math.hypot(bx-ax,by-ay);if(Ls<1)continue;const ux=(bx-ax)/Ls,uy=(by-ay)/Ls;
+      for(let s=0;s<Ls;s+=8){const x0=ax+ux*s,y0=ay+uy*s,dc=dL(x0,y0);if(dc>70||dc<22)continue;
+        for(const sg of[1,-1]){const x=x0-uy*sg*(r.w/2+3.5),y=y0+ux*sg*(r.w/2+3.5);if(dL(x,y)>=dc||dL(x,y)<18)continue;if(A.lieAt(x,y)!=='rough'||near(x,y,6))continue;
+          const q=[x,y,6+hsh(x,y)*3.5,3.4+hsh(y,x)*1.4,3];add.push(q);const k=Math.floor(x/10)+','+Math.floor(y/10);(G.get(k)||G.set(k,[]).get(k)).push(q);}}}}
+    D.tl=D.tl.concat(add);console.log('[ko] road screen trees',add.length);}
   for(const q of D.tl){const x=q[0],y=q[1],h=q[2],r=q[3],sp=SP[q[4]],u=hsh(x,y);
     let v=0;if(sp==='palm')v=Math.floor(u*2.999);else if(sp==='monkey')v=r/h>.72?1:0;else v=u<.5?0:1;
     const t={x,y,gz:A.H(x,y),h,r,fir:sp==='cook',v,sp,hero:sp==='palm'?'palm'+v:null};
@@ -150,7 +161,11 @@ X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.c
     for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
   const TL=new T.TextureLoader();
   for(const sp of SP){if(!L[sp].length)continue;const m=META[sp],tex=TL.load('ko_'+sp+'Atlas.webp');tex.encoding=T.sRGBEncoding;tex.anisotropy=4;
-    A.scene.add(A.mkImp(L[sp],tex,m.frames,m.rows,new Array(m.rows).fill(m.ratio),m.aspect));}
+    const M=A.mkImp(L[sp],tex,m.frames,m.rows,new Array(m.rows).fill(m.ratio),m.aspect);
+    /* the flyovers' monkeypods, broadleaves and kiawe read as deep, dark green masses; the baked atlases came out light */
+    const dk={monkey:.72,broad:.76,scrub:.8,cook:.86,plum:.9}[sp];const ca=M.instanceColor;
+    if(dk&&ca){for(let i=0;i<ca.count;i++)ca.setXYZ(i,ca.getX(i)*dk,ca.getY(i)*Math.min(1,dk*1.04),ca.getZ(i)*dk*.96);ca.needsUpdate=true;if(M.userData.imp)M.userData.imp.cols=ca.array.slice();}
+    A.scene.add(M);}
   console.log('[ko] lidar trees',TR.length,Object.fromEntries(SP.map(s=>[s,L[s].length])));return true;};
 
 /* ---------- light: high tropical sun, blue sky fill, clear air ---------- */
@@ -200,7 +215,7 @@ function paintGround(A){const D=A.D,c=A.ctx,m=A.mx,B=A.box,MP=A.MAIN.p;
   const outside=(cx)=>{cx.save();cx.beginPath();cx.rect(B.X0-50,B.Y0-50,B.WW+100,B.HH+100);cx.moveTo(MP[0][0],MP[0][1]);for(let i=1;i<MP.length;i++)cx.lineTo(MP[i][0],MP[i][1]);cx.closePath();cx.clip('evenodd');};
   for(const cx of[c,m]){outside(cx);cx.lineCap=cx.lineJoin='round';
     for(const b of D.beach||[]){cx.fillStyle=cx===c?'#e8d8b6':'#00ff00';fillP(cx,b);}
-    for(const r of D.roads||[]){cx.strokeStyle=cx===c?'#5f6264':'#ffff00';cx.lineWidth=r.w;stroke(cx,r.p);}
+    for(const r of D.roads||[]){cx.strokeStyle=cx===c?'#5f6264':'#ffff00';cx.lineWidth=r.w>=6?r.w*.78:r.w;stroke(cx,r.p);}/* roads drawn a little narrower so the grey stays on the carriageway and doesn't run down the embankments beside the course */
     if(cx===c)for(const r of D.roads||[]){if(r.w<9)continue;c.strokeStyle='rgba(235,235,225,.55)';c.lineWidth=.15;c.setLineDash([3,6]);stroke(c,r.p);c.setLineDash([]);}
     cx.restore();}
   /* pond banks: anything of a pond outline the water doesn't cover is shoreline, not open water */
