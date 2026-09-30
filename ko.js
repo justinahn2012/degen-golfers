@@ -206,7 +206,7 @@ function paintGround(A){const D=A.D,c=A.ctx,m=A.mx,B=A.box,MP=A.MAIN.p;
   /* pond banks: anything of a pond outline the water doesn't cover is shoreline, not open water */
   for(const w of A.WATER){if(w.creek)continue;c.fillStyle='#3f5a32';fillP(c,w.p);m.fillStyle='#ff0000';fillP(m,w.p);}
   /* drainage ditches: bare red Oahu dirt, darker in the invert (2, 6, 7 and 13 cross them) */
-  for(const l of D.ditch||[]){for(const [w,col] of[[3.4,'#8f5236'],[1.4,'#6b3a24']]){c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';stroke(c,l);}m.strokeStyle='#ffff00';m.lineWidth=3.2;stroke(m,l);}
+  for(const l of D.ditch||[]){for(const [w,col] of[[3.4,'#6e4029'],[1.4,'#4a2a1a']]){c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';stroke(c,l);}m.strokeStyle='#ffff00';m.lineWidth=3.2;stroke(m,l);}
   /* cart paths: red-tinted concrete on 6, 7, 11, 15, 16 and 17 (grey everywhere else), as in the flyovers */
   const RED=['6','7','11','15','16','17'].map(r=>holeByRef(A,r)).filter(Boolean);const ALL=A.HOLES;
   for(const p of A.PATHS){for(let i=1;i<p.length;i++){const mx0=(p[i-1][0]+p[i][0])/2,my0=(p[i-1][1]+p[i][1])/2;let best=null,bd=1e9;for(const h of ALL){const d=A.dPL(mx0,my0,h.p);if(d<bd){bd=d;best=h;}}
@@ -290,7 +290,7 @@ function fallMat(A){const T=A.THREE;return new T.ShaderMaterial({transparent:tru
    'if(uLin>.5)c=pow(c,vec3(2.2));gl_FragColor=vec4(c,a);}'});}
 function waterfalls(A){const T=A.THREE;const PL=[],FM=fallMat(A),FOAM=[];const PAL={'8':['#9c866e','#8a7560','#a8927a','#7d6a56','#957c64'],'12':['#2e2a27','#3a3531','#26231f','#443e38','#34302b'],'18':['#403b36','#34302c','#4b4540','#2c2926']};
   const spots=[['8',h=>{const g=greenOfHole(A,h),t0=h.p[0],dx=g.cx-t0[0],dy=g.cy-t0[1],L=Math.hypot(dx,dy);return[g.cx-dy/L*20-dx/L*10,g.cy+dx/L*20-dy/L*10];}],
-               ['12',h=>{const t0=h.p[0],t1=h.p[1],dx=t1[0]-t0[0],dy=t1[1]-t0[1],L=Math.hypot(dx,dy);return[t0[0]+dx/L*16,t0[1]+dy/L*16];}],
+               ['12',h=>{const t0=h.p[0],t1=h.p[1],dx=t1[0]-t0[0],dy=t1[1]-t0[1],L=Math.hypot(dx,dy);return[t0[0]+dx/L*30-dy/L*34,t0[1]+dy/L*30+dx/L*34];}],/* 12: the falls sit on the pond's far bank, left of the line of play (as in the flyover), not in front of the tee */
                ['18',h=>{const g=greenOfHole(A,h),t0=h.p[h.p.length-2],dx=g.cx-t0[0],dy=g.cy-t0[1],L=Math.hypot(dx,dy);return[g.cx-dy/L*26,g.cy+dx/L*26];}]];
   for(const [ref,fn] of spots){const RK=[];const h=holeByRef(A,ref);if(!h)continue;const Q=fn(h),w=nearestPond(A,Q[0],Q[1],90);if(!w)continue;const E=edgePointNear(w,Q[0],Q[1]);if(!E)continue;
     /* axis: a = 0 at the shoreline, positive out into the pond. The outcrop is built out from the bank and the water steps down
@@ -312,6 +312,8 @@ function waterfalls(A){const T=A.THREE;const PL=[],FM=fallMat(A),FOAM=[];const P
     /* plantings on the outcrop and the bank: red ti, crotons, lime shrubs */
     for(let k=0;k<130;k++){const a=1.6-hsh(k,7)*(tiers*run+5),s=(hsh(7,k)-.5)*2*(wid*.5+6),q=P(a,s);if(Math.abs(s)<wid*.5+.5&&a>1.6-tiers*run)continue;
       const l=A.lieAt(q[0],q[1]);if(l==='green'||l==='tee'||l==='bunker')continue;const z=Math.max(A.H(q[0],q[1]),rampZ(a)*(1-Math.max(0,Math.abs(s)-wid*.5)/5));if(z<lv+.1)continue;PL.push([q[0],q[1],.7+hsh(q[0],q[1])*.8,k%3,z-.05]);}
+    {const H0=A.HOLES||[],clear=(x,y)=>{if(A.lieAt(x,y)==='tee')return false;for(const hh of H0){const a=hh.p[0],b=hh.p[1];if(!a||!b)continue;const ux=b[0]-a[0],uy=b[1]-a[1],L=Math.hypot(ux,uy)||1,al=((x-a[0])*ux+(y-a[1])*uy)/L,la=Math.abs((x-a[0])*uy-(y-a[1])*ux)/L;if(al>-8&&al<150&&la<9)return false;}return true;};
+      for(let k=RK.length-1;k>=0;k--)if(!clear(RK[k][0],RK[k][1]))RK.splice(k,1);for(let k=PL.length-1;k>=0;k--)if(!clear(PL[k][0],PL[k][1]))PL.splice(k,1);}
     rocks(A,RK,PAL[ref]);console.log('[ko] waterfall on',ref);}
   plants(A,PL);
   if(FOAM.length){const g=new T.CircleGeometry(.9,12);g.rotateX(-Math.PI/2);const M=new T.InstancedMesh(g,new T.MeshBasicMaterial({color:0xf4f8f8,transparent:true,opacity:.55,depthWrite:false}),FOAM.length),m=new T.Matrix4();
@@ -326,7 +328,7 @@ function pondMat(A){const T=A.THREE,WM=window.__WM;return new T.ShaderMaterial({
    'void main(){vec2 p=vW.xz;float fp=length(fwidth(p));float fb=1.-smoothstep(.15,.9,fp);'+
    'vec3 a=texture2D(nm,p/9.+vec2(t*.021,t*.013)).xyz*2.-1.;vec3 b=texture2D(nm,p/3.6+vec2(-t*.031,t*.024)).xyz*2.-1.;'+
    'vec2 pert=(a.xy*.65+b.xy*.45*fb)*.11;vec3 n=normalize(vec3(pert.x,1.,pert.y));vec3 v=normalize(cameraPosition-vW);vec3 r=reflect(-v,n);r.y=abs(r.y);'+
-   'float fr=.05+.95*pow(1.-max(dot(n,v),0.),4.);vec3 body=mix(vec3(.10,.25,.31),vec3(.13,.31,.36),.5+.5*a.x);'+
+   'float fr=.16+.84*pow(1.-max(dot(n,v),0.),4.);vec3 body=mix(vec3(.19,.40,.50),vec3(.23,.46,.55),.5+.5*a.x);'+
    'vec3 col=mix(body,skyS(r)*.92,clamp(fr,0.,.88));vec3 sd=normalize(sun);col+=vec3(1.,.95,.85)*(pow(max(dot(r,sd),0.),240.)*2.2+pow(max(dot(r,sd),0.),40.)*.12);'+
    'if(uLin>.5)col=pow(col,vec3(2.2));gl_FragColor=vec4(col,1.);}'});}
 
