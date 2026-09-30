@@ -1727,7 +1727,7 @@ const BASE=[
  {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{shaft:{band:'#c08d1a'},putter:'blackout',skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
  {id:'red-brim',name:'David Chen',hcp:36,st:[52,52,37,53,37],ab:'read',color:'#e74c3c',look:{ironModel:'2',putter:'blackout',skin:'#e3b48e',cap:{style:'fwd',color:'#1b1b1d',brim:'#b8352b'},top:{type:'tee',color:'#e4e4e1'},legs:{color:'#2b2f36'}}},
  {id:'ramble-on',name:'Benja B',hcp:15,st:[89,68,71,70,70],ab:'rip',color:'#f1c40f',look:{ironModel:'2',skin:'#e8b893',tall:1.06,cap:{style:'fwd',color:'#1b1b1d',patch:'#d9892b'},top:{type:'polo',color:'#24345c',arms:'#5a7299'},legs:{color:'#1d1d20'},shoes:'#2a2a2e'}},
- {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,73,72,75],ab:'dial',color:'#1abc9c',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},skin:'#be906e',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
+ {id:'flag-holder',name:'Josh Seto',hcp:14,st:[71,83,68,77,75],ab:'dial',color:'#1abc9c',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},skin:'#be906e',tall:1.05,cap:{style:'fwd',color:'#1b1b1d'},top:{type:'hawaiian',color:'#141418',pat:'nightbloom'},legs:{color:'#23262d'}}},
  {id:'white-snap',name:'Jason Fritz',hcp:22,st:[64,66,64,64,64],ab:'dial',color:'#3498db',look:{skin:'#e6b894',cap:{style:'back',color:'#efefeb'},top:{type:'zip',color:'#3552a0'},legs:{color:'#2b2f36'}}},
  {id:'the-bay',name:'Roby Jung',hcp:10,st:[97,78,65,80,80],ab:'rip',color:'#9b59b6',look:{driverHead:{face:'#2a2c30',accent:'#2ea8e6',rim:'#f2f3f4'},skin:'#dfae86',cap:{style:'fwd',color:'#1b1b1d',rope:true},top:{type:'polo',color:'#f1f1ee'},legs:{color:'#2b2f36'}}},
  {id:'photobomber',name:'Shaw Wakayama',hcp:24,st:[63,70,63,54,59],ab:'dial',color:'#e84393',look:{putter:'oilslick',skin:'#b87a62',hairMesh:'parted',hair:'#141011',top:{type:'polo',color:'#eef1ec',pat:'pinstripe'},legs:{color:'#5e5f45'}}},
@@ -1745,14 +1745,14 @@ const BASE=[
 {id:'ephram',name:'Ephram Harsh',hcp:36,st:[70,30,60,44,28],ab:'rip',color:'#badc58',look:{skin:'#d9a58e',hair:'#3b2a20',hairMesh:'buzz',build:{torso:1.24,limbs:1.1},top:{type:'polo',color:'#56595c'},legs:{color:'#253a57',jeans:'#8aa8cb',bootcut:true},shoes:'#3a2718',boots:'#4a2f1b'}},
  {id:'landon',name:'Landon Glasscock',hcp:36,st:[64,56,30,56,28],ab:'read',color:'#22a6b3',look:{skin:'#df9f6a',hair:'#3a2518',hairMesh:'parted',top:{type:'polo',color:'#0b1426'},legs:{color:'#d8d6d0'},shoes:'#f2f2f2'}},
  {id:'stephen',name:'Stephen Goree',hcp:4,st:[98,88,80,72,86],ab:'rip',color:'#2e86de',look:{putter:'lab',skin:'#835a44',hair:'#1a1512',hairMesh:'buzz',top:{type:'polo',color:'#f0ede4'},legs:{color:'#17181b'}}},
-{id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,71,70,71],ab:'hl',color:'#00b894',look:{shaft:{band:'#7a0a0e'},skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
+{id:'keegan',name:'Keegan Choy',hcp:18,st:[66,70,81,80,51],ab:'hl',color:'#00b894',look:{shaft:{band:'#7a0a0e'},skin:'#c9977c',cap:{style:'fwd',color:'#e8e2d5',patch:'#3a3a3a'},top:{type:'hawaiian',color:'#e2563f',pat:'sunset'},legs:{color:'#3d4a5a'}}},
  {id:'brendan-ws',name:'Brendan Wesley-Smith',hcp:22,st:[69,69,63,63,58],ab:'dial',color:'#74b9ff',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},driverHead:{c:'#8d9298',m:.75,r:.28},putter:'blackout',skin:'#d0a08a',cap:{style:'fwd',color:'#f1f1ee',brim:'#1b1b1d'},top:{type:'hawaiian',color:'#1b2a4e',pat:'classic'},legs:{color:'#6b2f3e',shorts:true}}},
  {id:'andrea',name:'Andrea Wesley-Smith',hcp:36,st:[34,58,45,51,43],ab:'dial',color:'#fd79a8',look:{shaft:{body:['#0e6b70','#0a5559','#107a80'],band:'#13a6a8'},driverHead:{c:'#8d9298',m:.75,r:.28},skin:'#d9a58f',hair:'#3b2a22',hairMesh:'long',cap:{style:'cowboy',color:'#8C1515'},top:{type:'polo',color:'#8C1515'},legs:{color:'#f4f4f1',skirt:true},shoes:'#f4f4f2'}},
  {id:'sheldon',name:'Sheldon Lee',hcp:24,st:[82,49,59,59,60],ab:'rip',color:'#0984e3',look:{lefty:true,skin:'#c48d6c',cap:{style:'back',color:'#1b1b1d'},top:{type:'hawaiian',color:'#4da3d9',pat:'plumeria'},legs:{color:'#2b2f36'}}},
  {id:'erik',name:'Erick Miller',hcp:32,st:[65,56,49,45,42],ab:'dial',color:'#686de0',look:{skin:'#4a3024',hairMesh:'buzz',hair:'#121010',top:{type:'polo',color:'#f1f1ec'},legs:{color:'#1d1d20'},shoes:'#1b1b1d'}}];
 /* golfers' stats, names and abilities are set here only; any old edits saved on a phone are cleared and never used */
 try{localStorage.removeItem('jp-golf-roster-v3');localStorage.removeItem('dg-stat-mig-2');}catch(e){}
-const ROSTER=BASE.map(b=>Object.assign({beerRange:[2,5]},b,B(...b.st)));
+const ROSTER=BASE.map(b=>Object.assign({beerRange:[8,12]},b,B(...b.st)));
 ROSTER.sort((a,b)=>a.name.localeCompare(b.name));ROSTER.forEach(r=>{r.abName=ABIL[r.ab].n;r.abDesc=ABIL[r.ab].d;});
 const CLUBS=[
  {n:'Driver',c:245,apex:30,T:6.4,roll:.13},{n:'3 wood',c:225,apex:29,T:6.2,roll:.10},{n:'5 wood',c:210,apex:29,T:6.0,roll:.08},
@@ -1764,9 +1764,12 @@ const PUTTER=CLUBS.length-1;
 const FR={water:3,green:.62,fringe:1.3,fairway:1.8,tee:1.8,rough:4.8,bunker:14,oob:3};
 const SURF={water:0,fairway:1,tee:1,fringe:.8,green:.7,rough:.3,bunker:0};
 const DRUNK={pow:6,acc:16,sg:14,put:16,rec:10};
-const BLACKOUT=16;function ST(p,k){let v=Math.max(20,Math.min(99,p[k]-(p.over||0)*DRUNK[k]));if((p.beers||0)>=BLACKOUT)v*=.5;return v;}
+const BLACKOUT=16;function blackAt(p){return p.blackout||BLACKOUT;}/* each golfer blacks out at his own random 12-15 beers, rolled every round */
+function ST(p,k){let v=Math.max(20,Math.min(99,p[k]-(p.over||0)*DRUNK[k]));if((p.beers||0)>=blackAt(p))v*=.5;return v;}
 function driverTotal(pw){return pw<=65?180+(pw-32)*70/33:250+(pw-65)*70/34;}
-function powMult(p){return driverTotal(ST(p,'pow'))/(245*1.13)*(p.buzz>0?1.03:1);}
+/* the buzz: every beer under your limit is its own 6-shot buzz, and they stack - each one working adds +3% distance and a 25% bigger sweet spot */
+const BUZZ_SHOTS=6;function buzzN(p){return p.buzzQ?p.buzzQ.length:(p.buzz>0?1:0);}
+function powMult(p){return driverTotal(ST(p,'pow'))/(245*1.13)*(1+.03*buzzN(p));}
 function lieMult(p,lie,c){if(lie==='rough')return(c===CLUBS[1]||c===CLUBS[2]?.82:.88)+ST(p,'rec')*.0007;if(lie==='bunker')return c.sand?.88+ST(p,'rec')*.001:.6+ST(p,'rec')*.0015;return 1;}
 /* bump & run: a low runner. Carry (the bump) tops out at 70 yds with the longest eligible club (4 hybrid) down to 40 yds with the lob wedge;
    the run follows the Rule of 12 - roll : carry = 12 - club number (7 iron rolls 5x its carry, PW 2x ...), less on slower grass, capped at 90 yds of roll */
@@ -1778,7 +1781,7 @@ function carryOf(p,i){const c=CLUBS[i];if(p.shape==='Bump & run'&&bumpOK(i))retu
 function clubsFor(p){const r=[];CLUBS.forEach((c,i)=>{if(c.putt)return;if(i===0&&p.lie!=='tee')return;r.push(i);});r.push(PUTTER);return r;}
 const PUTT_MS=.75;/* putting meter runs at 75% of its former speed, both ways (the stroke is short, so it needs more time to judge) */
 function meterSpd(p){if(!p)return 1;const c=CLUBS[p.club];const s=c.putt?ST(p,'put'):c.wedge?(ST(p,'acc')*.5+ST(p,'sg')*.5):ST(p,'acc');return Math.max(.78,Math.min(1.1,1.12-s*.0032));}
-function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;if(p.buzz>0)t*=1.25;return t;}
+function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;t*=1+.25*buzzN(p);return t;}
 
 let MODE='click';try{MODE=localStorage.getItem('jp-swing-mode2')||'click';}catch(e){}let swipe=null;const FLY_OUT=5.5,FLY_BACK=3.3;let flyStart=0,flyUntil=0,players=[],cur=null,state='menu',wind={x:0,y:0,sp:0,a:0},overhead=false,plan=null,flightT0=0,swingU=0,swingPow=0,swingAnim=null,readOn=false;
 const picked=new Set();const MAXP=4;
@@ -1902,7 +1905,7 @@ function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.
     for(const f of Object.keys(C)){if(need.has(f))continue;const pr=C[f];delete C[f];pr.then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;o.geometry&&o.geometry.dispose();
       for(const m of(Array.isArray(o.material)?o.material:[o.material])){if(!m)continue;for(const k of['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap'])if(m[k])m[k].dispose();m.dispose();}});}).catch(()=>{});}}catch(e){console.warn('head cleanup',e);}
   const n=HOLES.length,idx=[...Array(n).keys()],list=len==='f9'?idx.slice(0,9):len==='b9'?idx.slice(9):idx;ROUND={list:list.length?list:idx,k:0,len};
-  players=ROSTER.filter(r=>picked.has(r.id)).map((r,i)=>{const p=Object.assign({},r,{x:0,y:0,strokes:0,done:false,abUsed:false,boost:null,lie:'tee',beers:0,buzz:0,over:0,drankTurn:false,card:{}});const br=r.beerRange||[2,5];p.limit=br[0]+Math.floor(Math.random()*(br[1]-br[0]+1));p.ball=makeBall(p);p.av=makeGolfer(p);linearize(p.ball.b);linearize(p.ball.sh);linearize(p.av);return p;});
+  players=ROSTER.filter(r=>picked.has(r.id)).map((r,i)=>{const p=Object.assign({},r,{x:0,y:0,strokes:0,done:false,abUsed:false,boost:null,lie:'tee',beers:0,buzz:0,buzzQ:[],over:0,drankTurn:false,card:{}});const br=r.beerRange||[8,12];/* hidden beer limit: random 8-12 each round */p.limit=br[0]+Math.floor(Math.random()*(br[1]-br[0]+1));p.blackout=12+Math.floor(Math.random()*4);/* blackout: random 12-15 */p.ball=makeBall(p);p.av=makeGolfer(p);linearize(p.ball.b);linearize(p.ball.sh);linearize(p.av);return p;});
   $('menu').hidden=true;$('card').hidden=true;$('courses').hidden=true;try{for(const p of players)p.av.visible=true;renderer.compile(scene,camera);try{const seen=new Set();scene.traverse(o=>{const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];for(const m of ms)for(const t of[m.map,m.normalMap,m.bumpMap,m.alphaMap,m.emissiveMap,m.roughnessMap])if(t&&!seen.has(t)&&t.image){seen.add(t);renderer.initTexture&&renderer.initTexture(t);}});}catch(e){}for(const p of players)p.av.visible=false;}catch(e){}startHole();}
 /* ---------- hole curtain: a full-screen hole card covers the view while the hole is set up and every part of the flyover is drawn once
    (shaders, textures, terrain tiles, trees), then it shrinks away and the pan starts on a warm, smooth renderer ---------- */
@@ -2187,7 +2190,7 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
   if(swingPow>1&&!p.mishit){err*=1+(swingPow-1)*8;err+=(Math.random()-.5)*(swingPow-1)*12;}else if(p.mishit){err=err*.5+(Math.random()-.5)*.8;}
   err=Math.max(-3,Math.min(3,err));p.lastErr=err;p.prev={x:p.x,y:p.y};
   plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
-  p.strokes++;if(p.boost){p.boost=null;}if(p.buzz>0)p.buzz--;
+  p.strokes++;if(p.boost){p.boost=null;}if(p.buzzQ&&p.buzzQ.length){p.buzzQ=p.buzzQ.map(x=>x-1).filter(x=>x>0);p.buzz=p.buzzQ.length?Math.max(...p.buzzQ):0;}else if(p.buzz>0)p.buzz--;
   state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;try{SND.whoosh(clubType(p.club),swingPow,DS);}catch(e){}swingAnim={p,t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(c.putt?Math.max(.28,DS*(.8+.35*Math.min(1,swingPow))):(_K.fin-_K.imp)/ANIM.fps*Math.max(.35,(()=>{const t=clubType(p.club),pw=Math.min(1,swingPow);return t==='wedge'?.4+.6*pw:.6+.4*pw;})())):0,type:clubType(p.club)};/* shorter follow-through takes proportionally less time, so the tempo stays natural */
   ring.visible=false;aimLine.visible=false;readLine.visible=false;trailPts=[];setRibbon([]);refresh();}
 function contactWord(e){const a=Math.abs(e);if(a<.35)return'Pure';const s=e>0?'draw':'fade';if(a<1)return'Slight '+s;if(a<2)return s[0].toUpperCase()+s.slice(1);return e>0?'Hook':'Slice';}
@@ -2415,7 +2418,7 @@ let toastTimer,TOAST_PEND=null;function toast(b,s){if(CURT||performance.now()/10
 /* ---------- HUD ---------- */
 
 function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p);
-  $('who').style.setProperty('--pc',p.color);$('wName').textContent=p.name+'   Stroke '+(p.strokes+1);const bs=p.beers>=BLACKOUT?'BLACKOUT, '+p.beers+' beers. Every stat halved':p.over?'You’re wasted ('+p.beers+' beers)':p.buzz>0?'Buzzed, '+p.buzz+' shot'+(p.buzz>1?'s':'')+' left':p.beers?p.beers+' beer'+(p.beers>1?'s':''):'';$('wBeer').textContent=bs;$('wBeer').hidden=!bs;$('wBeer').dataset.bad=p.over?'1':'';const bb=$('beerBtn');bb.disabled=p.drankTurn||state!=='aim';$('wDist').textContent=fmtDist(d,p.lie)+' to pin';$('wLie').textContent=LIE_NAME[p.lie];
+  $('who').style.setProperty('--pc',p.color);$('wName').textContent=p.name+'   Stroke '+(p.strokes+1);const bs=p.beers>=blackAt(p)?'BLACKOUT, '+p.beers+' beers. Every stat halved':p.over?'You’re wasted ('+p.beers+' beers)':p.buzz>0?(buzzN(p)>1?'Buzzed ×'+buzzN(p)+', ':'Buzzed, ')+p.buzz+' shot'+(p.buzz>1?'s':'')+' left':p.beers?p.beers+' beer'+(p.beers>1?'s':''):'';$('wBeer').textContent=bs;$('wBeer').hidden=!bs;$('wBeer').dataset.bad=p.over?'1':'';const bb=$('beerBtn');bb.disabled=p.drankTurn||state!=='aim';$('wDist').textContent=fmtDist(d,p.lie)+' to pin';$('wLie').textContent=LIE_NAME[p.lie];
   const bd=$('board');bd.innerHTML='';for(const q of players){const s=document.createElement('span');s.style.setProperty('--pc',q.color);const fn=q.name.split(' ')[0],dup=players.filter(o=>o.name.split(' ')[0]===fn).length>1;s.textContent=(dup?fn+' '+q.name.split(' ').slice(-1)[0][0]+'.':fn)+' '+q.strokes+(q.done?' ✓':'');bd.appendChild(s);}
   $('wSpd').textContent=Math.round(wind.sp*2.237);
   if(c.putt){$('cName').innerHTML='Putter<small>Full power '+Math.round(p.pmax*TOFT)+' ft</small>';}
@@ -2475,9 +2478,9 @@ holdBtn($('aimL'),1);holdBtn($('aimR'),-1);
 const SHAPES=['Straight','Draw','Fade','Punch','Bump & run'];$('shapeBtn').onclick=()=>{if(!cur||state!=='aim'||CLUBS[cur.club].putt)return;let k=SHAPES.indexOf(cur.shape||'Straight');do{k=(k+1)%SHAPES.length;}while(SHAPES[k]==='Bump & run'&&!bumpOK(cur.club));cur.shape=SHAPES[k];refresh();};
 $('viewBtn').onclick=()=>{if(state!=='aim')return;overhead=!overhead;$('viewBtn').setAttribute('aria-pressed',String(overhead));};
 $('beerBtn').onclick=()=>{const p=cur;if(!p||state!=='aim'||p.drankTurn)return;p.drankTurn=true;p.beers++;try{startBeer(p);}catch(e){console.warn(e);}
-  if(p.beers>=BLACKOUT){p.over=p.beers-p.limit;p.buzz=0;toast(p.beers===BLACKOUT?'BLACKOUT':'Still blacked out','Sixteen beers deep. Every stat is cut in half.');}
-  else if(p.beers>p.limit){p.over=p.beers-p.limit;p.buzz=0;toast('You’re wasted',p.over>1?'Even worse. Stats keep sliding for the rest of the round.':'All stats down for the rest of the round.');}
-  else{p.buzz=3;toast('Beer '+p.beers,p.beers===p.limit?'Loose for 3 shots. That one hit, maybe slow down.':'Loose and locked in for the next 3 shots.');}
+  if(p.beers>=blackAt(p)){p.over=p.beers-p.limit;p.buzz=0;p.buzzQ=[];toast(p.beers===blackAt(p)?'BLACKOUT':'Still blacked out',p.beers+' beers deep. Every stat is cut in half.');}
+  else if(p.beers>p.limit){p.over=p.beers-p.limit;p.buzz=0;p.buzzQ=[];toast('You’re wasted',p.over>1?'Even worse. Stats keep sliding for the rest of the round.':'All stats down for the rest of the round.');}
+  else{p.buzzQ=(p.buzzQ||[]).filter(x=>x>0);p.buzzQ.push(BUZZ_SHOTS);p.buzz=Math.max(...p.buzzQ);const n=p.buzzQ.length;toast('Beer '+p.beers,(n>1?n+' beers working at once, 6 shots each.':'Loose and locked in for 6 shots.')+(p.beers===p.limit?' That one hit, maybe slow down.':''));}
   refresh();updMeter();};
 $('abBtn').onclick=()=>{const p=cur;if(!p||p.abUsed||state!=='aim'||ABIL[p.ab].passive)return;p.abUsed=true;if(p.ab==='read')readOn=true;else p.boost=p.ab;toast(p.abName,p.abDesc[0].toUpperCase()+p.abDesc.slice(1));refresh();updMeter();};
 const GC=$('gest'),gx=GC.getContext('2d');function sizeG(){const d=Math.min(2,devicePixelRatio||1);GC.width=innerWidth*d;GC.height=innerHeight*d;gx.setTransform(d,0,0,d,0,0);}sizeG();addEventListener('resize',sizeG);
@@ -2595,7 +2598,7 @@ const DZ=(()=>{const g=new THREE.Group();g.visible=false;g.renderOrder=11;
     const tx=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false,toneMapped:false}));s.scale.set(1.15,.27,1);g.add(s);return s;};
   const lw=lab('You’re wasted','#ffd54a','rgba(255,200,40,.9)'),lb=lab('BLACKOUT','#ff4466','rgba(255,40,90,1)');scene.add(g);return{g,stars,ring,ring2,lw,lb};})();
 const _hp=new THREE.Vector3();
-function updDizzy(now){const p=cur,on=!!(p&&p.av&&p.av.visible&&p.over>0&&state!=='menu');DZ.g.visible=on;if(!on)return;const bo=p.beers>=16,R=p.av.userData.rig;
+function updDizzy(now){const p=cur,on=!!(p&&p.av&&p.av.visible&&(p.over>0||p.beers>=blackAt(p))&&state!=='menu');DZ.g.visible=on;if(!on)return;const bo=p.beers>=blackAt(p),R=p.av.userData.rig;
   if(R&&R.skel)R.B.Head.getWorldPosition(_hp);else if(R&&R.head)R.head.getWorldPosition(_hp);else _hp.copy(p.av.position).add(new THREE.Vector3(0,1.6,0));
   DZ.g.position.set(_hp.x,_hp.y+(bo?.34:.28),_hp.z);const n=bo?14:6,spd=bo?6.5:2.6,rad=bo?.34:.22;
   DZ.stars.forEach((s,i)=>{s.visible=i<n;if(i>=n)return;const a=now*spd*(bo&&i%2?-1:1)+i/n*6.283,rr=rad*(bo?1+.25*Math.sin(now*5+i):1);s.position.set(Math.cos(a)*rr,.05*Math.sin(now*3+i)+(bo?.09*Math.sin(a*3):0),Math.sin(a)*rr);s.material.color.set(bo?(i%3===0?0xff3355:i%3===1?0xb26bff:0xff9a2e):0xffe27a);s.material.rotation=now*5+i;s.scale.setScalar(bo?.13+.03*Math.sin(now*9+i):.09);});
