@@ -2510,8 +2510,7 @@ function diffRow(k){const v=(COURSES[k]&&COURSES[k].diff)||COURSE_DIFF[k];const 
   d.setAttribute('aria-label','Difficulty '+v+' out of 5');let h='<span>Difficulty</span>';
   for(let i=0;i<5;i++){const f=Math.max(0,Math.min(1,v-i)),id='gbh'+k+i;
     h+='<svg class="gb" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="'+id+'"><rect x="0" y="0" width="'+(20*f)+'" height="20"/></clipPath></defs>'+
-      '<circle cx="10" cy="10" r="8.6" class="e"/>'+(f>0?'<g clip-path="url(#'+id+')"><circle cx="10" cy="10" r="8.6" class="f"/>'+
-      [[7,6],[11,5.5],[14.5,8],[6,10],[10,9.5],[13.5,12],[7.5,14],[11.5,14.5]].map(q=>'<circle cx="'+q[0]+'" cy="'+q[1]+'" r="1.05" class="d"/>').join('')+'</g>':'')+'</svg>';}
+      '<circle cx="10" cy="10" r="8.6" class="e"/>'+(f>0?'<g clip-path="url(#'+id+')"><circle cx="10" cy="10" r="8.6" class="f"/></g>':'')+'</svg>';}
   d.innerHTML=h;return d;}
 function buildCourses(){const w=$('cCards');w.innerHTML='';for(const k of Object.keys(COURSES)){const C=COURSES[k],b=document.createElement('button');b.className='cc';b.setAttribute('aria-pressed',String(k===selC));
     b.innerHTML='<canvas width="480" height="300"></canvas><div><h3></h3><div class="a"></div><div class="s"></div></div>';b.querySelector('h3').textContent=C.short;b.querySelector('.a').textContent=C.area;
