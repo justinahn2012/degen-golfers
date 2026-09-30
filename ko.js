@@ -305,7 +305,7 @@ function fallMat(A){const T=A.THREE;return new T.ShaderMaterial({transparent:tru
    'if(uLin>.5)c=pow(c,vec3(2.2));gl_FragColor=vec4(c,a);}'});}
 function waterfalls(A){const T=A.THREE;const PL=[],FM=fallMat(A),FOAM=[];const PAL={'8':['#9c866e','#8a7560','#a8927a','#7d6a56','#957c64'],'12':['#2e2a27','#3a3531','#26231f','#443e38','#34302b'],'18':['#403b36','#34302c','#4b4540','#2c2926']};
   const spots=[['8',h=>{const g=greenOfHole(A,h),t0=h.p[0],dx=g.cx-t0[0],dy=g.cy-t0[1],L=Math.hypot(dx,dy);return[g.cx-dy/L*20-dx/L*10,g.cy+dx/L*20-dy/L*10];}],
-               ['12',h=>{const t0=h.p[0],t1=h.p[1],dx=t1[0]-t0[0],dy=t1[1]-t0[1],L=Math.hypot(dx,dy);return[t0[0]+dx/L*30-dy/L*34,t0[1]+dy/L*30+dx/L*34];}],/* 12: the falls sit on the pond's far bank, left of the line of play (as in the flyover), not in front of the tee */
+               ['12',h=>{const t0=h.p[0],t1=h.p[1],dx=t1[0]-t0[0],dy=t1[1]-t0[1],L=Math.hypot(dx,dy);return[t0[0]-dx/L*6-dy/L*15,t0[1]-dy/L*6+dx/L*15];}],/* 12: the falls sit where the pond comes nearest the tees - its east end, just left of and level with the tee boxes (satellite and flyover) - not out on the line of play */
                ['18',h=>{const g=greenOfHole(A,h),t0=h.p[h.p.length-2],dx=g.cx-t0[0],dy=g.cy-t0[1],L=Math.hypot(dx,dy);return[g.cx-dy/L*26,g.cy+dx/L*26];}]];
   for(const [ref,fn] of spots){const RK=[];const h=holeByRef(A,ref);if(!h)continue;const Q=fn(h),w=nearestPond(A,Q[0],Q[1],90);if(!w)continue;const E=edgePointNear(w,Q[0],Q[1]);if(!E)continue;
     /* axis: a = 0 at the shoreline, positive out into the pond. The outcrop is built out from the bank and the water steps down
