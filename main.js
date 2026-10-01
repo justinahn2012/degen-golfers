@@ -2397,7 +2397,7 @@ const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NC
 #hsEntry .skip{font-family:'EB Garamond',Georgia,serif;font-size:13px;background:none;border:none;color:#d9c27a;cursor:pointer;margin-top:10px;text-decoration:underline}`;document.head.appendChild(st);})();
 const hsTP=tp=>tp===0?'E':(tp>0?'+':'')+tp,hsSort=(a,b)=>a.tp-b.tp||a.s-b.s||a.t-b.t;
 function hsPending(){try{return JSON.parse(localStorage.getItem('dg-hs-pending')||'[]');}catch(e){return[];}}
-function hsAll(){const seen=new Set(HS.board.map(r=>r.rid));return HS.board.concat(hsPending().filter(r=>!seen.has(r.rid)));}
+function hsAll(){const seen=new Set(HS.board.map(r=>r.rid));return HS.board.concat(hsPending().filter(r=>!seen.has(r.rid)).map(r=>r.tp==null?Object.assign({},r,{tp:r.s-r.par}):r)/* not yet on the server: work out to-par here */);}
 function hsRows(tab){return hsAll().filter(r=>tab==='all'||r.c===tab).sort(hsSort).slice(0,10);}
 function hsRender(mark){const el=$('hs');if(!el)return;const tabs=['all','jp','ws','nc','cda'];
   let h='<h2>Leaderboard</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'">'+(t==='all'?'All courses':HS_CN[t])+'</button>').join('')+'</div><div class="board">';

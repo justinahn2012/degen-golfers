@@ -1,5 +1,5 @@
 /* Degen Golfers '26 - tiny server: serves the game files, plus a shared arcade leaderboard at /api/scores (stored in Workers KV). */
-const COURSES = { jp: 1, ws: 1, nc: 1, cda: 1 };
+const COURSES = { jp: 1, ws: 1, nc: 1, cda: 1, ko: 1 };
 const KEEP_PER_COURSE = 25;
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const rank = (a, b) => a.tp - b.tp || a.s - b.s || a.t - b.t;
@@ -15,7 +15,7 @@ export default {
         const i = String(e.i || '').toUpperCase().replace(/[^A-Z0-9 ]/g, '').slice(0, 3).padEnd(3, ' ');
         const g = String(e.g || '').replace(/[<>&"]/g, '').trim().slice(0, 24);
         const c = String(e.c || ''), s = Math.round(+e.s), par = Math.round(+e.par), tp = s - par;
-        if (!i.trim() || !g || !COURSES[c] || !(s >= 40 && s <= 220) || !(par >= 54 && par <= 80)) return json({ err: 'invalid score' }, 400);
+        if (!i.trim() || !g || !COURSES[c] || !(s >= 20 && s <= 220) || !(par >= 27 && par <= 80)) return json({ err: 'invalid score' }, 400);
         const rid = String(e.rid || '').slice(0, 48);
         const b = (await env.SCORES.get('board', { type: 'json' })) || [];
         if (rid && b.some(r => r.rid === rid)) return json({ board: b, dup: true });

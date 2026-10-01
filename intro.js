@@ -1,7 +1,7 @@
 (function(){const el=document.getElementById('intro');if(window.BOOT){el.remove();return;}
  (function leaders(){const box=document.getElementById('introLB');if(!box)return;const CS={jp:'JPK',ws:'WSEA',nc:'NCST',cda:'CDA',ko:'KOLN'}/*COURSE-EXT*/;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
    const tp=v=>v===0?'E':(v>0?'+':'')+v,srt=(a,b)=>a.tp-b.tp||a.s-b.s||a.t-b.t;
-   const draw=L=>{L=(L||[]).slice().sort(srt).slice(0,10);let h='<div class="hd">Leaderboard<small>The Degen Golfers Invitational</small></div><div class="ch"><span>Place</span><span>Initials</span><span>Player</span><span>Course</span><span>Score</span></div>';
+   const draw=L=>{L=(L||[]).map(r=>r.tp==null&&r.s!=null&&r.par!=null?Object.assign({},r,{tp:r.s-r.par}):r).filter(r=>r.tp!=null&&r.s!=null).sort(srt).slice(0,10);let h='<div class="hd">Leaderboard<small>The Degen Golfers Invitational</small></div><div class="ch"><span>Place</span><span>Initials</span><span>Player</span><span>Course</span><span>Score</span></div>';
      if(!L.length){box.innerHTML=h+'<div class="vp"><div class="empty">The board is open \u2014 be the first to sign it</div></div>';return;}
      const row=(r,k)=>'<div class="r"><span class="p">'+(k+1)+'</span><span class="i" style="white-space:pre">'+esc(r.i)+'</span><span class="g">'+esc(String(r.g).split(' ')[0])+'</span><span class="c">'+(CS[r.c]||String(r.c).toUpperCase())+'</span><span class="s"><span class="'+(r.tp<0?'u':r.tp>0?'o':'e')+'">'+tp(r.tp)+'</span><small>'+r.s+'</small></span></div>';
      const rows=L.map(row).join('');box.innerHTML=h+'<div class="vp"><div class="rows">'+rows+(L.length>3?rows:'')+'</div></div>';size();
