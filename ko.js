@@ -123,6 +123,7 @@ root.KOT=KOT;})(typeof window!=='undefined'?window:globalThis);
    Everything here is Ko Olina-only: it does nothing for the other courses. */
 (function(){
 if(window.COURSE_KEY!=='ko')return;
+window.COURSE_EXT_READY=fetch('ko_extra.json').then(r=>r.json()).then(x=>{Object.assign(window.COURSE,x);}).catch(e=>console.warn('[ko] extra data',e));
 const KOT=window.KOT;
 const META={"palm": {"frames": 8, "rows": 3, "aspect": 1.167, "ratio": 1.05}, "monkey": {"frames": 4, "rows": 2, "aspect": 2.094, "ratio": 1.05}, "cook": {"frames": 8, "rows": 2, "aspect": 0.207, "ratio": 1.05}, "plum": {"frames": 4, "rows": 2, "aspect": 1.332, "ratio": 1.05}, "broad": {"frames": 4, "rows": 2, "aspect": 1.523, "ratio": 1.05}, "scrub": {"frames": 4, "rows": 2, "aspect": 1.605, "ratio": 1.05}};
 const X={};

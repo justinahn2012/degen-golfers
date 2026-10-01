@@ -4,13 +4,13 @@
   const load=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error(src));document.body.appendChild(s);});
   const status=t=>{const l=document.getElementById('load');if(l)l.textContent=t;};
   try{
-    const [A,F,FONT,jp,ws,nc,cda,AN,F3,ko]=await Promise.all([J('assets.json'),J('faces.json'),J('font.json'),J('jp.json'),J('ws.json'),J('nc.json'),J('cda.json'),J('anims.json').catch(()=>null),null,J('ko.json').catch(()=>null)]);/*COURSE-EXT*/
-    window.ASSETS=A;window.ANIMS=AN;window.FACE3D=null;window.FACES=F;window.LOGO_FONT=FONT;window.COURSES={jp,ws,nc,cda};if(ko)window.COURSES.ko=ko;
+    const [A,F,FONT,jp,ws,nc,cda,AN,F3,ko,cc]=await Promise.all([J('assets.json'),J('faces.json'),J('font.json'),J('jp.json'),J('ws.json'),J('nc.json'),J('cda.json'),J('anims.json').catch(()=>null),null,J('ko.json').catch(()=>null),J('cc.json').catch(()=>null)]);/*CC-COURSE*//*COURSE-EXT*/
+    window.ASSETS=A;window.ANIMS=AN;window.FACE3D=null;window.FACES=F;window.LOGO_FONT=FONT;window.COURSES={jp,ws,nc,cda};if(ko)window.COURSES.ko=ko;if(cc)window.COURSES.cc=cc;
     (function(){let B=null;try{const s=sessionStorage.getItem('dg-boot');if(s){B=JSON.parse(s);sessionStorage.removeItem('dg-boot');}}catch(e){}
  if(!B){try{const m=location.hash.match(/dg=([^&]+)/);if(m){B=JSON.parse(decodeURIComponent(m[1]));try{history.replaceState(null,'',location.pathname+location.search);}catch(e){location.hash='';}}}catch(e){}}
  let k='jp';try{k=(B&&B.c)||localStorage.getItem('dg-course')||'jp';}catch(e){if(B&&B.c)k=B.c;}if(!COURSES[k])k='jp';
  window.BOOT=B;window.COURSE_KEY=k;window.COURSE=COURSES[k];if(window.COURSE.assets)Object.assign(window.ASSETS,window.COURSE.assets);const l=document.getElementById('load');if(l)l.textContent=B?'Heading to '+COURSES[k].short+'…':'Laying out the course…';})()
     try{const c=window.COURSE;if(c&&c.lidar){status('Loading '+c.short+' terrain…');const b=await fetch(c.lidar.file).then(r=>r.ok?r.arrayBuffer():null);if(b)c.lidar.data=new Int16Array(b);}}catch(e){console.warn('lidar',e);}
-    await load('dimples.js');await load('intro.js');if(window.COURSE&&window.COURSE.ext)await load(window.COURSE.ext).catch(e=>console.warn('course ext',e));await load('main.js');
+    await load('dimples.js');await load('intro.js');if(window.COURSE&&window.COURSE.ext)await load(window.COURSE.ext).catch(e=>console.warn('course ext',e));/*EXT-DATA*/if(window.COURSE_EXT_READY)await window.COURSE_EXT_READY;await load('main.js');
   }catch(e){console.error(e);status('Couldn’t load the game files. Check that every file uploaded, then reload.');}
 })();

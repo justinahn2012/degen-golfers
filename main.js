@@ -223,7 +223,7 @@ function buildFarTerrain(){const F=D.far;if(!F||!ASSETS)return;camera.far=34000;
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(UV,2));g.setIndex(I);g.computeVertexNormals();g.computeBoundingSphere();
     const hz=new THREE.Color(SKY).convertSRGBToLinear(),m=new THREE.MeshBasicMaterial({map:tex,fog:false});
     m.onBeforeCompile=sh=>{sh.uniforms.uHz={value:new THREE.Vector3(hz.r,hz.g,hz.b)};sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;').replace('#include <project_vertex>','#include <project_vertex>\nvWp=(modelMatrix*vec4(transformed,1.)).xyz;');
-      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform vec3 uHz;').replace('#include <dithering_fragment>','#include <dithering_fragment>\n{float d=length(vWp-cameraPosition);float k=1.-exp(-d/9000.);gl_FragColor.rgb=mix(gl_FragColor.rgb*vec3(.95,1.,1.02),uHz,clamp(k*.8,0.,.8));}');};
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vWp;uniform vec3 uHz;').replace('#include <dithering_fragment>','#include <dithering_fragment>\n{float d=length(vWp-cameraPosition);float k=1.-exp(-d/'+((D.far&&D.far.haze)||9000).toFixed(1)+');gl_FragColor.rgb=mix(gl_FragColor.rgb*vec3(.95,1.,1.02),uHz,clamp(k*.8,0.,.8));}');};
     m.customProgramCacheKey=()=>'farterrain';m.userData.lin=1;const mesh=new THREE.Mesh(g,m);mesh.frustumCulled=false;mesh.renderOrder=-1;scene.add(mesh);
     /* the open lake out to the far shores, with the same water surface as the bay by the course */
     const wm2=(window.__WM||new THREE.MeshBasicMaterial({color:0x223344})).clone();if(wm2.uniforms){for(const k in window.__WM.uniforms){const v=window.__WM.uniforms[k].value;if(v&&(v.isTexture))wm2.uniforms[k]={value:v};}wm2.uniforms.t=window.__WM.uniforms.t;wm2.uniforms.fogN={value:700};wm2.uniforms.fogF={value:6000};wm2.uniforms.fogC={value:new THREE.Color(SKY)};}
@@ -2438,7 +2438,7 @@ function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 
 /* ---------- arcade leaderboard: shared by everyone through /api/scores (falls back to this phone's own board when offline) ---------- */
-const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN'};const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina'};
+const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO'};/*CC-COURSE*/const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina',cc:'Newcastle Coal Creek'};
 (function(){const st=document.createElement('style');st.textContent=`
 .arcade{font-family:'EB Garamond',Georgia,serif;background:linear-gradient(#0b5a37,#064a2c);border:2px solid #c9a227;border-radius:12px;box-shadow:0 0 0 4px #033d23,0 10px 26px rgba(0,0,0,.35);padding:14px 12px 12px;margin:0 0 14px;color:#1c2a22;text-align:center}
 .arcade h2{margin:0 0 2px;font-family:'Playfair Display SC','Playfair Display',Georgia,serif;font-size:22px;letter-spacing:4px;color:#f5eed8;font-weight:700}
@@ -2666,7 +2666,7 @@ function drawThumb(cv,C){const x=cv.getContext('2d'),W=cv.width,Hh=cv.height;con
    (index = slope + 3 x (rating - par); 1 ball = 100, +1 ball per 12), rounded to the nearest half ball:
    Jefferson Park 67.6/113 (par 69) 1.5 | West Seattle 69.4/123 (72) 2.5 | Coeur d'Alene 70.1/122 (71) 2.5 |
    Ko Olina 73.6/138 (72) 4.5 | Newcastle China Creek 73.6/138 (71) 5 */
-const COURSE_DIFF={jp:1.5,ws:2.5,cda:2.5,ko:4.5,nc:5};
+const COURSE_DIFF={jp:1.5,ws:2.5,cda:2.5,ko:4.5,nc:5,cc:5};/* Coal Creek tips 74.8/140, par 72 */
 function diffRow(k){const v=(COURSES[k]&&COURSES[k].diff)||COURSE_DIFF[k];const d=document.createElement('div');d.className='df';if(v==null)return d;
   d.setAttribute('aria-label','Difficulty '+v+' out of 5');let h='<span>Difficulty</span>';
   for(let i=0;i<5;i++){const f=Math.max(0,Math.min(1,v-i)),id='gbh'+k+i;

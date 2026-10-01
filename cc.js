@@ -1,0 +1,129 @@
+/* ===== The Golf Club at Newcastle, Coal Creek: course extension for Degen Golfers '26 =====
+   Loaded by boot.js before main.js (course JSON "ext":"cc.js"); main.js calls these hooks through EXT(name, ...).
+   Coal Creek only. Shares the Pacific Northwest look of China Creek; adds the views: Lake Washington, Mercer Island, downtown
+   Bellevue and downtown Seattle (towers from the 2021 King County lidar), the Space Needle and Mount Rainier. */
+(function(){
+if(window.COURSE_KEY!=='cc')return;
+window.COURSE_EXT_READY=fetch('cc_extra.json').then(r=>r.json()).then(x=>{Object.assign(window.COURSE,x);}).catch(e=>console.warn('[cc] extra data',e));
+const X={};
+const hsh=(x,y)=>{const s=Math.sin(x*12.9898+y*78.233)*43758.5453;return s-Math.floor(s);};
+/* ---------- trees: every crown from the 2021 lidar (position, height, spread); conifer or broadleaf from crown shape, drawn with the game's own PNW atlases ---------- */
+X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.clear();const firs=[],decs=[];
+  for(const q of D.tl){const x=q[0],y=q[1],t={x,y,gz:A.H(x,y),h:q[2],r:q[3],fir:!!q[4],v:Math.floor(hsh(x,y)*(q[4]?2.999:1.999))};TR.push(t);(t.fir?firs:decs).push(t);
+    const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
+  const ld=k=>{const t=new T.TextureLoader().load(window.ASSETS[k]);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;};
+  const pf=new T.TextureLoader().load('pnw_dfirAtlas.webp');pf.encoding=T.sRGBEncoding;pf.anisotropy=4;
+  A.scene.add(A.mkImp(firs,pf,8,3,[1.05,1.05,1.05],.713),A.mkImp(decs,ld('broadAtlas'),4,2,[1.216,1.03],1));
+  console.log('[cc] lidar trees',TR.length,'conifers',firs.length);return true;};
+/* ---------- Lake Washington and Puget Sound: slate-blue water under the PNW sky, masked to the shoreline so the low shores never flicker ---------- */
+X.farWater=function(w,A){const T=A.THREE,D=A.D,F=D.far,N=F.near,WM=window.__WM;const TL=new T.TextureLoader(),mn=TL.load(D.lake.near),mf=TL.load(D.lake.far);for(const x of[mn,mf]){x.minFilter=T.LinearFilter;x.generateMipmaps=false;}
+  const U={sky:{value:A.skyMat.uniforms.sky.value},nm:{value:WM?WM.uniforms.nm.value:null},mn:{value:mn},mf:{value:mf},rot:{value:A.skyMat.uniforms.rot.value},t:A.WT,sun:{value:A.sunDir},uLin:A.LINQ,
+    hz:{value:new T.Color(A.SKY)},bn:{value:new T.Vector4(N.x0,N.x1,N.y0,N.y1)},bf:{value:new T.Vector4(F.x0,F.x1,F.y0,F.y1)},hd:{value:F.haze||9000}};
+  w.material=new T.ShaderMaterial({uniforms:U,extensions:{derivatives:true},
+    vertexShader:'varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform sampler2D sky,nm,mn,mf;uniform float rot,t,uLin,hd;uniform vec3 sun,hz;uniform vec4 bn,bf;varying vec3 vW;'+
+     'vec3 skyS(vec3 d){float u=fract(atan(d.z,d.x)*.1591549+.5+rot);float v=max(asin(clamp(d.y,-1.,1.))*.3183099+.5,.503);return texture2D(sky,vec2(u,v)).rgb;}\n'+
+     'void main(){vec2 p=vW.xz;vec2 lp=vec2(p.x,-p.y);vec2 un=(lp-bn.xz)/(bn.yw-bn.xz),uf=(lp-bf.xz)/(bf.yw-bf.xz);float s=1.;'+
+     'if(un.x>0.&&un.x<1.&&un.y>0.&&un.y<1.)s=texture2D(mn,un).r;else if(uf.x>0.&&uf.x<1.&&uf.y>0.&&uf.y<1.)s=texture2D(mf,uf).r;if(s<.05)discard;'+
+     'float dist=length(cameraPosition-vW);float fp=length(fwidth(p));float fb=1.-smoothstep(.6,4.,fp);'+
+     'vec3 a=texture2D(nm,p/45.+vec2(t*.01,t*.006)).xyz*2.-1.;vec3 b=texture2D(nm,p/13.+vec2(-t*.016,t*.012)).xyz*2.-1.;vec2 pert=(a.xy*.6+b.xy*.4*fb)*.22;vec3 n=normalize(vec3(pert.x,1.,pert.y));'+
+     'vec3 v=normalize(cameraPosition-vW);vec3 r=reflect(-v,n);r.y=abs(r.y);float fr=.03+.97*pow(1.-max(dot(n,v),0.),5.);'+
+     'vec3 body=mix(vec3(.17,.29,.34),vec3(.07,.18,.27),smoothstep(0.,.5,s*s));vec3 col=mix(body,skyS(r),clamp(fr*1.1,0.,.88));'+
+     'col+=vec3(1.,.96,.88)*pow(max(dot(r,normalize(sun)),0.),180.)*1.4;float k=1.-exp(-dist/hd);col=mix(col,hz,clamp(k*.8,0.,.8));'+
+     'if(uLin>.5)col=pow(col,vec3(2.2));gl_FragColor=vec4(col,1.);}'});
+  w.material.customProgramCacheKey=()=>'ccLake';w.renderOrder=0;const o=A.outer;if(o)o.position.y=Math.min(o.position.y,F.lakeH-3);console.log('[cc] lake');};
+/* ---------- the skyline: downtown Seattle and downtown Bellevue as lidar-measured prisms (podium, body and crown for each tower) ---------- */
+const VOFF=0,BSCALE=1.6;/* King County lidar heights match 3DEP (checked on the corrected grids); towers drawn 1.6x (the terrain relief is 1.5x) so the skylines read at 10-16 km */
+function skyline(A){const T=A.THREE,D=A.D,TEE=D.tee0,P=[],C=[],hz=new T.Color(A.SKY).convertSRGBToLinear(),c=new T.Color(),cx=A.MAIN.cx,cy=A.MAIN.cy;
+  const GL=['#7f93a3','#8c9aa4','#9aa6ae','#6f8597','#a7b0b5','#b8b9b4','#8f9ea8','#5f7688'];
+  for(const b of D.sky2){const Pp=b.p;if(Pp.length<3)continue;let mx=0,my=0;for(const q of Pp){mx+=q[0];my+=q[1];}mx/=Pp.length;my/=Pp.length;
+    const zb=1.5*((b.g-VOFF)-TEE)-3,zt=zb+3+(b.h-b.g)*BSCALE,d=Math.hypot(mx-cx,my-cy),k=Math.min(.6,(1-Math.exp(-d/(D.far.haze||9000)))*.6);
+    c.set(GL[Math.floor(hsh(mx,my)*GL.length)]).convertSRGBToLinear().multiplyScalar(1.25);const base=c.clone().lerp(hz,k),top=c.clone().multiplyScalar(1.15).lerp(hz,k);
+    for(let i=0;i<Pp.length;i++){const a=Pp[i],e=Pp[(i+1)%Pp.length],v=[A.V(a[0],a[1],zb),A.V(e[0],e[1],zb),A.V(e[0],e[1],zt),A.V(a[0],a[1],zt)];
+      for(const [vv,cc] of[[v[0],base],[v[1],base],[v[2],top],[v[0],base],[v[2],top],[v[3],top]]){P.push(vv.x,vv.y,vv.z);C.push(cc.r,cc.g,cc.b);}}
+    const sg=new T.ShapeGeometry(new T.Shape(Pp.map(q=>new T.Vector2(q[0],q[1])))),sp=sg.attributes.position,ix=sg.index?Array.from(sg.index.array):[...Array(sp.count).keys()];
+    for(const i of ix){const v=A.V(sp.getX(i),sp.getY(i),zt);P.push(v.x,v.y,v.z);C.push(top.r,top.g,top.b);}}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('color',new T.Float32BufferAttribute(C,3));g.computeVertexNormals();
+  const m=new T.Mesh(g,new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,fog:false}));m.material.userData.lin=1;m.frustumCulled=false;m.renderOrder=-1;A.scene.add(m);console.log('[cc] skyline prisms',D.sky2.length);}
+/* ---------- the Space Needle at Seattle Center (184 m, drawn 1.6x like the towers) ---------- */
+function needle(A){const T=A.THREE,D=A.D,grp=new T.Group(),hz=new T.Color(A.SKY),d=Math.hypot(-15275-A.MAIN.cx,9462-A.MAIN.cy),k=Math.min(.8,(1-Math.exp(-d/(D.far.haze||9000)))*.8);
+  const sm=new T.MeshLambertMaterial({color:new T.Color(0xd9dee2).lerp(hz,k),fog:false}),Hn=184*BSCALE,base=A.V(-15275,9462,1.5*(40-D.tee0)-2),Y=v=>new T.Vector3(0,v,0);
+  const seg=(a,b,r1,r2)=>{const dv=b.clone().sub(a),m=new T.Mesh(new T.CylinderGeometry(r2,r1,dv.length(),8),sm);m.position.copy(a).addScaledVector(dv,.5);m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),dv.normalize());grp.add(m);};
+  const s=Hn/118;for(let k2=0;k2<3;k2++){const an=k2*2.094+.3,c=Math.cos(an),sn=Math.sin(an),foot=base.clone().add(new T.Vector3(c*13*s,0,sn*13*s)),waist=base.clone().add(new T.Vector3(c*3.2*s,Hn*.36,sn*3.2*s)),top=base.clone().add(new T.Vector3(c*6.5*s,Hn*.83,sn*6.5*s));seg(foot,waist,1.5*s,1.1*s);seg(waist,top,1.1*s,1.3*s);}
+  seg(base,base.clone().add(Y(Hn*.86)),2.4*s,2*s);const house=new T.Mesh(new T.CylinderGeometry(15*s,9*s,4.5*s,28),sm);house.position.copy(base).add(Y(Hn*.86));grp.add(house);
+  const roof=new T.Mesh(new T.CylinderGeometry(5*s,14*s,4*s,28),sm);roof.position.copy(base).add(Y(Hn*.86+4.2*s));grp.add(roof);const sp=new T.Mesh(new T.CylinderGeometry(.35*s,1.1*s,Hn*.2,6),sm);sp.position.copy(base).add(Y(Hn*.86+6*s+Hn*.1));grp.add(sp);
+  grp.traverse(o=>{if(o.isMesh){o.frustumCulled=false;o.renderOrder=-1;}});A.scene.add(grp);}
+/* ---------- Mount Rainier on its true bearing (the game's NPS photograph), peak about 4.5 deg above the horizon ---------- */
+function rainier(A){const T=A.THREE;if(!window.ASSETS.rainier)return;const t=new T.TextureLoader().load(window.ASSETS.rainier);t.encoding=T.sRGBEncoding;t.anisotropy=8;
+  const mm=new T.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,fog:false,toneMapped:false,color:new T.Color(.86,.9,.98)});mm.userData.lin=1;
+  const L=Math.hypot(28935,-75902),dx=28935/L,dy=-75902/L,Dd=24000,Hm=3100,Wm=Hm*1.5,cx=A.MAIN.cx,cy=A.MAIN.cy;
+  const pl=new T.Mesh(new T.PlaneGeometry(Wm,Hm),mm);pl.position.copy(A.V(cx+dx*Dd,cy+dy*Dd,Hm*.5-Hm*.34));pl.lookAt(A.V(cx,cy,Hm*.3));pl.renderOrder=-2;pl.frustumCulled=false;A.scene.add(pl);}
+/* ---------- the neighbourhoods round the course: OSM footprints, siding walls, dark composition-shingle hip roofs ---------- */
+function houses(A){const T=A.THREE,D=A.D,P=[],C=[],R=[],RC=[],c=new T.Color();const WALL=['#d8d2c4','#c9c3b5','#b9b7ae','#e0dbd0','#a8a296','#cfc6b2','#9aa3a6'],ROOF=['#3d3f42','#4a4643','#55514c','#3a3632','#5b5f62'];
+  const push=(arr,ca,v,col)=>{arr.push(v.x,v.y,v.z);ca.push(col.r,col.g,col.b);};let n=0;
+  for(const b of D.kbld||[]){const Pp=b.p;let cx=0,cy=0;Pp.forEach(q=>{cx+=q[0];cy+=q[1];});cx/=Pp.length;cy/=Pp.length;const club=/golf club/i.test(b.n||'')||b.t==='clubhouse';const lie=A.lieAt(cx,cy);if(!club&&lie!=='oob'&&lie!=='rough')continue;
+    let gz=1e9;for(const q of Pp)gz=Math.min(gz,A.H(q[0],q[1]));gz-=.4;let ar=0;for(let i=0;i<Pp.length;i++){const a=Pp[i],e=Pp[(i+1)%Pp.length];ar+=a[0]*e[1]-e[0]*a[1];}ar=Math.abs(ar)/2;
+    const rh=club?Math.min(9,.3*Math.sqrt(ar)):Math.min(4,.22*Math.sqrt(ar)),wh=Math.max(2.8,b.h-rh*(club?.5:1)),top=gz+.4+wh;c.set(club?'#8e9396':WALL[Math.floor(hsh(cx,cy)*WALL.length)]).convertSRGBToLinear();
+    for(let i=0;i<Pp.length;i++){const a=Pp[i],e=Pp[(i+1)%Pp.length],v=[A.V(a[0],a[1],gz),A.V(e[0],e[1],gz),A.V(e[0],e[1],top),A.V(a[0],a[1],top)];for(const k of[0,1,2,0,2,3])push(P,C,v[k],c);}
+    c.set(club?'#2f3336':ROOF[Math.floor(hsh(cy,cx)*ROOF.length)]).convertSRGBToLinear();const ap=A.V(cx,cy,top+rh);
+    for(let i=0;i<Pp.length;i++){const a=Pp[i],e=Pp[(i+1)%Pp.length],ev=q=>{const dx=q[0]-cx,dy=q[1]-cy,dd=Math.hypot(dx,dy)||1;return A.V(q[0]+dx/dd*.6,q[1]+dy/dd*.6,top-.15);};push(R,RC,ev(a),c);push(R,RC,ev(e),c);push(R,RC,ap,c);}n++;}
+  for(const [p,cc] of[[P,C],[R,RC]]){if(!p.length)continue;const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('color',new T.Float32BufferAttribute(cc,3));g.computeVertexNormals();
+    const m=new T.Mesh(g,new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide}));m.material.userData.lin=1;m.castShadow=true;m.receiveShadow=true;A.scene.add(m);}console.log('[cc] houses',n);}
+/* ---------- native fescue: the golden unmown rough of the club's photos, mapped from the aerial (cc_fescue.png), painted onto the ground ---------- */
+function fescue(A){const D=A.D,Fz=D.fescue;if(!Fz)return;const img=new Image();img.onload=()=>{try{
+  const w=img.width,h=img.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,w,h),d=id.data,mk=new Uint8ClampedArray(d);
+  for(let i=0;i<d.length;i+=4){const a=d[i]/255,n=(Math.sin(i*.0137)*43758.5453)%1,k=.86+.28*Math.abs(n);d[i]=Math.min(255,166*k);d[i+1]=Math.min(255,164*k);d[i+2]=Math.min(255,104*k);d[i+3]=Math.round(a*120);}
+  try{plantings(A,{w,h,d:mk});}catch(e){console.warn('plantings',e);}
+  x.putImageData(id,0,0);const c=A.ctx,B=A.box,S=c.canvas.width;c.save();c.setTransform(1,0,0,1,0,0);
+  c.drawImage(cv,(Fz.x0-B.X0)/B.WW*S,(B.Y1-Fz.y1)/B.HH*S,(Fz.x1-Fz.x0)/B.WW*S,(Fz.y1-Fz.y0)/B.HH*S);c.restore();A.tex.needsUpdate=true;console.log('[cc] fescue painted');}catch(e){console.warn('[cc] fescue',e);}};img.src=Fz.img;}
+/* ---------- rocky creek banks (as in the club's photos of 1, 3, 7 and the 17th's cascade) ---------- */
+function rockGeo(T,seed){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;let r=seed*9.7;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=1+.25*Math.sin(x*2.3+r)*Math.cos(z*2.1+r*.7)+.12*Math.sin(y*4.7+r*1.3);p.setXYZ(i,x*k,y*k*.7,z*k);}g.computeVertexNormals();return g;}
+function creekRocks(A){const T=A.THREE,D=A.D,L=[],D17=[],near=(x,y)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<110);
+  for(const l of D.creek||[])for(let i=1;i<l.length;i++){const a=l[i-1],b=l[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len;
+    for(let s=0;s<len;s+=1.3){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;for(const sd of[-1,1]){const u=hsh(x*sd,y),o=2.0+u*.9;if(u<.25)continue;L.push([x+nx*sd*o,y+ny*sd*o,.28+hsh(y,x*sd)*.55]);}}}
+  /* the 17th's cascade: boulders round the two small pools short of the green */
+  for(const w of A.WATER){if(w.creek||Math.hypot(w.cx+202,w.cy-231)>40)continue;for(const q of w.p){for(let k=0;k<2;k++){const u=hsh(q[0]+k,q[1]);L.push([q[0]+(u-.5)*2.4,q[1]+(hsh(q[1],q[0]+k)-.5)*2.4,.5+u*.9]);}}}
+  {const h17=A.HOLES.find(h=>h.ref==='17');const pools=A.WATER.filter(w=>!w.creek&&Math.hypot(w.cx+202,w.cy-231)<40);
+   if(h17&&pools.length){const g=h17.p[h17.p.length-1],pr=h17.p[h17.p.length-2],fx=g[0]-pr[0],fy=g[1]-pr[1],fl=Math.hypot(fx,fy),ux=fx/fl,uy=fy/fl,sx=-uy,sy=ux;
+     let mx=0,my=0;pools.forEach(w=>{mx+=w.cx;my+=w.cy;});mx/=pools.length;my/=pools.length;
+     for(let s=-22;s<=22;s+=.9)for(let r=0;r<3;r++){const x=mx+sx*s+ux*(r-1)*1.6+(hsh(s,r)-.5)*.8,y=my+sy*s+uy*(r-1)*1.6+(hsh(r,s)-.5)*.8;D17.push([x,y,.6+hsh(x,y)*.9]);}}}
+  if(!L.length)return;const geos=[rockGeo(T,1),rockGeo(T,2),rockGeo(T,3)],cols=['#8b8a84','#76746d','#9a978e','#6a6862','#a3a097'],m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();
+  geos.forEach((g,gi)=>{const S=L.filter((_,i)=>i%3===gi);if(!S.length)return;const M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.95,flatShading:true}),S.length));
+    S.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.35),q,new T.Vector3(p[2],p[2],p[2]));M.setMatrixAt(i,m);c.set(cols[Math.floor(hsh(p[1],p[0])*cols.length)]);M.setColorAt(i,c);});
+    M.castShadow=true;M.receiveShadow=true;A.scene.add(M);});
+  if(D17.length){const g=rockGeo(T,5),M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.9,flatShading:true}),D17.length)),dk=['#3d3a37','#4a4642','#2f2c29','#55504a'];
+    D17.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.25),q,new T.Vector3(p[2]*1.2,p[2],p[2]*1.1));M.setMatrixAt(i,m);c.set(dk[Math.floor(hsh(p[1],p[0])*dk.length)]);M.setColorAt(i,c);});
+    M.castShadow=true;M.receiveShadow=true;A.scene.add(M);}
+  console.log('[cc] creek rocks',L.length,'17th cascade',D17.length);}
+/* ---------- the PNW plantings from the club's photos: Scotch broom (yellow) in the native areas, wildflower and rhododendron
+   beds by the tees, thick brush in 'dry' penalty areas. Crossed leaf cards, textures drawn at runtime (no files) ---------- */
+function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');let s=kind*977+13;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  const P=[[['#6f8a2c','#5f7a26','#7d9a33'],['#f2d21b','#e8c413','#f7e04a']],[['#4f6e2c','#5b7a33'],['#8d5bc4','#a77ad6','#6f45a8','#c79be8']],[['#2f4f27','#3a5c2e'],['#e0679c','#d24f8a','#ef8fb6','#c43d78']],[['#4d5f2a','#5a6a30','#3e4f22','#6b7536'],['#8a7a46','#6e6a3a']]][kind];
+  for(let i=0;i<60;i++){const a=-Math.PI/2+(r()-.5)*2.4,l=30+r()*60,cx=64+(r()-.5)*30;x.save();x.translate(cx,124);x.rotate(a+Math.PI/2);x.strokeStyle=P[0][Math.floor(r()*P[0].length)];x.lineWidth=kind==0?2:3;x.beginPath();x.moveTo(0,0);x.lineTo((r()-.5)*10,-l);x.stroke();x.restore();}
+  const nf=kind==3?40:kind==0?140:90;for(let i=0;i<nf;i++){const a=r()*6.283,rr=Math.pow(r(),.7)*48,cx=64+Math.cos(a)*rr,cy=(kind==1?40:58)+Math.sin(a)*rr*(kind==1?.9:.6);x.fillStyle=P[1][Math.floor(r()*P[1].length)];
+    x.beginPath();x.arc(cx,cy,kind==2?5+r()*3:kind==0?2+r()*1.6:2.5+r()*2,0,7);x.fill();}
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
+function plants(A,list){if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+  for(const ang of[0,Math.PI/3,2*Math.PI/3]){const g=g0.clone();g.rotateY(ang);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
+  for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
+    L.forEach((p,i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),hsh(p[0],p[1])*6.28);m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-.08),q,new T.Vector3(p[2]*1.25,p[2],p[2]*1.25));M.setMatrixAt(i,m);});
+    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);}}
+function plantings(A,mask){const D=A.D,L=[],near=(x,y,d)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<d);
+  /* broom in the native fescue near play, in clumps */
+  if(mask){const Fz=D.fescue,{w,h,d}=mask;for(let y=Fz.y0+3;y<Fz.y1;y+=5)for(let x=Fz.x0+3;x<Fz.x1;x+=5){const jx=x+(hsh(x,y)-.5)*4,jy=y+(hsh(y,x)-.5)*4,i=Math.floor((jx-Fz.x0)/(Fz.x1-Fz.x0)*w),j=Math.floor((Fz.y1-jy)/(Fz.y1-Fz.y0)*h);
+    if(i<0||j<0||i>=w||j>=h||d[(j*w+i)*4]<150)continue;const cl=Math.sin(jx*.045)*Math.cos(jy*.05)+.6*Math.sin((jx+jy)*.021);if(cl<.55||!near(jx,jy,90))continue;L.push([jx,jy,1.1+hsh(jx*2,jy)*1.1,0]);if(L.length>2200)break;}}
+  /* thick brush and broom filling 'dry' penalty areas */
+  for(const f of D.f){if(!f.dry)continue;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;f.p.forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);});
+    for(let y=y0;y<y1;y+=2.4)for(let x=x0;x<x1;x+=2.4){const jx=x+(hsh(x,y)-.5)*1.6,jy=y+(hsh(y,x)-.5)*1.6;if(A.inP({p:f.p,x0,y0,x1,y1,cx:0,cy:0,R:1e9},jx,jy)||pipLocal(jx,jy,f.p))L.push([jx,jy,1.3+hsh(jx,jy)*1.3,hsh(jy,jx)<.35?0:3]);}}
+  /* wildflower / rhododendron beds beside each first tee */
+  for(const h of A.HOLES){const t0=h.p[0],t1=h.p[1],a=Math.atan2(t1[1]-t0[1],t1[0]-t0[0]),kind=(+h.ref)%3===0?2:1;
+    for(const [al,sd] of[[-11,-9],[-7,10]]){const cx=t0[0]+Math.cos(a)*al-Math.sin(a)*sd,cy=t0[1]+Math.sin(a)*al+Math.cos(a)*sd;for(let k=0;k<22;k++){const x=cx+(hsh(k,cx)-.5)*7,y=cy+(hsh(cy,k)-.5)*4;const l=A.lieAt(x,y);if(l==='rough'||l==='oob')L.push([x,y,.6+hsh(x,y)*.6,kind]);}}}
+  plants(A,L);console.log('[pl] plantings',L.length);}
+function pipLocal(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];if((a[1]>y)!==(b[1]>y)&&x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;}
+function dryHazards(A){const T=A.THREE,D=A.D,dry=D.f.filter(f=>f.dry);if(!dry.length)return;
+  A.scene.traverse(o=>{if(!o.isMesh||!o.geometry||o.material!==window.__WM)return;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox,c=b.getCenter(new T.Vector3()).add(o.position);if(dry.some(f=>pipLocal(c.x,-c.z,f.p)))o.visible=false;});
+  const c=A.ctx;c.save();c.fillStyle='#4a5a2c';for(const f of dry){c.beginPath();f.p.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();}c.restore();A.tex.needsUpdate=true;}
+X.decor=function(A){try{dryHazards(A);}catch(e){console.warn('dry',e);}for(const [n,f] of[['skyline',skyline],['needle',needle],['rainier',rainier],['houses',houses],['fescue',fescue],['rocks',creekRocks]]){try{f(A);}catch(e){console.warn('[cc] '+n,e);}}};
+window.COURSE_EXT=X;
+})();
