@@ -2733,12 +2733,12 @@ const DZ=(()=>{const g=new THREE.Group();g.visible=false;g.renderOrder=11;
 const _hp=new THREE.Vector3();
 function updDizzy(now){const p=cur,on=!!(p&&p.av&&p.av.visible&&(p.over>0||p.beers>=blackAt(p))&&state!=='menu');DZ.g.visible=on;if(!on)return;const bo=p.beers>=blackAt(p),R=p.av.userData.rig;
   if(R&&R.skel)R.B.Head.getWorldPosition(_hp);else if(R&&R.head)R.head.getWorldPosition(_hp);else _hp.copy(p.av.position).add(new THREE.Vector3(0,1.6,0));
-  DZ.g.position.set(_hp.x,_hp.y+(bo?.34:.28),_hp.z);const n=bo?14:6,spd=bo?6.5:2.6,rad=bo?.34:.22;
+  DZ.g.position.set(_hp.x,_hp.y+(bo?.25:.21),_hp.z);/* halo just above the hair; sign close above it so the HUD doesn't cover it */const n=bo?14:6,spd=bo?6.5:2.6,rad=bo?.34:.22;
   DZ.stars.forEach((s,i)=>{s.visible=i<n;if(i>=n)return;const a=now*spd*(bo&&i%2?-1:1)+i/n*6.283,rr=rad*(bo?1+.25*Math.sin(now*5+i):1);s.position.set(Math.cos(a)*rr,.05*Math.sin(now*3+i)+(bo?.09*Math.sin(a*3):0),Math.sin(a)*rr);s.material.color.set(bo?(i%3===0?0xff3355:i%3===1?0xb26bff:0xff9a2e):0xffe27a);s.material.rotation=now*5+i;s.scale.setScalar(bo?.13+.03*Math.sin(now*9+i):.09);});
   DZ.ring.scale.setScalar(rad/.22);DZ.ring.material.color.set(bo?0xff3355:0xffe27a);DZ.ring.rotation.set(Math.PI/2+Math.sin(now*(bo?7:2))*(bo?.55:.15),Math.cos(now*(bo?5:1.5))*(bo?.4:.1),0);
   DZ.ring2.visible=bo;if(bo){DZ.ring2.scale.setScalar(rad/.22*1.35);DZ.ring2.material.color.set(0xb26bff);DZ.ring2.rotation.set(Math.PI/2+Math.cos(now*6)*.6,Math.sin(now*4)*.5,0);}
-  DZ.lw.visible=!bo;DZ.lb.visible=bo;DZ.lw.position.y=.26+.02*Math.sin(now*3);DZ.lw.material.rotation=Math.sin(now*2.2)*.08;
-  if(bo){DZ.lb.position.y=.36;DZ.lb.material.opacity=.7+.3*Math.sin(now*11);DZ.lb.material.rotation=Math.sin(now*6)*.12;DZ.lb.scale.set(1.2+.1*Math.sin(now*8),.29,1);}}
+  DZ.lw.visible=!bo;DZ.lb.visible=bo;DZ.lw.position.y=.14+.015*Math.sin(now*3);DZ.lw.scale.set(1,.235,1);DZ.lw.material.rotation=Math.sin(now*2.2)*.08;
+  if(bo){DZ.lb.position.y=.2;DZ.lb.material.opacity=.7+.3*Math.sin(now*11);DZ.lb.material.rotation=Math.sin(now*6)*.12;DZ.lb.scale.set(1.04+.08*Math.sin(now*8),.25,1);}}
 /* ---------- sound (Web Audio, synthesised) ---------- */
 const SND=(()=>{let ac=null,out=null,on=true,noise=null;try{on=localStorage.getItem('dg-snd')!=='off';}catch(e){}
   function init(){if(ac){if(ac.state==='suspended')ac.resume();return;}try{ac=new(window.AudioContext||window.webkitAudioContext)();out=ac.createGain();out.gain.value=on?.9:0;out.connect(ac.destination);
