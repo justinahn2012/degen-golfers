@@ -528,6 +528,10 @@ function canAt(x,y){const c=D.canopy,i=Math.floor((x-c.x0)/c.sx+.5),j=Math.floor
      if(WATER.some(w=>inP(w,x,y))||FAIRWAYS.some(f=>inP(f,x,y))||obst.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||PATHS.some(p=>dPL(x,y,p)<2.5)||lines.some(l=>dPL(x,y,l.p)<(l.w>20?11:8))||tooClose(x,y,4.2))continue;
      const fir=rnd()<.7,t={x,y,gz:H(x,y),fir,h:(fir?15+rnd()*12:12+rnd()*8)*tall,r:0,v:Math.floor(rnd()*12)};t.r=fir?t.h*.2:t.h*.4;TREES.push(t);added++;const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let a=-R2;a<=R2;a++)for(let b=-R2;b<=R2;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(t);}}
    console.log('tree-line fill',added,'total',TREES.length);}
+ /* course data can clear trees from given spots (D.noTree: [x, y, half-length, half-width, along-x, along-y] ellipses) - done after
+    planting so every other tree on the course stays exactly where it was */
+ if(D.noTree&&D.noTree.length){const rm=t=>D.noTree.some(z=>{const dx=t.x-z[0],dy=t.y-z[1],a=dx*z[4]+dy*z[5],b=-dx*z[5]+dy*z[4];return (a/z[2])**2+(b/z[3])**2<=1;});
+  for(let i=TREES.length-1;i>=0;i--)if(rm(TREES[i]))TREES.splice(i,1);for(const [k,arr] of THASH){const f=arr.filter(t=>!rm(t));if(f.length!==arr.length)THASH.set(k,f);}}
  /* each tree is a camera-facing card cut from an 8-angle (fir) / 4-angle (broadleaf) atlas, blended between neighbouring angles */
  const firs=TREES.filter(t=>t.fir),decs=TREES.filter(t=>!t.fir);
  const iq=new THREE.PlaneGeometry(1,1);iq.translate(0,.5,0);
