@@ -1895,10 +1895,14 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
     for(let k=1;k<=6;k++){const s2=k/6,qx=ex+ux*hl*s2,qy=ey+uy*hl*s2;pts.push({t:a.t+dt2*s2,x:qx,y:qy,z:H(qx,qy)+.021+4*hh*s2*(1-s2)});}sx=hx;sy=hy;st0=a.t+dt2;rd2=Math.max(.05,rd-hl);}
   const v0=Math.sqrt(2*FR[land]*rd2);
   const r=simRoll(sx,sy,ux*v0,uy*v0,st0,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob});return res;}
+/* the speed a putt needs to roll a flat distance d along heading a, paying for each surface it actually crosses.
+   It used to take the friction of wherever the ball started: from the fringe (twice the green's drag) the ball left at the speed
+   for a fringe roll and then ran about twice as far once it reached the green. */
+function puttV0(x,y,a,d){const ca=Math.cos(a),sa=Math.sin(a),st=.25;let e=0,s=0;while(s<d-1e-6){const ds=Math.min(st,d-s),m=s+ds/2,l=lieAt(x+ca*m,y+sa*m);e+=(FR[l]||FR.green)*ds;s+=ds;}return Math.sqrt(2*Math.max(.03,e));}
 function planPutt(p,power,err){/* short-putt forgiveness: inside ~12 ft the pace is pulled toward a firm, holeable speed, the line tightens and the break softens, more so for better putters */
   const D0=dist(p),sk=Math.max(0,Math.min(1,ST(p,'put')/100)),near=(D0<=1.25?1-.25*D0/1.25:.75*Math.pow(Math.max(0,1-(D0-1.25)/1.6),2))*(p.lie==='green'?1:.6);
   let d=p.pmax*power;const ideal=D0+.33+.15*(1-sk);d+=(ideal-d)*near*(.35+.6*sk);
-  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.005*(1.3-ST(p,'put')*.007)/* a quarter of the original start-line miss per unit of meter error: reading the greens is hard enough */,v0=Math.sqrt(2*FR[p.lie]*Math.max(.05,d));
+  const e2=err*(1-near*(.4+.55*sk)),a=p.aim+e2*.005*(1.3-ST(p,'put')*.007)/* a quarter of the original start-line miss per unit of meter error: reading the greens is hard enough */,v0=puttV0(p.x,p.y,a,Math.max(.05,d));
   const r=simRoll(p.x,p.y,Math.cos(a)*v0,Math.sin(a)*v0,0,true,true,1-near*(.35+.55*sk));return{pts:[{t:0,x:p.x,y:p.y,z:H(p.x,p.y)+.021}].concat(r.pts),x:r.x,y:r.y,holed:r.holed,oob:r.oob,putt:true};}
 
 /* ---------- balls ---------- */
@@ -2402,7 +2406,7 @@ function hsRows(tab){return hsAll().filter(r=>tab==='all'||r.c===tab).sort(hsSor
 function hsRender(mark){const el=$('hs');if(!el)return;const tabs=['all','jp','ws','nc','cda'];
   let h='<h2>Leaderboard</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'">'+(t==='all'?'All courses':HS_CN[t])+'</button>').join('')+'</div><div class="board">';
   const L=hsRows(HS.tab);
-  h+='<table><tr><th>Place</th><th>Initials</th><th>Player</th>'+(HS.tab==='all'?'<th>Course</th>':'')+'<th style="text-align:right">Score</th></tr>';
+  h+='<table><tr><th>Place</th><th>Initials</th><th>Character</th>'+(HS.tab==='all'?'<th>Course</th>':'')+'<th style="text-align:right">Score</th></tr>';
   for(let k=0;k<10;k++){const r=L[k],cls=r?(r.tp<0?'hsu':r.tp>0?'hso':'hse'):'';
     h+=r?'<tr class="hr'+(k+1)+(mark&&r.rid===mark?' me':'')+'"><td class="hspos">'+(k+1)+'</td><td class="hsini">'+esc(r.i)+'</td><td class="hsg">'+esc(r.g.split(' ')[0])+'</td>'+(HS.tab==='all'?'<td class="hscr">'+(HS_CS[r.c]||r.c.toUpperCase())+'</td>':'')+'<td class="hssc"><span class="'+cls+'">'+hsTP(r.tp)+'</span><small>'+r.s+'</small></td></tr>'
       :'<tr class="empty"><td class="hspos">'+(k+1)+'</td><td class="hsini">&middot;&middot;&middot;</td><td class="hsg"></td>'+(HS.tab==='all'?'<td class="hscr"></td>':'')+'<td class="hssc">&mdash;</td></tr>';}
@@ -2502,7 +2506,7 @@ function updMeter(){const p=cur;if(!p)return;const c=CLUBS[p.club],tol=tolFor(p,
   $('mLbl').textContent=pw>0?Math.round(pw*100)+'%':(c.putt?'Line marks the hole':'');}
 function updAim(){const p=cur;if(!p||state!=='aim'){ring.visible=aimLine.visible=readLine.visible=false;return;}const c=CLUBS[p.club],dx=Math.cos(p.aim),dy=Math.sin(p.aim);
   if(c.putt){ring.visible=false;const d=dist(p),pts=[];for(let i=0;i<=30;i++){const s=d*i/30;pts.push(V(p.x+dx*s,p.y+dy*s,H(p.x+dx*s,p.y+dy*s)+.03));}setLine(aimLine,pts);aimLine.visible=true;
-    if(readOn){const r=simRoll(p.x,p.y,0,0,0,true,false);const v0=Math.sqrt(2*FR[p.lie]*d);const rr=simRoll(p.x,p.y,dx*v0,dy*v0,0,true,false);setLine(readLine,rr.pts.map(q=>V(q.x,q.y,q.z+.02)));readLine.visible=true;}else readLine.visible=false;}
+    if(readOn){const r=simRoll(p.x,p.y,0,0,0,true,false);const v0=puttV0(p.x,p.y,p.aim,d);const rr=simRoll(p.x,p.y,dx*v0,dy*v0,0,true,false);setLine(readLine,rr.pts.map(q=>V(q.x,q.y,q.z+.02)));readLine.visible=true;}else readLine.visible=false;}
   else{const cr=carryOf(p,p.club)*(p.boost==='rip'?1.12:p.boost==='hl'?1.1:1),ex=p.x+dx*cr,ey=p.y+dy*cr;ring.position.copy(V(ex,ey,H(ex,ey)+.3));ring.visible=true;
     const pts=[];for(let i=0;i<=40;i++){const s=cr*i/40,x=p.x+dx*s,y=p.y+dy*s;pts.push(V(x,y,H(x,y)+.25));}setLine(aimLine,pts);aimLine.visible=true;readLine.visible=false;}
   posGolfer(p,0);}
