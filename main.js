@@ -758,11 +758,17 @@ function getEnv(){if(ENV)return ENV;try{const img=skyT&&skyT.image;if(!img||!img
 function clubType(i){return i===0?'driver':i<=3?'wood':i<=8?'iron':i<=12?'wedge':'putter';}
 const CLUB_LEN={driver:1.1,wood:1.03,iron:.95,wedge:.9,putter:.89};
 /* one club built in its own frame: lead hand at origin, shaft down -Y, face toward +X, toe toward +Z */
+/* the standard putter model: at address, turn the head about the target line so heel and toe sit level, and lower it onto the turf.
+   The lie the game calibrates is taken at impact for the old drawn blade; on this longer head that left the heel up and the toe down. */
+function levelPutter(g){const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;if(!pc)return;const hb=pc.userData.hb,hg=pc.userData.hg;if(!hb||!hg||!hb.userData.neckModel)return;
+  hb.userData.lieFix=null;pc.updateMatrixWorld(true);const e=hg.matrixWorld.elements,lie=Math.atan2(e[9],e[5]);hb.rotation.x=lie;hb.userData.lieFix=lie;hb.userData.axisMount.dy=0;fitPutterNeck(hb);pc.updateMatrixWorld(true);
+  const o=hb.getWorldPosition(new THREE.Vector3()),up=new THREE.Vector3(0,1,0).transformDirection(hb.matrixWorld),gy=H(o.x,-o.z);hb.userData.axisMount.dy=-(o.y-gy)/Math.max(.5,up.y);fitPutterNeck(hb);pc.updateMatrixWorld(true);}
 function fitPutterNeck(hb){const n=hb.userData.neck;if(!n)return;const t0=hb.rotation.x,AM=hb.userData.axisMount;
+  if(hb.userData.lieFix!=null&&hb.rotation.x!==hb.userData.lieFix){hb.rotation.x=hb.userData.lieFix;return fitPutterNeck(hb);}/* the standard putter keeps the lie that sets it flat at address */
   if(AM){/* the shaft line runs through this frame's origin along (0,cos t,-sin t): extend it straight down into the head, and set the
            head so its mount point (the blade-to-disc junction, centred heel to toe) sits right where the shaft meets it */
-    const tn=Math.tan(t0),zA=-AM.y*tn;hb.userData.nA=new THREE.Vector3(0,AM.y,zA);hb.userData.nB=new THREE.Vector3(0,.04,-.04*tn);hb.userData.nC=new THREE.Vector3(0,.058,-.058*tn);
-    for(const m of hb.userData.hm||[])m.position.set(AM.xj,0,zA-AM.zc);hb.userData.fc=new THREE.Vector3((AM.fx!=null?AM.fx:.0172)+AM.xj+.0214,.013,zA);}
+    const dS=AM.dy||0,tn=Math.tan(t0),zA=-(AM.y+dS)*tn;hb.userData.nA=new THREE.Vector3(0,AM.y+dS,zA);hb.userData.nB=new THREE.Vector3(0,.04,-.04*tn);hb.userData.nC=new THREE.Vector3(0,.058,-.058*tn);
+    for(const m of hb.userData.hm||[])m.position.set(AM.xj,dS,zA-AM.zc);hb.userData.fc=new THREE.Vector3((AM.fx!=null?AM.fx:.0172)+AM.xj+.0214,AM.fcy!=null?dS+AM.fcy:.013,zA+(AM.fcz||0));}
   if(hb.userData.neckModel&&hb.userData.nA){/* the standard putter's own plumber's neck: from the head's mount straight to where the shaft ends, whatever the lie */
     const NM=hb.userData.neckModel,t1=hb.rotation.x,A1=hb.userData.nA,se=hb.userData.sEnd||.075,tp=new THREE.Vector3(0,se*Math.cos(t1),-se*Math.sin(t1)),dv=tp.clone().sub(A1),L1=dv.length();
     NM.g.position.copy(A1);NM.g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dv.normalize());NM.g.scale.set(1,L1/NM.L0,1);return;}
@@ -792,7 +798,7 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'std';/* 'std' = the silver
   const seg=(y0,y1,r0,r1,m,par,sg)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,Math.abs(y1-y0),sg||20),m);c.position.y=(y0+y1)/2;par.add(c);return c;};
   const mk=(type,build)=>{const L=CLUB_LEN[type],cg=new THREE.Group();
     const gp=seg(.11,-.165,.0132,.0104,gripM,cg,24);if(type==='putter')gp.scale.set(1.32,1,.95);const cap=new THREE.Mesh(new THREE.SphereGeometry(.0133,20,10,0,Math.PI*2,0,Math.PI/2),gripM);cap.position.y=.11;cg.add(cap);
-    const SEND=type==='putter'&&PSTYLE==='std'?.125:.075/* the standard putter model's neck needs 5 cm more room */,top=-.165,bot=-L+SEND,isWood=type==='driver'||type==='wood';
+    const SEND=type==='putter'&&(PSTYLE==='std'||PSTYLE==='blackout'||PSTYLE==='oilslick')?.125:.075/* the standard putter model's neck needs 5 cm more room */,top=-.165,bot=-L+SEND,isWood=type==='driver'||type==='wood';
     if(isWood){/* graphite: dark glossy body, a colour band and wordmark under the grip, tapering to the hosel */
       /* a golfer can have his own driver shaft (look.shaft: body = three gradient colours top/middle/bottom, band = the colour band under the grip) */
       const SH=((type==='driver'||(type==='wood'&&lk&&lk.shaftWoods))&&lk&&lk.shaft)||{}/* look.shaftWoods: the fairway woods get the driver's shaft too */,sb=SH.body||['#1a2233','#0f1522','#1b2436'],sband=SH.band||'#2d6bd8',skey=sb.join()+sband;window._shaftTexs=window._shaftTexs||{};
@@ -904,13 +910,13 @@ mk('driver',withModel(wood(1,dh&&dh.tint&&!dh.c?S({map:T.carbon,color:new THREE.
       window._spiderP=window._spiderP||new Promise(res=>new THREE.GLTFLoader().load('putter_spider.glb',res,undefined,()=>res(null)));
       window._spiderP.then(gl=>{if(gl)put(gl);});
     }
-    if(PSTYLE==='std'){/* the standard putter model: the drawn blade above shows only until it has loaded */
+    if(PSTYLE==='std'||PSTYLE==='blackout'||PSTYLE==='oilslick'){/* the standard putter model (blackout and oil-slick are the same head in their colours): the drawn blade above shows only until it has loaded */
       window._pstdP=window._pstdP||new Promise(res=>new THREE.GLTFLoader().load('putter_std.glb',res,undefined,()=>res(null)));
       window._pstdP.then(gl=>{if(!gl)return;const hd=gl.scene.getObjectByName('pHead'),nk=gl.scene.getObjectByName('pNeck');if(!hd||!nk)return;
         hb.children.forEach(c=>c.visible=false);hg.children.forEach(c=>{if(c!==hb)c.visible=false;});
-        const tint=lk&&lk.putterTint,mk2=(o,par,list)=>o.traverse(q=>{if(!q.isMesh)return;let mt=q.material;if(tint){mt=mt.clone();mt.color=new THREE.Color(tint);mt.metalness=.95;mt.roughness=.24;}const m=new THREE.Mesh(q.geometry,mt);if(env&&m.material&&!m.material.envMap){m.material.envMap=env;m.material.envMapIntensity=1.1;m.material.needsUpdate=true;}m.castShadow=true;par.add(m);list&&list.push(m);});
+        const tint=(lk&&lk.putterTint)||(PSTYLE==='blackout'?'#1b1c1f':PSTYLE==='oilslick'?'#6c78d6':null),dark=PSTYLE==='blackout',mk2=(o,par,list)=>o.traverse(q=>{if(!q.isMesh)return;let mt=q.material;if(tint){mt=mt.clone();mt.color=new THREE.Color(tint);mt.metalness=dark?.45:.95;mt.roughness=dark?.55:.24;}const m=new THREE.Mesh(q.geometry,mt);if(env&&m.material&&!m.material.envMap){m.material.envMap=env;m.material.envMapIntensity=1.1;m.material.needsUpdate=true;}m.castShadow=true;par.add(m);list&&list.push(m);});
         const hm=[];mk2(hd,hb,hm);hb.userData.hm=hm;const ng=new THREE.Group();mk2(nk,ng);hb.add(ng);
-        hb.userData.axisMount={xj:.0106,zc:-.0087,y:.0423,fx:-.001};hb.userData.neckModel={g:ng,L0:.0839};hb.userData.neck=hb.userData.neck||[];hb.userData.sEnd=.125;
+        hb.userData.axisMount={xj:.0106,zc:-.0043,y:.0163,fx:.0037,fcz:.0303,fcy:.0214};hb.userData.neckModel={g:ng,L0:.0839};hb.userData.neck=hb.userData.neck||[];hb.userData.sEnd=.125;
         const fr=new THREE.Mesh(new THREE.CylinderGeometry(.0052,.0058,.016,24),S({color:0x0b0b0d,metalness:.4,roughness:.3}));fr.position.y=.129;hg.add(fr);
         fitPutterNeck(hb);});}
     if(PSTYLE==='lab'||PSTYLE==='labmid'||PSTYLE==='spider'){hb.userData.neck=[segMesh(.0042,.0042,neckMat,hb),segMesh(.0042,.0042,neckMat,hb),segMesh(.0046,.0042,neckMat,hb)];hb.userData.jn=[new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat),new THREE.Mesh(new THREE.SphereGeometry(.0043,12,8),neckMat)];hb.userData.jn.forEach(m=>hb.add(m));fitPutterNeck(hb);
@@ -2253,7 +2259,7 @@ function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.a
   {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;
   /* putting: pose the stroke at impact, measure exactly where the putter face is, and set the golfer so the face meets the ball -
      exact for every body and stance (the women's taller address lengthens the putter to reach the turf) */
-  if(pt){try{const g=p.av;g.updateMatrixWorld(true);applyPose(g,swingPose('down',1,.5,true),'putter');g.updateMatrixWorld(true);const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;
+  if(pt){try{const g=p.av;g.updateMatrixWorld(true);try{applyPose(g,swingPose('addr',0,0,true),'putter');g.updateMatrixWorld(true);levelPutter(g);}catch(e){console.warn('level putter',e);}applyPose(g,swingPose('down',1,.5,true),'putter');g.updateMatrixWorld(true);const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;
     if(pc&&pc.userData.hb){pc.updateMatrixWorld(true);const f=pc.userData.hb.localToWorld(pc.userData.hb.userData.fc?pc.userData.hb.userData.fc.clone():new THREE.Vector3(.0175+.0214,.013,.049)),b=V(p.x,p.y,0),dx=b.x-f.x,dz=b.z-f.z;
       if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(H(gx2+sx,gy2+sy)+H(gx2-sx,gy2-sy)+H(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
   applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
