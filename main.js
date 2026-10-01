@@ -2275,26 +2275,66 @@ let CELEB=null;
    camera on the uppercut and back round for the roar - is in the clip, framed for the celebration camera (27 deg off
    the golfer's front, on his left), which is where the broadcast camera stood. */
 const CELEB_IN=.22;
+/* birdie celebrations: one is picked at random each time (never the same one twice in a row) */
+const CELEB_CLIPS=['celeb','celeb_walkpump','celeb_roar','celeb_clench'];let _celebLast='';
+function pickCeleb(){const ok=CELEB_CLIPS.filter(k=>ANIM&&ANIM.clips&&ANIM.clips[k]);if(!ok.length)return null;const pool=ok.length>1?ok.filter(k=>k!==_celebLast):ok;_celebLast=pool[Math.floor(Math.random()*pool.length)];return _celebLast;}
 function celebFeet(g,A){/* both feet stay planted on the turf; the knee keeps pointing where the clip put it */
   const R=g.userData.rig,B=R.B,sc=g.scale.y||1;g.updateMatrixWorld(true);
   for(const s of['l','r']){const th=B['thigh_'+s],ca=B['calf_'+s],ft=B['foot_'+s];if(!th||!ca||!ft)continue;
-    const fq=relQ(g,ft),a=gpG(g,ft),w=g.localToWorld(a.clone()),gy=A.footY+(H(w.x,-w.z)-g.position.y)/sc;if(Math.abs(a.y-gy)<.003)continue;
+    const fq=relQ(g,ft),a=gpG(g,ft),w=g.localToWorld(a.clone()),dg=(H(w.x,-w.z)-g.position.y)/sc,gy=(a.y-A.footY<.035?A.footY:a.y)+dg;if(Math.abs(a.y-gy)<.003)continue;/* planted feet are pinned to the turf; a foot the clip lifts mid-stride stays up */
     const S0=gpG(g,th),E0=gpG(g,ca),l1=S0.distanceTo(E0),l2=E0.distanceTo(a),T=a.clone();T.y=gy;const v=T.sub(S0),D=Math.min(v.length(),l1+l2-.002);v.setLength(D);
     const dn=v.clone().normalize(),aa=(l1*l1-l2*l2+D*D)/(2*D),hh=Math.sqrt(Math.max(0,l1*l1-aa*aa)),pole=E0.clone().sub(S0);pole.addScaledVector(dn,-pole.dot(dn));
     if(pole.lengthSq()<1e-8)pole.set(0,0,1);pole.normalize();const E=S0.clone().addScaledVector(dn,aa).addScaledVector(pole,hh);
     aimBoneG(g,th,ca,E);aimBoneG(g,ca,ft,S0.clone().add(v));setRelG(g,ft,fq);}}
-function celebPump(g,A,t){const C=ANIM&&ANIM.clips&&ANIM.clips.celeb;if(!C)return false;const R=g.userData.rig,B=R.B;
+function celebRest(g,A){/* rest-pose references, measured once per celebration (feet height, head and hand frames) */
+  const B=g.userData.rig.B;animReset(g);A.footY=Math.min(gpG(g,B.foot_l).y,gpG(g,B.foot_r).y);A.hq0=B.Head?relQ(g,B.Head):null;A.hf0={};
+  for(const s of['l','r']){const ha=B['hand_'+s],mi=B['middle_01_'+s],th=B['thumb_01_'+s];if(!ha||!mi||!th)continue;
+    const h=gpG(g,ha).clone(),d=gpG(g,mi).clone().sub(h).normalize(),tv=gpG(g,th).clone().sub(h);tv.addScaledVector(d,-tv.dot(d));
+    A.hf0[s]={q:relQ(g,ha),d,n:new THREE.Vector3().crossVectors(d,tv).normalize().multiplyScalar(s==='l'?1:-1)};}}
+function celebEar(g,A,e,t){/* "come on, let's hear it": the open hand stands out from the side of the head like a scoop, palm forward, and the fingertips touch the back of the ear */
+  const R=g.userData.rig,B=R.B,s=e.side,sg=s==='l'?1:-1,sm=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},w=Math.min(sm(e.t0,e.t0+.25,t),1-sm(e.t1,e.t1+.3,t));
+  const ha=B['hand_'+s],m3=B['middle_03_'+s],hf=A.hf0&&A.hf0[s];if(w<=0||!B.Head||!ha||!m3||!hf||!A.hq0)return;
+  const V=(x,y,z)=>new THREE.Vector3(x,y,z),qh=relQ(g,B.Head).multiply(A.hq0.clone().invert()),lat=V(1,0,0).applyQuaternion(qh),up=V(0,1,0).applyQuaternion(qh),fw=V(0,0,1).applyQuaternion(qh);
+  const k=(R.anim&&R.anim.k)||1,goal=gpG(g,B.Head).clone().addScaledVector(up,(e.up||.059)*k).addScaledVector(lat,sg*(e.out||.086)*k).addScaledVector(fw,-(e.back||.022)*k);
+  const dir=lat.clone().multiplyScalar(-sg).addScaledVector(up,.3).addScaledVector(fw,-.12).normalize(),palm=fw.clone();
+  const F=(p,q)=>{const P=p.clone().normalize(),Q=q.clone().addScaledVector(P,-q.dot(P)).normalize();return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(Q,P,new THREE.Vector3().crossVectors(Q,P)));};
+  const want=F(dir,palm).multiply(F(hf.d,hf.n).invert()).multiply(hf.q.clone()),tl=boneTipLocal(g,m3);
+  const tipNow=()=>{g.updateMatrixWorld(true);return tl?g.worldToLocal(m3.localToWorld(tl.clone())):gpG(g,m3).clone();};
+  const S0=gpG(g,B['upperarm_'+s]).clone(),pole=S0.clone().addScaledVector(lat,sg*.6).addScaledVector(fw,.15).addScaledVector(up,-.3),start=gpG(g,ha).clone();
+  setRelG(g,ha,want);let wr=goal.clone().sub(tipNow().sub(gpG(g,ha)));
+  for(let it=0;it<3;it++){armTo(g,s,start.clone().lerp(wr,w),pole);setRelG(g,ha,want);if(w<1)break;const err=goal.clone().sub(tipNow());if(err.length()<.002)break;wr.add(err);}
+  if(w<1)setRelG(g,ha,relQ(g,ha).slerp(want,w));}
+function celebHands(g,sc){const B=g&&g.userData.rig&&g.userData.rig.B;if(!B)return;for(const s of['l','r'])if(B['hand_'+s])B['hand_'+s].scale.setScalar(sc);}
+function celebFist(g,P){/* a real fist: square row of knuckles, fingers wrapped round a hollow (not crushed into the palm), thumb lying across the middle segments of the index and middle fingers */
+  const B=g.userData.rig.B,o=Object.assign({k1:0,k2n:.3,k3:.45,t1:.5},P||{});if(typeof aimBoneG!=='function')return;
+  for(const s of['l','r']){const sg=s==='l'?1:-1,hd=B['hand_'+s],m1=B['middle_01_'+s],i1=B['index_01_'+s],p1=B['pinky_01_'+s];if(!hd||!m1||!i1||!p1)continue;
+    const W=gpG(g,hd).clone(),K=gpG(g,m1).clone(),toW=W.clone().sub(K).normalize(),fk=toW.clone().negate(),across=gpG(g,i1).clone().sub(gpG(g,p1)).normalize();
+    across.addScaledVector(fk,-across.dot(fk)).normalize();const n=new THREE.Vector3().crossVectors(fk,across).multiplyScalar(sg).normalize();   // palm side
+    for(const f of['index','middle','ring','pinky']){const b1=B[f+'_01_'+s],b2=B[f+'_02_'+s],b3=B[f+'_03_'+s];if(!b1||!b2)continue;
+      const q1=gpG(g,b1).clone(),l1=q1.distanceTo(gpG(g,b2));aimBoneG(g,b1,b2,q1.clone().addScaledVector(n.clone().addScaledVector(fk,o.k1).normalize(),l1));
+      if(!b3)continue;const q2=gpG(g,b2).clone(),l2=q2.distanceTo(gpG(g,b3));aimBoneG(g,b2,b3,q2.clone().addScaledVector(toW.clone().addScaledVector(n,o.k2n).normalize(),l2));
+      const q3=gpG(g,b3).clone();aimTip(g,b3,q3.clone().addScaledVector(toW.clone().multiplyScalar(o.k3).addScaledVector(n,-1).normalize(),.03));}
+    const t1=B['thumb_01_'+s],t2=B['thumb_02_'+s],t3=B['thumb_03_'+s];if(!t1||!t2||!t3)continue;
+    const mid=(a,b)=>gpG(g,B[a+'_'+s]).clone().lerp(gpG(g,B[b+'_'+s]),.5);
+    /* metacarpal swings only part way across; the two thumb segments lie on the outside of the index and middle fingers' middle segments */
+    const a1=gpG(g,t1).clone(),L1=a1.distanceTo(gpG(g,t2)),cur=gpG(g,t2).clone().sub(a1).normalize(),P1=gpG(g,i1).clone().addScaledVector(n,.035).sub(a1).normalize();
+    aimBoneG(g,t1,t2,a1.clone().addScaledVector(cur.lerp(P1,o.t1).normalize(),L1));
+    const a2=gpG(g,t2).clone(),L2=a2.distanceTo(gpG(g,t3)),P2=mid('index_02','index_03').addScaledVector(n,.014);aimBoneG(g,t2,t3,a2.clone().addScaledVector(P2.sub(a2).normalize(),L2));
+    aimTip(g,t3,mid('middle_02','middle_03').addScaledVector(n,.014));}}
+function celebPump(g,A,t){const ck=A.clip||'celeb',C=ANIM&&ANIM.clips&&ANIM.clips[ck];if(!C)return false;const R=g.userData.rig,B=R.B;
   if(!A.snap){/* the pose the golfer finished the putt in: the roar blends out of it */
     const q={};for(const n of ANIM.bones)if(B[n])q[n]=relQ(g,B[n]);A.snap={q,pp:B.pelvis.position.clone()};
-    animReset(g);A.footY=Math.min(gpG(g,B.foot_l).y,gpG(g,B.foot_r).y);}
-  const f=Math.max(0,Math.min(C.n-1,t*ANIM.fps));animApply(g,'celeb',f);
+    celebRest(g,A);}
+  const f=Math.max(0,Math.min(C.n-1,t*ANIM.fps));animApply(g,ck,f);
   const k=Math.max(0,Math.min(1,t/CELEB_IN)),wi=k*k*(3-2*k);
   if(wi<1){for(const n of ANIM.bones){const b=B[n];if(!b||!A.snap.q[n])continue;setRelG(g,b,A.snap.q[n].clone().slerp(relQ(g,b),wi));}
     B.pelvis.position.lerpVectors(A.snap.pp,B.pelvis.position.clone(),wi);B.pelvis.updateMatrixWorld(true);}
+  if(C.ear)try{celebEar(g,A,C.ear,t);}catch(e){}
   try{celebFeet(g,A);}catch(e){}
-  fistThumbs(g);return true;}
+  if(!C.nofist){celebFist(g);const d=(C.n-1)/ANIM.fps,q=x=>Math.max(0,Math.min(1,x)),wf=Math.min(q(t/.3),q((d-.12-t)/.3));celebHands(g,1+.25*wf*wf*(3-2*wf));}
+  return true;}
 
-function startCeleb(p,kind){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel||typeof armTo!=='function')return false;CELEB={p,kind,t0:performance.now()/1000+.45,dur:kind==='pump'?(ANIM&&ANIM.clips&&ANIM.clips.celeb?(ANIM.clips.celeb.n-1)/ANIM.fps:2.7):3.1};return true;}
+function startCeleb(p,kind){if(!p||!p.av||!p.av.userData.rig||!p.av.userData.rig.skel||typeof armTo!=='function')return false;const clip=kind==='pump'?pickCeleb():null;CELEB={p,kind,clip,t0:performance.now()/1000+.45,dur:kind==='pump'?(clip?(ANIM.clips[clip].n-1)/ANIM.fps:2.7):3.1};return true;}
 /* where a bone's own skin points (for end joints like the thumb tip, which have no child bone to aim at) - measured once from the bind pose */
 function boneTipLocal(g,bone){if(bone.userData.tipL!==undefined)return bone.userData.tipL;bone.userData.tipL=null;let body=null;g.traverse(o=>{if(o.isSkinnedMesh&&o.skeleton&&o.skeleton.bones.includes(bone))body=o;});if(!body)return null;
   const sk=body.skeleton,bi=sk.bones.indexOf(bone),inv=sk.boneInverses[bi],G=body.geometry,SI=G.attributes.skinIndex.array,SW=G.attributes.skinWeight.array,P=G.attributes.position,v=new THREE.Vector3(),pts=[];
@@ -2319,8 +2359,8 @@ function fistThumbs(g){/* a real closed fist: every finger folds into the palm, 
     const a2=gpG(g,t2),L2=a2.distanceTo(gpG(g,t3)),M=gpG(g,mm).addScaledVector(n,.015);aimBoneG(g,t2,t3,a2.clone().add(M.sub(a2).normalize().multiplyScalar(L2)));
     /* the last thumb joint folds over the middle/ring fingers too */const r2=B['ring_02_'+s]||B['ring_01_'+s];aimTip(g,t3,gpG(g,mm).lerp(r2?gpG(g,r2):gpG(g,mm),.5).addScaledVector(n,.012));
     for(const f of['index','middle','ring','pinky']){const b3=B[f+'_03_'+s];if(b3)aimTip(g,b3,W.clone().addScaledVector(n,.02));}}}
-function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=null;return;}const t=now-A.t0;if(t<0)return;const u=t/A.dur;
-  const p=A.p,g=p.av,R=g.userData.rig,B=R.B;if(u>=1){CELEB=null;return;}if(swingAnim&&swingAnim.p===p)swingAnim=null;for(const k in R.clubs)R.clubs[k].visible=false;if(A.kind==='pump'&&celebPump(g,A,t))return;
+function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){if(A.p&&A.p.av)celebHands(A.p.av,1);CELEB=null;return;}const t=now-A.t0;if(t<0)return;const u=t/A.dur;
+  const p=A.p,g=p.av,R=g.userData.rig,B=R.B;if(u>=1){celebHands(g,1);CELEB=null;return;}if(swingAnim&&swingAnim.p===p)swingAnim=null;for(const k in R.clubs)R.clubs[k].visible=false;if(A.kind==='pump'&&celebPump(g,A,t))return;
   const ss=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);},V3=(x,y,z)=>new THREE.Vector3(x,y,z),Rx=a=>new THREE.Quaternion().setFromAxisAngle(V3(1,0,0),a),Ry=a=>new THREE.Quaternion().setFromAxisAngle(V3(0,1,0),a);
   animReset(g);try{feetToGround(g);}catch(e){}
   const rot=(b,q)=>{if(b)setRelG(g,b,q.multiply(relQ(g,b)));};
@@ -2342,11 +2382,11 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){CELEB=nul
     const tR=gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)).lerp(load,crouch).lerp(arc,ss(0,.02,uu)).lerp(flex,ss(.36,.4,uu));tR.lerp(gpG(g,B.pelvis).addScaledVector(side,.26).add(V3(0,-.05,.06)),ss(.92,1,uu));/* one punch up, then held */
     armTo(g,'r',tR,shR().addScaledVector(side,.7).addScaledVector(up,-.1).addScaledVector(fwd,-.04));
     const tL=gpG(g,B.pelvis).addScaledVector(sideL,.26).add(V3(0,-.05,.06)).lerp(shL().addScaledVector(sideL,.5).addScaledVector(up,-.34).addScaledVector(fwd,.1),pose);
-    armTo(g,'l',tL,shL().addScaledVector(sideL,.3).addScaledVector(up,-.5).addScaledVector(fwd,-.25));fistThumbs(g);}
+    armTo(g,'l',tL,shL().addScaledVector(sideL,.3).addScaledVector(up,-.5).addScaledVector(fwd,-.25));try{celebFist(g);}catch(e){fistThumbs(g);}}
   else{const on=ss(0,.2,u)*(1-ss(.9,1,u)),hang=ss(.12,.3,u)*(1-ss(.9,1,u)),shake=Math.sin(t*8.5)*.24*ss(.28,.4,u)*(1-ss(.78,.9,u));
     rot(B.spine_02,Rx(.14*hang));rot(B.neck_01,Rx(.22*hang));rot(B.Head,Ry(shake).multiply(Rx(.34*hang)));
     const hipL=pel.clone().add(V3(.2,.07,.02)),hipR=pel.clone().add(V3(-.2,.07,.02));
-    armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));fistThumbs(g);}}
+    armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));try{celebFist(g);}catch(e){fistThumbs(g);}/* the new fist (square knuckles, wrapped fingers, thumb across) on the hips too */}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
   let cel=false;if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;const dd=p.strokes-PAR;if(dd<=-1)cel=startCeleb(p,'pump');else if(dd>=2)cel=startCeleb(p,'hips');}
   else if(r.oob){p.strokes++;const wet=lieAt(r.x,r.y)==='water';big=wet?(inGulch(r.x,r.y)?'In the gulch':'In the water'):'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';
@@ -2357,7 +2397,7 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
     if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';cel=startCeleb(p,'hips');}}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
-  let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result'){CELEB=null;startReplay(r,p,safe(()=>startTurn(),'next turn'));}},'replay'),cel?4600:1300);}else setTimeout(safe(()=>{if(state==='result'){CELEB=null;startTurn();}},'next turn'),cel?4800:r.holed?2600:2100);}
+  let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result'){CELEB=null;startReplay(r,p,safe(()=>startTurn(),'next turn'));}},'replay'),cel?Math.max(4600,CELEB?Math.round(CELEB.dur*1000)+600:0):1300);}else setTimeout(safe(()=>{if(state==='result'){CELEB=null;startTurn();}},'next turn'),cel?Math.max(4800,CELEB?Math.round(CELEB.dur*1000)+800:0):r.holed?2600:2100);}
 function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 
