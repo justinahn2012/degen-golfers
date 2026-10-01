@@ -2402,7 +2402,7 @@ function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 
 /* ---------- arcade leaderboard: shared by everyone through /api/scores (falls back to this phone's own board when offline) ---------- */
-const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCST',cda:'CDA',ko:'KOLN'};const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle',cda:"Coeur d'Alene",ko:'Ko Olina'};
+const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN'};const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina'};
 (function(){const st=document.createElement('style');st.textContent=`
 .arcade{font-family:'EB Garamond',Georgia,serif;background:linear-gradient(#0b5a37,#064a2c);border:2px solid #c9a227;border-radius:12px;box-shadow:0 0 0 4px #033d23,0 10px 26px rgba(0,0,0,.35);padding:14px 12px 12px;margin:0 0 14px;color:#1c2a22;text-align:center}
 .arcade h2{margin:0 0 2px;font-family:'Playfair Display SC','Playfair Display',Georgia,serif;font-size:22px;letter-spacing:4px;color:#f5eed8;font-weight:700}
