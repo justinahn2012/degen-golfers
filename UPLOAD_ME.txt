@@ -1,0 +1,24 @@
+AUGUSTA NATIONAL — upload these 14 files to the top level of the GitHub repo (same place as main.js).
+Nothing to run. 11 are new; 3 replace the existing files of the same name.
+
+NEW (11):
+  ag.js
+  ag.json
+  ag_extra.json
+  ag.lidar.bin
+  ag_far.bin
+  ag_far.jpg
+  ag_near.bin
+  ag_near.jpg
+  ag_straw.png
+  ag_lobAtlas.webp
+  ag_dogwAtlas.webp
+
+REPLACE (3) — today's live versions with Augusta added to the course list and leaderboards:
+  main.js
+  boot.js
+  intro.js
+
+If the main chat has changed main.js, boot.js or intro.js since 2 Oct, don't upload those three:
+ask the main chat to add Augusta to them instead (key 'ag', leaderboard code ANGC, after Ko Olina).
+Leaderboard code: ANGC (par 72). If the scores server checks course codes, it needs ANGC added.

@@ -2463,7 +2463,7 @@ function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 
 /* ---------- arcade leaderboard: shared by everyone through /api/scores (falls back to this phone's own board when offline) ---------- */
-const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO',cb:'CBAY'};/*CC-COURSE*/const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina',cc:'Newcastle Coal Creek',cb:'Chambers Bay'};
+const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO',cb:'CBAY',ag:'ANGC'};/*AG-COURSE*//*CC-COURSE*/const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina',cc:'Newcastle Coal Creek',cb:'Chambers Bay',ag:'Augusta National'};
 (function(){const st=document.createElement('style');st.textContent=`
 .arcade{font-family:'EB Garamond',Georgia,serif;background:linear-gradient(#0b5a37,#064a2c);border:2px solid #c9a227;border-radius:12px;box-shadow:0 0 0 4px #033d23,0 10px 26px rgba(0,0,0,.35);padding:14px 12px 12px;margin:0 0 14px;color:#1c2a22;text-align:center}
 .arcade h2{margin:0 0 2px;font-family:'Playfair Display SC','Playfair Display',Georgia,serif;font-size:22px;letter-spacing:4px;color:#f5eed8;font-weight:700}
@@ -2698,7 +2698,7 @@ function diffRow(k){const v=(COURSES[k]&&COURSES[k].diff)||COURSE_DIFF[k];const 
     h+='<svg class="gb" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="'+id+'"><rect x="0" y="0" width="'+(20*f)+'" height="20"/></clipPath></defs>'+
       '<circle cx="10" cy="10" r="8.6" class="e"/>'+(f>0?'<g clip-path="url(#'+id+')"><circle cx="10" cy="10" r="8.6" class="f"/></g>':'')+'</svg>';}
   d.innerHTML=h;return d;}
-const COURSE_ORDER=['jp','ws','nc','cc','cb','cda','ko'];/* course select order; any course not listed goes at the end */
+const COURSE_ORDER=['jp','ws','nc','cc','cb','cda','ko','ag'];/* course select order; any course not listed goes at the end */
 function buildCourses(){const w=$('cCards');w.innerHTML='';const ks=Object.keys(COURSES).sort((a,b)=>{const ia=COURSE_ORDER.indexOf(a),ib=COURSE_ORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});for(const k of ks){const C=COURSES[k],b=document.createElement('button');b.className='cc';b.setAttribute('aria-pressed',String(k===selC));
     b.innerHTML='<canvas width="480" height="300"></canvas><div><h3></h3><div class="a"></div><div class="s"></div></div>';b.querySelector('h3').textContent=C.short;b.querySelector('.a').textContent=C.area;
     b.querySelector('.s').textContent='Par '+C.par+', '+C.yd.toLocaleString()+' yards, 18 holes';b.querySelector('div').appendChild(diffRow(k));drawThumb(b.querySelector('canvas'),C);b.onclick=()=>{selC=k;buildCourses();};w.appendChild(b);}
