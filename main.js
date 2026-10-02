@@ -438,7 +438,7 @@ const ground=new THREE.Mesh(gGeo,gmat);ground.receiveShadow=true;scene.add(groun
 /* bunkers get their own 35 cm mesh so the lip, face and floor actually show; the coarse ground under them is tucked away */
 {const gp=gGeo.attributes.position;for(let i=0;i<gp.count;i++){const x=gp.getX(i),y=-gp.getZ(i);for(const b of BUNKERS){if(x<b.x0||x>b.x1||y<b.y0||y>b.y1)continue;if(inP(b,x,y)){gp.setY(i,gp.getY(i)-.7);break;}}}gp.needsUpdate=true;gGeo.computeVertexNormals();
  const gB=gmat.clone();gB.onBeforeCompile=gmat.onBeforeCompile;gB.customProgramCacheKey=gmat.customProgramCacheKey;gB.polygonOffset=true;gB.polygonOffsetFactor=-1;gB.polygonOffsetUnits=-4;
- for(const b of BUNKERS.filter(b=>b.cx>X0&&b.cx<X1&&b.cy>Y0&&b.cy<Y1&&HOLES.some(h=>dPL(b.cx,b.cy,h.p)<75))){const st=.35,m=2.8,x0=b.x0-m,y0=b.y0-m,nx=Math.ceil((b.x1-b.x0+2*m)/st)+1,ny=Math.ceil((b.y1-b.y0+2*m)/st)+1,P=new Float32Array(nx*ny*3),U=new Float32Array(nx*ny*2),I=[];
+ for(const b of BUNKERS.filter(b=>b.cx>X0&&b.cx<X1&&b.cy>Y0&&b.cy<Y1&&HOLES.some(h=>dPL(b.cx,b.cy,h.p)<75))){const st=GREENS.some(G=>Math.hypot(G.cx-b.cx,G.cy-b.cy)<45+Math.max(b.x1-b.x0,b.y1-b.y0)/2)?.35:Math.min(.9,Math.max(.35,Math.sqrt((b.x1-b.x0+5.6)*(b.y1-b.y0+5.6))/160))/* big waste bunkers away from greens get a coarser grid; any bunker by a green keeps the fine one, so its lip can't ride above the putting surface */,m=2.8,x0=b.x0-m,y0=b.y0-m,nx=Math.ceil((b.x1-b.x0+2*m)/st)+1,ny=Math.ceil((b.y1-b.y0+2*m)/st)+1,P=new Float32Array(nx*ny*3),U=new Float32Array(nx*ny*2),I=[];
   for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=x0+i*st,y=y0+j*st,k=j*nx+i;P[k*3]=x;P[k*3+1]=H(x,y);P[k*3+2]=-y;U[k*2]=(x-X0)/WW;U[k*2+1]=(y-Y0)/HH;if(i<nx-1&&j<ny-1)I.push(k,k+1,k+nx,k+1,k+nx+1,k+nx);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const mm=new THREE.Mesh(g,gB);mm.receiveShadow=true;scene.add(mm);}}
 
@@ -626,7 +626,7 @@ const bladeMat=(()=>{const m=new THREE.MeshLambertMaterial({color:0xffffff,side:
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vH;').replace('#include <color_fragment>','#include <color_fragment>\n diffuseColor.rgb*=mix(.45,1.,smoothstep(0.,1.,vH));diffuseColor.rgb+=vec3(.03,.035,.005)*smoothstep(.75,1.,vH);');};
   m.customProgramCacheKey=()=>'blades1';return m;})();
 const BLADE_LIE_0={fairway:{h:[.035,.065],w:.008,c:0x4a7a2b},tee:{h:[.015,.028],w:.007,c:0x4a7a2b},fringe:{h:[.05,.08],w:.007,c:0x477628},rough:{h:[.065,.12],w:.008,c:0x436b25}};
-const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assign({},BLADE_LIE_0[k]);v.c=new THREE.Color(cdaHex('#'+new THREE.Color(v.c).getHexString())).getHex();o[k]=v;}return o;})();
+const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assign({},BLADE_LIE_0[k]);v.c=new THREE.Color(cdaHex('#'+new THREE.Color(v.c).getHexString())).getHex();o[k]=v;}return o;})();if(D.blade)for(const k in D.blade)if(BLADE_LIE[k])BLADE_LIE[k]=Object.assign({},BLADE_LIE[k],{c:D.blade[k]});/* a course can recolour its grass blades (Chambers Bay: fescue-gold rough, firm links fairways) */
 /* ---------- grass, built in slices: the same blades and tufts as before, but the work can be spread over many frames and done ahead
    of time (while the ball bounces and rolls), so the next turn just swaps the finished grass in ---------- */
 function* genBlades(x0,y0,tee,out){const N=MOBILE?40000:70000,R=11,m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();
@@ -2438,7 +2438,7 @@ function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
 function tally(p){let s=0,pr=0;for(const k in p.card){s+=p.card[k];pr+=+HOLES[k].par||4;}return{s,tp:s-pr};}
 
 /* ---------- arcade leaderboard: shared by everyone through /api/scores (falls back to this phone's own board when offline) ---------- */
-const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO'};/*CC-COURSE*/const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina',cc:'Newcastle Coal Creek'};
+const HS={board:[],tab:'all',online:null};const HS_CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO',cb:'CBAY'};/*CC-COURSE*/const HS_CN={jp:'Jefferson Park',ws:'West Seattle',nc:'Newcastle China Creek',cda:"Coeur d'Alene",ko:'Ko Olina',cc:'Newcastle Coal Creek',cb:'Chambers Bay'};
 (function(){const st=document.createElement('style');st.textContent=`
 .arcade{font-family:'EB Garamond',Georgia,serif;background:linear-gradient(#0b5a37,#064a2c);border:2px solid #c9a227;border-radius:12px;box-shadow:0 0 0 4px #033d23,0 10px 26px rgba(0,0,0,.35);padding:14px 12px 12px;margin:0 0 14px;color:#1c2a22;text-align:center}
 .arcade h2{margin:0 0 2px;font-family:'Playfair Display SC','Playfair Display',Georgia,serif;font-size:22px;letter-spacing:4px;color:#f5eed8;font-weight:700}
@@ -2666,14 +2666,14 @@ function drawThumb(cv,C){const x=cv.getContext('2d'),W=cv.width,Hh=cv.height;con
    (index = slope + 3 x (rating - par); 1 ball = 100, +1 ball per 12), rounded to the nearest half ball:
    Jefferson Park 67.6/113 (par 69) 1.5 | West Seattle 69.4/123 (72) 2.5 | Coeur d'Alene 70.1/122 (71) 2.5 |
    Ko Olina 73.6/138 (72) 4.5 | Newcastle China Creek 73.6/138 (71) 5 */
-const COURSE_DIFF={jp:1.5,ws:2.5,cda:2.5,ko:4.5,nc:5,cc:5};/* Coal Creek tips 74.8/140, par 72 */
+const COURSE_DIFF={jp:1.5,ws:2.5,cda:2.5,ko:4.5,nc:5,cc:5,cb:5};/* Chambers Bay black tees 74.4/138 *//* Coal Creek tips 74.8/140, par 72 */
 function diffRow(k){const v=(COURSES[k]&&COURSES[k].diff)||COURSE_DIFF[k];const d=document.createElement('div');d.className='df';if(v==null)return d;
   d.setAttribute('aria-label','Difficulty '+v+' out of 5');let h='<span>Difficulty</span>';
   for(let i=0;i<5;i++){const f=Math.max(0,Math.min(1,v-i)),id='gbh'+k+i;
     h+='<svg class="gb" viewBox="0 0 20 20" aria-hidden="true"><defs><clipPath id="'+id+'"><rect x="0" y="0" width="'+(20*f)+'" height="20"/></clipPath></defs>'+
       '<circle cx="10" cy="10" r="8.6" class="e"/>'+(f>0?'<g clip-path="url(#'+id+')"><circle cx="10" cy="10" r="8.6" class="f"/></g>':'')+'</svg>';}
   d.innerHTML=h;return d;}
-const COURSE_ORDER=['jp','ws','nc','cc','cda','ko'];/* course select order; any course not listed goes at the end */
+const COURSE_ORDER=['jp','ws','nc','cc','cda','ko','cb'];/* course select order; any course not listed goes at the end */
 function buildCourses(){const w=$('cCards');w.innerHTML='';const ks=Object.keys(COURSES).sort((a,b)=>{const ia=COURSE_ORDER.indexOf(a),ib=COURSE_ORDER.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib);});for(const k of ks){const C=COURSES[k],b=document.createElement('button');b.className='cc';b.setAttribute('aria-pressed',String(k===selC));
     b.innerHTML='<canvas width="480" height="300"></canvas><div><h3></h3><div class="a"></div><div class="s"></div></div>';b.querySelector('h3').textContent=C.short;b.querySelector('.a').textContent=C.area;
     b.querySelector('.s').textContent='Par '+C.par+', '+C.yd.toLocaleString()+' yards, 18 holes';b.querySelector('div').appendChild(diffRow(k));drawThumb(b.querySelector('canvas'),C);b.onclick=()=>{selC=k;buildCourses();};w.appendChild(b);}

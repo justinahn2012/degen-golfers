@@ -1,5 +1,5 @@
 (function(){const el=document.getElementById('intro');if(window.BOOT){el.remove();return;}
- (function leaders(){const box=document.getElementById('introLB');if(!box)return;const CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO'}/*CC-COURSE*//*COURSE-EXT*/;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ (function leaders(){const box=document.getElementById('introLB');if(!box)return;const CS={jp:'JPK',ws:'WSEA',nc:'NCCH',cda:'CDA',ko:'KOLN',cc:'NCCO',cb:'CBAY'}/*CC-COURSE*//*COURSE-EXT*/;const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
    const tp=v=>v===0?'E':(v>0?'+':'')+v,srt=(a,b)=>a.tp-b.tp||a.s-b.s||a.t-b.t;
    const draw=L=>{L=(L||[]).map(r=>r.tp==null&&r.s!=null&&r.par!=null?Object.assign({},r,{tp:r.s-r.par}):r).filter(r=>r.tp!=null&&r.s!=null).sort(srt).slice(0,10);let h='<div class="hd">Leaderboard<small>The Degen Golfers Invitational</small></div><div class="ch"><span>Place</span><span>Initials</span><span>Character</span><span>Course</span><span>Score</span></div>';
      if(!L.length){box.innerHTML=h+'<div class="vp"><div class="empty">The board is open \u2014 be the first to sign it</div></div>';return;}

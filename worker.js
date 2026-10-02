@@ -1,5 +1,5 @@
 /* Degen Golfers '26 - tiny server: serves the game files, plus a shared arcade leaderboard at /api/scores (stored in Workers KV). */
-const COURSES = { jp: 1, ws: 1, nc: 1, cda: 1, ko: 1, cc: 1 };
+const COURSES = { jp: 1, ws: 1, nc: 1, cda: 1, ko: 1, cc: 1, cb: 1 };
 const KEEP_PER_COURSE = 25;
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const rank = (a, b) => a.tp - b.tp || a.s - b.s || a.t - b.t;
