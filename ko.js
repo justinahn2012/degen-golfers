@@ -282,7 +282,7 @@ function rocks(A,list,cols,rough){if(!list.length)return;const T=A.THREE;const g
   const tex=ctex(T,cv(128,128,(x,W,H)=>{const r=KOT.rng(4);x.fillStyle='#fff';x.fillRect(0,0,W,H);for(let i=0;i<900;i++){const k=150+r()*105|0;x.fillStyle='rgba('+k+','+k+','+k+','+(.25+r()*.35)+')';x.fillRect(r()*W,r()*H,1+r()*3,1+r()*3);}}),1);
   geos.forEach((geo,gi)=>{const L=list.filter((_,i)=>i%3===gi);if(!L.length)return;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshStandardMaterial({map:tex,roughness:rough||.95,metalness:0,flatShading:true}),L.length));
     const m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();L.forEach((p,i)=>{q.setFromEuler(new T.Euler((hsh(p[0],p[1])-.5)*.4,hsh(p[1],p[0])*6.28,(hsh(p[0]+1,p[1])-.5)*.4));
-      m.compose(A.V(p[0],p[1],p[3]),q,new T.Vector3(p[2],p[2]*(p[4]||1),p[2]));M.setMatrixAt(i,m);c.set(cols[Math.floor(hsh(p[0]*3,p[1])*cols.length)]);M.setColorAt(i,c);});
+      m.compose(A.V(p[0],p[1],p[3]),q,new T.Vector3(p[2],p[2]*(p[4]||1),p[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],p[3],p[2]*.95,p[2]*(p[4]||1)*.68);c.set(cols[Math.floor(hsh(p[0]*3,p[1])*cols.length)]);M.setColorAt(i,c);});
     M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;M.userData.occluder=true;A.scene.add(M);});}
 
 /* ---------- tropical plantings: red ti, crotons, yellow-green shrubs (crossed leaf cards) ---------- */

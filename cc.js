@@ -80,7 +80,7 @@ function fescue(A){const D=A.D,Fz=D.fescue;if(!Fz)return;const img=new Image();i
 function rockGeo(T,seed){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;let r=seed*9.7;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=1+.25*Math.sin(x*2.3+r)*Math.cos(z*2.1+r*.7)+.12*Math.sin(y*4.7+r*1.3);p.setXYZ(i,x*k,y*k*.7,z*k);}g.computeVertexNormals();return g;}
 function creekRocks(A){const T=A.THREE,D=A.D,L=[],D17=[],near=(x,y)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<110);
   for(const l of D.creek||[])for(let i=1;i<l.length;i++){const a=l[i-1],b=l[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len;
-    for(let s=0;s<len;s+=1.3){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;for(const sd of[-1,1]){const u=hsh(x*sd,y),o=2.0+u*.9;if(u<.25)continue;L.push([x+nx*sd*o,y+ny*sd*o,.28+hsh(y,x*sd)*.55]);}}}
+    for(let s=0;s<len;s+=1.3){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;for(const sd of[-1,1]){const u=hsh(x*sd,y),o=2.0+u*.9;if(u<.25||!lineClear(A,x,y,1))continue;L.push([x+nx*sd*o,y+ny*sd*o,.28+hsh(y,x*sd)*.55]);}}}
   /* the 17th's cascade: boulders round the two small pools short of the green */
   for(const w of A.WATER){if(w.creek||Math.hypot(w.cx+202,w.cy-231)>40)continue;for(const q of w.p){for(let k=0;k<2;k++){const u=hsh(q[0]+k,q[1]);L.push([q[0]+(u-.5)*2.4,q[1]+(hsh(q[1],q[0]+k)-.5)*2.4,.5+u*.9]);}}}
   {const h17=A.HOLES.find(h=>h.ref==='17');const pools=A.WATER.filter(w=>!w.creek&&Math.hypot(w.cx+202,w.cy-231)<40);
@@ -89,11 +89,11 @@ function creekRocks(A){const T=A.THREE,D=A.D,L=[],D17=[],near=(x,y)=>A.HOLES.som
      for(let s=-22;s<=22;s+=.9)for(let r=0;r<3;r++){const x=mx+sx*s+ux*(r-1)*1.6+(hsh(s,r)-.5)*.8,y=my+sy*s+uy*(r-1)*1.6+(hsh(r,s)-.5)*.8;D17.push([x,y,.6+hsh(x,y)*.9]);}}}
   if(!L.length)return;const geos=[rockGeo(T,1),rockGeo(T,2),rockGeo(T,3)],cols=['#8b8a84','#76746d','#9a978e','#6a6862','#a3a097'],m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();
   geos.forEach((g,gi)=>{const S=L.filter((_,i)=>i%3===gi);if(!S.length)return;const M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.95,flatShading:true}),S.length));
-    S.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.35),q,new T.Vector3(p[2],p[2],p[2]));M.setMatrixAt(i,m);c.set(cols[Math.floor(hsh(p[1],p[0])*cols.length)]);M.setColorAt(i,c);});
+    S.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.35),q,new T.Vector3(p[2],p[2],p[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],A.H(p[0],p[1])-p[2]*.35,p[2]*.9,p[2]*.65);c.set(cols[Math.floor(hsh(p[1],p[0])*cols.length)]);M.setColorAt(i,c);});
     M.castShadow=true;M.receiveShadow=true;A.scene.add(M);});
   if(D17.length){const g=rockGeo(T,5),M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.9,flatShading:true}),D17.length)),dk=['#3d3a37','#4a4642','#2f2c29','#55504a'];
-    D17.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.25),q,new T.Vector3(p[2]*1.2,p[2],p[2]*1.1));M.setMatrixAt(i,m);c.set(dk[Math.floor(hsh(p[1],p[0])*dk.length)]);M.setColorAt(i,c);});
-    M.castShadow=true;M.receiveShadow=true;A.scene.add(M);}
+    D17.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.25),q,new T.Vector3(p[2]*1.2,p[2],p[2]*1.1));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],A.H(p[0],p[1])-p[2]*.25,p[2]*1.05,p[2]*.65);c.set(dk[Math.floor(hsh(p[1],p[0])*dk.length)]);M.setColorAt(i,c);});
+    M.castShadow=true;M.receiveShadow=true;M.userData.occluder=true;/* the landing camera climbs over the 17th's boulder band */A.scene.add(M);}
   console.log('[cc] creek rocks',L.length,'17th cascade',D17.length);}
 /* ---------- the PNW plantings from the club's photos: Scotch broom (yellow) in the native areas, wildflower and rhododendron
    beds by the tees, thick brush in 'dry' penalty areas. Crossed leaf cards, textures drawn at runtime (no files) ---------- */
@@ -103,7 +103,8 @@ function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.hei
   const nf=kind==3?40:kind==0?140:90;for(let i=0;i<nf;i++){const a=r()*6.283,rr=Math.pow(r(),.7)*48,cx=64+Math.cos(a)*rr,cy=(kind==1?40:58)+Math.sin(a)*rr*(kind==1?.9:.6);x.fillStyle=P[1][Math.floor(r()*P[1].length)];
     x.beginPath();x.arc(cx,cy,kind==2?5+r()*3:kind==0?2+r()*1.6:2.5+r()*2,0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
-function plants(A,list){if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+function lineClear(A,x,y,rock){const l=A.lieAt(x,y);return !(l==='tee'||l==='green'||l==='bunker'||(!rock&&l==='fairway'));}/* plantings and stones go where they really are, ahead of tees included; never on a tee, green or bunker, and plants not on fairway cuts (stones may line a creek where it crosses one) */
+function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
   for(const ang of[0,Math.PI/3,2*Math.PI/3]){const g=g0.clone();g.rotateY(ang);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
   for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
@@ -124,6 +125,26 @@ function pipLocal(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){
 function dryHazards(A){const T=A.THREE,D=A.D,dry=D.f.filter(f=>f.dry);if(!dry.length)return;
   A.scene.traverse(o=>{if(!o.isMesh||!o.geometry||o.material!==window.__WM)return;o.geometry.computeBoundingBox();const b=o.geometry.boundingBox,c=b.getCenter(new T.Vector3()).add(o.position);if(dry.some(f=>pipLocal(c.x,-c.z,f.p)))o.visible=false;});
   const c=A.ctx;c.save();c.fillStyle='#4a5a2c';for(const f of dry){c.beginPath();f.p.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();}c.restore();A.tex.needsUpdate=true;}
-X.decor=function(A){try{dryHazards(A);}catch(e){console.warn('dry',e);}for(const [n,f] of[['skyline',skyline],['needle',needle],['rainier',rainier],['houses',houses],['fescue',fescue],['rocks',creekRocks]]){try{f(A);}catch(e){console.warn('[cc] '+n,e);}}};
+/* ---------- rocky creek channels: the club's photos (Coal Creek 1, 3, 7) show stone-filled channels with a thin trickle,
+   not open water. The game's creek strips keep their hazard rules; they are drawn as wet stone with a dark thread of
+   water, and filled with stones. ---------- */
+function rockyCreeks(A){const T=A.THREE,D=A.D;if(!(D.creek||[]).length||!window.__WM)return;
+  const bed=new T.ShaderMaterial({uniforms:{uLin:A.LINQ},vertexShader:'varying vec2 vU;varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}',
+    fragmentShader:'uniform float uLin;varying vec3 vW;float h(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}void main(){vec2 p=vW.xz;float n=h(floor(p*2.2))*.6+h(floor(p*5.))*.4;vec3 c=mix(vec3(.24,.23,.21),vec3(.42,.40,.36),n);if(uLin>.5)c=pow(c,vec3(2.2));gl_FragColor=vec4(c,1.);}'});
+  let n=0;A.scene.traverse(o=>{if(o.isMesh&&o.material===window.__WM&&o.geometry&&o.geometry.type==='BufferGeometry'){o.material=bed;o.renderOrder=0;n++;}});
+  /* the creek strips are also painted into the ground texture as water: repaint them as a stony bed with a thin dark thread */
+  {const c=A.ctx,m=A.mx;c.save();m.save();c.lineCap=m.lineCap='round';c.lineJoin=m.lineJoin='round';
+   for(const l of D.creek){const st=(w,col,cx)=>{cx.strokeStyle=col;cx.lineWidth=w;cx.beginPath();l.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.stroke();};
+     st(3.6,'#57534a',c);st(2.2,'#6b665b',c);st(.7,'#22303a',c);st(3.6,'#ffff00',m);}
+   c.restore();m.restore();A.tex.needsUpdate=true;A.maskT.needsUpdate=true;}
+  const L=[],near=(x,y)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<110);
+  for(const l of D.creek)for(let i=1;i<l.length;i++){const a=l[i-1],b=l[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len;
+    for(let s=0;s<len;s+=.9){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;const u=hsh(x,y),o=(u-.5)*2.4;L.push([x+nx*o,y+ny*o,.18+hsh(y,x)*.32]);}}
+  if(L.length){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)*.55);g.computeVertexNormals();
+    const M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.7,flatShading:true}),L.length)),m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color(),cols=['#5b5850','#6e6a61','#4a4842','#7c776c'];
+    L.forEach((s,i)=>{q.setFromEuler(new T.Euler(0,hsh(s[0],s[1])*6.28,0));m.compose(A.V(s[0],s[1],A.H(s[0],s[1])-s[2]*.2),q,new T.Vector3(s[2],s[2],s[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(s[0],s[1],A.H(s[0],s[1])-s[2]*.2,s[2]*.9,s[2]*.5);c.set(cols[Math.floor(hsh(s[1],s[0])*cols.length)]);M.setColorAt(i,c);});
+    M.receiveShadow=true;A.scene.add(M);}
+  console.log('[rc] creek strips restyled',n,'channel stones',L.length);}
+X.decor=function(A){try{dryHazards(A);}catch(e){console.warn('dry',e);}try{rockyCreeks(A);}catch(e){console.warn('creeks',e);}for(const [n,f] of[['skyline',skyline],['needle',needle],['rainier',rainier],['houses',houses],['fescue',fescue],['rocks',creekRocks]]){try{f(A);}catch(e){console.warn('[cc] '+n,e);}}};
 window.COURSE_EXT=X;
 })();

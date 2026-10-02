@@ -11,7 +11,7 @@
 
 setTimeout(function(){
 "use strict";
-const D=window.COURSE;/*COURSE-EXT*/const EXT=(k,...a)=>{const X=window.COURSE_EXT;if(!X||typeof X[k]!=='function')return;try{return X[k](...a);}catch(e){console.warn('course ext '+k,e);}};let EXTAPI=null;function mkAPI(){if(EXTAPI)return EXTAPI;EXTAPI={THREE,D,get scene(){return scene;},get renderer(){return renderer;},get camera(){return camera;},get sun(){return sun;},get HEMI(){return HEMI;},get SKY(){return SKY;},get WT(){return WT;},get LINQ(){return LINQ;},get sunDir(){return sunDir;},get skyMat(){return skyMat;},H:(x,y)=>H(x,y),baseH:(x,y)=>baseH(x,y),V:(x,y,z)=>V(x,y,z),lieAt:(x,y)=>lieAt(x,y),inP:(P,x,y)=>inP(P,x,y),dPL:(x,y,l)=>dPL(x,y,l),grad:(x,y)=>grad(x,y),rnd:()=>rnd(),get TREES(){return TREES;},get THASH(){return THASH;},get IMPS(){return IMPS;},get mkImp(){return window.__MKIMP;},get GREENS(){return GREENS;},get TEES(){return TEES;},get BUNKERS(){return BUNKERS;},get WATER(){return WATER;},get FAIRWAYS(){return FAIRWAYS;},get PATHS(){return PATHS;},get MAIN(){return MAIN;},get HOLES(){return HOLES;},get ctx(){return ctx;},get mx(){return mx;},get tex(){return tex;},get maskT(){return maskT;},get box(){return{X0,X1,Y0,Y1,WW,HH};},get outer(){return outer;},get HERO(){return HERO;},IMC:m=>IMC(m),linearize:o=>linearize(o)};return EXTAPI;}
+const D=window.COURSE;/*COURSE-EXT*/const EXT=(k,...a)=>{const X=window.COURSE_EXT;if(!X||typeof X[k]!=='function')return;try{return X[k](...a);}catch(e){console.warn('course ext '+k,e);}};let EXTAPI=null;function mkAPI(){if(EXTAPI)return EXTAPI;EXTAPI={THREE,D,get scene(){return scene;},get renderer(){return renderer;},get camera(){return camera;},get sun(){return sun;},get HEMI(){return HEMI;},get SKY(){return SKY;},get WT(){return WT;},get LINQ(){return LINQ;},get sunDir(){return sunDir;},get skyMat(){return skyMat;},H:(x,y)=>H(x,y),baseH:(x,y)=>baseH(x,y),V:(x,y,z)=>V(x,y,z),lieAt:(x,y)=>lieAt(x,y),inP:(P,x,y)=>inP(P,x,y),dPL:(x,y,l)=>dPL(x,y,l),grad:(x,y)=>grad(x,y),rnd:()=>rnd(),get TREES(){return TREES;},get THASH(){return THASH;},get IMPS(){return IMPS;},get mkImp(){return window.__MKIMP;},get GREENS(){return GREENS;},get TEES(){return TEES;},get BUNKERS(){return BUNKERS;},get WATER(){return WATER;},get FAIRWAYS(){return FAIRWAYS;},get PATHS(){return PATHS;},get MAIN(){return MAIN;},get HOLES(){return HOLES;},get ctx(){return ctx;},get mx(){return mx;},get tex(){return tex;},get maskT(){return maskT;},get box(){return{X0,X1,Y0,Y1,WW,HH};},get outer(){return outer;},get HERO(){return HERO;},IMC:m=>IMC(m),linearize:o=>linearize(o),addSolid:(x,y,z,r,hz)=>addSolid(x,y,z,r,hz)};return EXTAPI;}
 let GFX="ultra";try{GFX=localStorage.getItem("dg-gfx2")||"ultra";}catch(e){}
 const LINQ={value:0};let COMP=null,GRADE=null;const MOBILE=matchMedia("(pointer:coarse)").matches;let DRS=1,FT=16,DRSnext=0;function basePR(){return Math.min(GFX==="ultra"?(MOBILE?1.6:2):(MOBILE?1.15:1.25),window.devicePixelRatio||1);}
 const YD=0.9144, TOYD=1.0936, TOFT=3.2808;
@@ -478,7 +478,7 @@ function worldGrass(m){if(!HASA)return m;m.onBeforeCompile=sh=>{Object.assign(sh
   m.customProgramCacheKey=()=>'worldgrass';return m;}
 const DMIN=Math.min(...DM.z),HZ=DM.z.reduce((a,b)=>a+b,0)/DM.z.length;
 {const g=new THREE.PlaneGeometry((DM.nx-1)*DM.st,(DM.ny-1)*DM.st,DM.nx-1,DM.ny-1);g.rotateX(-Math.PI/2);const pos=g.attributes.position,cx=DM.x0+(DM.nx-1)*DM.st/2,cy=DM.y0+(DM.ny-1)*DM.st/2;
- for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)-cy;pos.setX(i,x);pos.setZ(i,z);let hh=demH(x,-z);try{hh=Math.min(hh,H(x,-z));}catch(e){}pos.setY(i,hh-2.6);}g.computeVertexNormals();scene.add(new THREE.Mesh(g,worldGrass(new THREE.MeshLambertMaterial({color:0x42602c}))));}
+ for(let i=0;i<pos.count;i++){const x=pos.getX(i)+cx,z=pos.getZ(i)-cy;pos.setX(i,x);pos.setZ(i,z);let hh=demH(x,-z);try{for(let a=-10;a<=10;a+=5)for(let b=-10;b<=10;b+=5)hh=Math.min(hh,H(x+a,-z+b));}catch(e){}pos.setY(i,hh-2.6);}/* the lowest ground within 10 m: a 20 m underlay must not ride up through a hollow (it showed through Chambers Bay's 1st green) */g.computeVertexNormals();scene.add(new THREE.Mesh(g,worldGrass(new THREE.MeshLambertMaterial({color:0x42602c}))));}
 const outer=new THREE.Mesh(new THREE.PlaneGeometry(6000,6000),worldGrass(new THREE.MeshLambertMaterial({color:0x3e5a2a})));outer.rotation.x=-Math.PI/2;let HMIN=DMIN;try{for(let x=X0;x<=X1;x+=6)for(let y=Y0;y<=Y1;y+=6)HMIN=Math.min(HMIN,H(x,y));}catch(e){}outer.position.set((X0+X1)/2,HMIN-4,-(Y0+Y1)/2);if(D.island){let lk=1e9;for(const f of D.f)if(f.k==='water'&&f.c&&f.p.length>20)for(const q of f.p)lk=Math.min(lk,baseH(q[0],q[1]));if(lk<1e8)outer.position.y=Math.min(outer.position.y,lk-4);}/* keep the far ground plane under a lake's surface */scene.add(outer);
 
 const WT={value:0};
@@ -1785,7 +1785,7 @@ function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);retur
 
 
 /* ---------- golfers (placeholders until the real roster is in) ---------- */
-const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot'},dial:{n:'Dialed in',d:'near-perfect contact on one shot'},read:{n:'Green reader',d:'shows the true putt line for the rest of the hole'},hl:{n:'Lucky shot',d:'+10% carry and near-perfect contact on one shot'},bounce:{n:'Consistency King',d:'always on: contact tightens right after a bad shot',passive:true}};
+const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot, once every 3 holes'},dial:{n:'Dialed in',d:'near-perfect contact on one shot'},read:{n:'Green reader',d:'shows the true putt line for the rest of the hole'},hl:{n:'Lucky shot',d:'+10% carry and near-perfect contact on one shot'},bounce:{n:'Consistency King',d:'always on: contact tightens right after a bad shot',passive:true}};
 const B=(pow,acc,sg,put,rec)=>({pow,acc,sg,put,rec});
 const BASE=[
  {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{shaft:{band:'#c08d1a'},putter:'blackout',skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
@@ -1868,11 +1868,18 @@ function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;
     if(i%45===0){hist.push([x,y]);if(hist.length>5){const o=hist[hist.length-6];if(Math.hypot(x-o[0],y-o[1])<.3)break;}}
     if(sp>1e-6){const dec=Math.min(fr*dt,sp);vx-=vx/sp*dec;vy-=vy/sp*dec;}
     vx+=ax*dt;vy+=ay*dt;x+=vx*dt;y+=vy*dt;t+=dt;
+    if(SOLIDS.length){const s=solidAt(x,y,H(x,y)+.03);if(s){const ux0=x-s.x,uy0=y-s.y,ul=Math.hypot(ux0,uy0)||1,ux=ux0/ul,uy=uy0/ul,vn=vx*ux+vy*uy;
+      if(vn<0){vx-=1.6*vn*ux;vy-=1.6*vn*uy;const kk=(Math.random()-.5)*.6,c=Math.cos(kk),sn=Math.sin(kk),tx=vx*c-vy*sn;vy=vx*sn+vy*c;vx=tx;}x+=ux*.06;y+=uy*.06;}}
     if(cupOK){const d=Math.hypot(x-PIN.x,y-PIN.y);sp=Math.hypot(vx,vy);
       if(d<.075){if(sp<1.35){holed=true;x=PIN.x;y=PIN.y;break;}else if(noise){vx*=.7;vy*=.7;const k=(Math.random()-.5)*.7,c=Math.cos(k),s=Math.sin(k);const nx=vx*c-vy*s;vy=vx*s+vy*c;vx=nx;}}}
     if(i%3===0)pts.push({t,x,y,z:H(x,y)+.021});}
   pts.push({t:t+.01,x,y,z:holed?H(x,y)-.06:H(x,y)+.021});return{pts,x,y,holed,oob};}
 
+/*ROCK-BOUNCE*/const SOLIDS=[],SHASH=new Map();
+function addSolid(x,y,z,r,hz){const s={x,y,z,r,hz};SOLIDS.push(s);const R=Math.ceil(r/5),cx=Math.floor(x/5),cy=Math.floor(y/5);for(let i=-R;i<=R;i++)for(let j=-R;j<=R;j++){const k=(cx+i)+','+(cy+j);let a=SHASH.get(k);if(!a)SHASH.set(k,a=[]);a.push(s);}}
+function solidAt(x,y,z){const a=SHASH.get(Math.floor(x/5)+','+Math.floor(y/5));if(!a)return null;for(const s of a){const dx=(x-s.x)/s.r,dy=(y-s.y)/s.r,dz=(z-s.z)/s.hz;if(dx*dx+dy*dy+dz*dz<1)return s;}return null;}
+function rockSeg(x0,y0,z0,x1,y1,z1){if(!SOLIDS.length)return null;if(Math.min(z0-H(x0,y0),z1-H(x1,y1))>4)return null;const n=Math.max(2,Math.ceil(Math.hypot(x1-x0,y1-y0,z1-z0)/.3));
+  for(let k=1;k<=n;k++){const u=k/n,x=x0+(x1-x0)*u,y=y0+(y1-y0)*u,z=z0+(z1-z0)*u,s=solidAt(x,y,z);if(s)return{x,y,z,s};}return null;}
 const TS=.72;
 function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;if(p.boost==='hl')carry*=1.10;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
@@ -1898,6 +1905,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
     return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+cmp.b*u+cmp.c*u*u];};
   const pts=[],N=110,TEV=[];let hit=null,prev=null,TREEM=1;
   for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS;
+    if(i>2&&prev&&SOLIDS.length){const rk=rockSeg(prev[0],prev[1],prev[2],px,py,pz);if(rk){hit={x:rk.x,y:rk.y,z:rk.z,t,rock:rk.s,dx:px-prev[0],dy:py-prev[1],dz:pz-prev[2]};TEV.push({t,k:'trunk',x:rk.x,y:rk.y,z:rk.z});break;}}
     if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};TEV.push({t,k:'trunk',x:ts.x,y:ts.y,z:ts.z});break;}const tp=treePart(px,py,pz);
       if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};TEV.push({t,k:'trunk',x:px,y:py,z:pz});break;}
       if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;if(!inLeaf)TEV.push({t,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};TEV.push({t,k:'limb',fir:tp.t.fir,x:px,y:py,z:pz},{t:t+.12,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});break;}}
@@ -1909,6 +1917,18 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
         const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
   const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV,treeMult:TREEM};
+  if(hit&&hit.rock){const R=hit.rock,L0=Math.hypot(hit.dx,hit.dy,hit.dz)||1,dX=hit.dx/L0,dY=hit.dy/L0,dZ=hit.dz/L0;
+    let nX=(hit.x-R.x)/(R.r*R.r),nY=(hit.y-R.y)/(R.r*R.r),nZ=(hit.z-R.z)/(R.hz*R.hz);const nl=Math.hypot(nX,nY,nZ)||1;nX/=nl;nY/=nl;nZ/=nl;
+    const dn=dX*nX+dY*nY+dZ*nZ;let rX=dX-2*dn*nX,rY=dY-2*dn*nY,rZ=dZ-2*dn*nZ;
+    /* rock faces are irregular: kick the rebound, more on a square hit than a glancing one */
+    const jit=.22+.32*Math.abs(dn);rX+=(Math.random()-.5)*2*jit;rY+=(Math.random()-.5)*2*jit;rZ+=(Math.random()-.35)*jit;const rl=Math.hypot(rX,rY,rZ)||1;rX/=rl;rY/=rl;rZ/=rl;
+    const hz=Math.hypot(rX,rY),a2=Math.random()*6.283,qx=hz>.05?rX/hz:Math.cos(a2),qy=hz>.05?rY/hz:Math.sin(a2),k=.55+.45*Math.min(1,carry/180),up=Math.max(0,rZ);
+    let x=hit.x,y=hit.y,t=hit.t,z0=hit.z;pts.push({t,x,y,z:z0});
+    for(const [hl,hh,first] of[[Math.min(34,9+carry*.2)*k*(.3+.7*hz),Math.min(4.2,1+carry*.014)*k*(.5+1.3*up),1],[Math.min(15,4+carry*.08)*k*.8,Math.min(1.4,.35+carry*.005)*k,0]]){const dt2=.35+hl*.028;
+      for(let s2=1;s2<=10;s2++){const u=s2/10,px=x+qx*hl*u,py=y+qy*hl*u,g=H(px,py)+.021,base=first?z0+(g-z0)*u:g;pts.push({t:t+dt2*u,x:px,y:py,z:Math.max(g,base+4*hh*u*(1-u))});}
+      x+=qx*hl;y+=qy*hl;t+=dt2;z0=H(x,y)+.021;}
+    Object.assign(res,{rock:true,rockBounce:true});const l2=lieAt(x,y);if(l2==='water'||l2==='oob'){Object.assign(res,{x,y,holed:false,oob:true});return res;}
+    const v0=Math.sqrt(2*FR[l2]*Math.max(.3,carry*.06)),r=simRoll(x,y,qx*v0,qy*v0,t,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob});return res;}
   if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
     Object.assign(res,{x:fx,y:fy,tree:true,treeKind:'limb',holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
   if(hit){res.treeKind='trunk';const fx=hit.x-dx*.8,fy=hit.y-dy*.8,gz=H(fx,fy)+.021;pts.push({t:hit.t+.05,x:fx,y:fy,z:hit.z});pts.push({t:hit.t+.35,x:fx,y:fy,z:(hit.z+gz)/2});pts.push({t:hit.t+.6,x:fx,y:fy,z:gz});
@@ -1990,7 +2010,7 @@ function newGame(len){len=len||'18';for(const p of players){scene.remove(p.ball.
     for(const f of Object.keys(C)){if(need.has(f))continue;const pr=C[f];delete C[f];pr.then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;o.geometry&&o.geometry.dispose();
       for(const m of(Array.isArray(o.material)?o.material:[o.material])){if(!m)continue;for(const k of['map','normalMap','roughnessMap','metalnessMap','aoMap','emissiveMap'])if(m[k])m[k].dispose();m.dispose();}});}).catch(()=>{});}}catch(e){console.warn('head cleanup',e);}
   const n=HOLES.length,idx=[...Array(n).keys()],list=len==='f9'?idx.slice(0,9):len==='b9'?idx.slice(9):idx;ROUND={list:list.length?list:idx,k:0,len};
-  players=ROSTER.filter(r=>picked.has(r.id)).map((r,i)=>{const p=Object.assign({},r,{x:0,y:0,strokes:0,done:false,abUsed:false,boost:null,lie:'tee',beers:0,buzz:0,buzzQ:[],over:0,drankTurn:false,card:{}});const br=r.beerRange||[8,12];/* hidden beer limit: random 8-12 each round */p.limit=br[0]+Math.floor(Math.random()*(br[1]-br[0]+1));p.blackout=12+Math.floor(Math.random()*4);/* blackout: random 12-15 */p.ball=makeBall(p);p.av=makeGolfer(p);linearize(p.ball.b);linearize(p.ball.sh);linearize(p.av);return p;});
+  players=ROSTER.filter(r=>picked.has(r.id)).map((r,i)=>{const p=Object.assign({},r,{x:0,y:0,strokes:0,done:false,abUsed:false,ripAt:null,holesPlayed:null,boost:null,lie:'tee',beers:0,buzz:0,buzzQ:[],over:0,drankTurn:false,card:{}});const br=r.beerRange||[8,12];/* hidden beer limit: random 8-12 each round */p.limit=br[0]+Math.floor(Math.random()*(br[1]-br[0]+1));p.blackout=12+Math.floor(Math.random()*4);/* blackout: random 12-15 */p.ball=makeBall(p);p.av=makeGolfer(p);linearize(p.ball.b);linearize(p.ball.sh);linearize(p.av);return p;});
   $('menu').hidden=true;$('card').hidden=true;$('courses').hidden=true;try{for(const p of players)p.av.visible=true;renderer.compile(scene,camera);try{const seen=new Set();scene.traverse(o=>{const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];for(const m of ms)for(const t of[m.map,m.normalMap,m.bumpMap,m.alphaMap,m.emissiveMap,m.roughnessMap])if(t&&!seen.has(t)&&t.image){seen.add(t);renderer.initTexture&&renderer.initTexture(t);}});}catch(e){}for(const p of players)p.av.visible=false;}catch(e){}startHole();}
 /* ---------- hole curtain: a full-screen hole card covers the view while the hole is set up and every part of the flyover is drawn once
    (shaders, textures, terrain tiles, trees), then it shrinks away and the pan starts on a warm, smooth renderer ---------- */
@@ -2026,7 +2046,7 @@ function curtainCam(){const C=CURT;if(!C||C.phase<1)return;const bar=C.el.queryS
 function startHoleNow(quiet){setHole(ROUND.list[ROUND.k]);for(const q of players)q.isleTries=0;try{updBoat();}catch(e){}
   const wa=Math.random()*Math.PI*2,sp=Math.random()*6;wind={a:wa,sp,x:Math.cos(wa)*sp,y:Math.sin(wa)*sp};
   const t=H1[0],q=plAt(H1,15);
-  players.forEach((p,i)=>{const o=(i-(players.length-1)/2)*.7;p.x=t[0]-q.ty*o;p.y=t[1]+q.tx*o;p.strokes=0;p.done=false;p.abUsed=false;p.boost=null;p.lie='tee';p.lastErr=0;p.av.visible=false;placeBall(p,p.x,p.y,H(p.x,p.y)+.05);});
+  players.forEach((p,i)=>{const o=(i-(players.length-1)/2)*.7;p.x=t[0]-q.ty*o;p.y=t[1]+q.tx*o;p.strokes=0;p.done=false;p.holesPlayed=(p.holesPlayed==null?0:p.holesPlayed+1);p.abUsed=(p.ab==='rip'&&p.ripAt!=null&&p.holesPlayed-p.ripAt<3);p.boost=null;p.lie='tee';p.lastErr=0;p.av.visible=false;placeBall(p,p.x,p.y,H(p.x,p.y)+.05);});/* Grip it and rip it: once every 3 holes */
   readOn=false;setRibbon([]);GRASS_DEFER=!quiet;startTurn();GRASS_DEFER=false;if(quiet){flyStart=0;flyUntil=0;}else{flyStart=performance.now()/1000;flyUntil=flyStart+FLY_OUT+FLY_BACK;if(cur)cur.intro=flyUntil+3.4;showHoleCard();}}
 
 function drawHoleMap(cv){const x=cv.getContext('2d'),W=cv.width,Hh=cv.height,hp=HOLE.p,t=hp[0],gr=hp[hp.length-1],ang=Math.atan2(gr[1]-t[1],gr[0]-t[0]),len=Math.hypot(gr[0]-t[0],gr[1]-t[1])||1;
@@ -2615,7 +2635,7 @@ $('beerBtn').onclick=()=>{const p=cur;if(!p||state!=='aim'||p.drankTurn)return;p
   else if(p.beers>p.limit){p.over=p.beers-p.limit;p.buzz=0;p.buzzQ=[];toast('You’re wasted',p.over>1?'Even worse. Stats keep sliding for the rest of the round.':'All stats down for the rest of the round.');}
   else{p.buzzQ=(p.buzzQ||[]).filter(x=>x>0);p.buzzQ.push(BUZZ_SHOTS);p.buzz=Math.max(...p.buzzQ);const n=p.buzzQ.length;toast('Beer '+p.beers,(n>1?n+' beers working at once, 6 shots each.':'Loose and locked in for 6 shots.')+(p.beers===p.limit?' That one hit, maybe slow down.':''));}
   refresh();updMeter();};
-$('abBtn').onclick=()=>{const p=cur;if(!p||p.abUsed||state!=='aim'||ABIL[p.ab].passive)return;p.abUsed=true;if(p.ab==='read')readOn=true;else p.boost=p.ab;toast(p.abName,p.abDesc[0].toUpperCase()+p.abDesc.slice(1));refresh();updMeter();};
+$('abBtn').onclick=()=>{const p=cur;if(!p||p.abUsed||state!=='aim'||ABIL[p.ab].passive)return;p.abUsed=true;if(p.ab==='rip')p.ripAt=p.holesPlayed||0;if(p.ab==='read')readOn=true;else p.boost=p.ab;toast(p.abName,p.abDesc[0].toUpperCase()+p.abDesc.slice(1));refresh();updMeter();};
 const GC=$('gest'),gx=GC.getContext('2d');function sizeG(){const d=Math.min(2,devicePixelRatio||1);GC.width=innerWidth*d;GC.height=innerHeight*d;gx.setTransform(d,0,0,d,0,0);}sizeG();addEventListener('resize',sizeG);
 let g0=null,trace=[];
 function drawG(){gx.clearRect(0,0,innerWidth,innerHeight);if(state!=='sw'||!swipe||!trace.length)return;const sc=swipeScale(),x0=swipe.x0,y0=swipe.y0;
