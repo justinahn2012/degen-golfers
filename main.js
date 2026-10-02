@@ -2906,7 +2906,9 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
       if(!p._held){if(INTRO_D<.4){p._held=true;p.intro=Math.max(p.intro,now+2.2);}else if(now<p._it0+6)p.intro=Math.max(p.intro,now+.3);}}   /* never cut away mid-trip; then a full beat on the face */
     else if(overhead&&state==='aim'){const d=dist(p),mx=(p.x+PIN.x)/2,my=(p.y+PIN.y)/2;want=V(mx-dx*d*.25,my-dy*d*.25,z+Math.max(25,d*.85));look=V(mx,my,z);}
     else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75);look=V(p.x+dx*4,p.y+dy*4,z);}
-    else{want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);}}
+    else{/* blind tee shot (a dune or bank rising in front): lift the camera until the eye line clears it */
+       let lift=0;for(let s=8;s<=90;s+=6){const q=H(p.x+dx*s,p.y+dy*s)-z-2.1,need=q-(s+7.5)*.02;if(need>lift)lift=need;}lift=Math.min(9,Math.max(0,lift*1.15));
+       want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1+lift);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2+lift*.35);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
     if(state==='flight'&&plan.treeEv)for(const e of plan.treeEv)if(!e.done&&t>=e.t){e.done=1;try{const d=camera.position.distanceTo(V(e.x,e.y,e.z));SND.tree(e.k,e.fir,1.25-d/110);}catch(err){}}
