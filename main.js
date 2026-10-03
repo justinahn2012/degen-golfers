@@ -637,7 +637,11 @@ const BLADE_LIE=(()=>{const o={};for(const k in BLADE_LIE_0){const v=Object.assi
    of time (while the ball bounces and rolls), so the next turn just swaps the finished grass in ---------- */
 function* genBlades(x0,y0,tee,out){const N=MOBILE?40000:70000,R=11,m=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),s=new THREE.Vector3(),c=new THREE.Color();
   out.m=new Float32Array(N*16);out.c=new Float32Array(N*3);out.n=0;let n=0;
-  for(let i=0;i<N*1.6&&n<N;i++){if(i%1200===1199)yield;const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r,L=BLADE_LIE[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||onPath(x,y))continue;
+  for(let i=0;i<N*1.6&&n<N;i++){if(i%1200===1199)yield;const r=R*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;
+    if(window.NOGRASS&&window.NOGRASS(x,y)){/* pine straw: a carpet of loose needles lying flat instead of grass */if(Math.random()>.6)continue;const L0=BLADE_LIE.rough||{w:.004};
+      e.set(1.47+(Math.random()-.5)*.16,Math.random()*6.283,(Math.random()-.5)*.25);q.setFromEuler(e);m.compose(V(x,y,H(x,y)+.002),q,s.set((L0.w||.004)*.45,.05+Math.random()*.08,1));m.toArray(out.m,n*16);
+      c.setRGB(.42+Math.random()*.16,.22+Math.random()*.1,.1+Math.random()*.05);c.toArray(out.c,n*3);n++;out.n=n;continue;}
+    const L=BLADE_LIE[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||onPath(x,y))continue;
     const fade=1-Math.max(0,(r-R*.7)/(R*.3)),h=(L.h[0]+Math.random()*(L.h[1]-L.h[0]))*(.35+.65*fade);e.set((Math.random()-.5)*.5,Math.random()*6.283,(Math.random()-.5)*.35);q.setFromEuler(e);
     m.compose(V(x,y,H(x,y)-.004),q,s.set(L.w*(.7+Math.random()*.6),h,1));m.toArray(out.m,n*16);c.set(L.c).offsetHSL((Math.random()-.5)*.035,(Math.random()-.5)*.1,(Math.random()-.5)*.09);c.toArray(out.c,n*3);n++;out.n=n;}}
 function applyBlades(d){if(BLADES){scene.remove(BLADES);BLADES.dispose&&BLADES.dispose();BLADES=null;}const n=Math.max(1,d.n),M=IMC(new THREE.InstancedMesh(bladeGeo,bladeMat,n));
@@ -648,7 +652,7 @@ function updBlades(){if(!BLADES)return;const sh=bladeMat.userData.sh;if(sh){cons
 const MULCH=[],MULCHG=new Map();
 function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if(!L)return false;for(const b of L)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&inPoly(b.p,x,y))return true;return false;}
 function IMC(M){if(!M.instanceColor)M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1,M.count)*3).fill(1),3);return M;}
-function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
+function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;if(window.NOGRASS&&window.NOGRASS(x,y))return true;/* a course can mark ground with no grass blades or tufts (Augusta's pine straw) */const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
 function* genTufts(x0,y0,tee,out){const list=[];
  for(let i=0,NT=20000,NN=7000;i<NT;i++){if(i%1500===1499)yield;const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
  const n=Math.max(1,list.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);out.m=new Float32Array(n*16);out.c=new Float32Array(n*3);out.tv=new Float32Array(n);out.n=list.length;
