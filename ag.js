@@ -255,7 +255,7 @@ function creekWall(A){const T=A.THREE,D=A.D,h12=A.HOLES.find(h=>h.ref==='12');if
   if(!P.length)return;const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();
   const m=new T.Mesh(g,new T.MeshStandardMaterial({map:stoneTex(T),roughness:.9,side:T.DoubleSide}));m.receiveShadow=true;A.scene.add(m);console.log('[ag] 12 creek wall segments',P.length/18);}
 /* ---------- leaderboards: the green Masters boards near 18, 11, 16 and 2 ---------- */
-function boards(A){const T=A.THREE,c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');x.fillStyle='#0d4a2a';x.fillRect(0,0,256,128);x.fillStyle='#f4f1e8';x.fillRect(10,22,236,98);
+function boardsOld(A){const T=A.THREE,c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');x.fillStyle='#0d4a2a';x.fillRect(0,0,256,128);x.fillStyle='#f4f1e8';x.fillRect(10,22,236,98);
   x.fillStyle='#0d4a2a';x.font='bold 14px sans-serif';x.fillText('LEADERS',100,16);x.fillStyle='#c9c4b5';for(let r=0;r<10;r++){x.fillRect(14,26+r*9.4,80,7);for(let k=0;k<12;k++)x.fillRect(100+k*12,26+r*9.4,10,7);}
   const tex=new T.CanvasTexture(c);tex.encoding=T.sRGBEncoding;const face=new T.MeshLambertMaterial({map:tex}),green=new T.MeshLambertMaterial({color:0x0d4a2a});let n=0;
   for(const ref of['18','11','16','2']){const h=A.HOLES.find(q=>q.ref===ref);if(!h)continue;const P=h.p,g=P[P.length-1],a=P[P.length-2],dx=g[0]-a[0],dy=g[1]-a[1],l=Math.hypot(dx,dy),ux=dx/l,uy=dy/l;
@@ -264,6 +264,16 @@ function boards(A){const T=A.THREE,c=document.createElement('canvas');c.width=25
     for(const sx of[-W/2+.4,W/2-.4]){const p=new T.Mesh(new T.BoxGeometry(.25,1.4,.25),green);p.position.set(sx,.7,0);grp.add(p);}
     grp.position.copy(A.V(bx,by,z));grp.lookAt(A.V(g[0],g[1],z));grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.userData.occluder=true;}});A.scene.add(grp);n++;}
   console.log('[ag] leaderboards',n);}
+/* the leaderboards: the classic white Augusta board (ag_board.glb, about 10 m wide), placed where the old flat boards stood;
+   if the model can't load, the old flat boards go up instead */
+function boards(A){const T=A.THREE,spots=[];
+  for(const ref of['18','11','16','2']){const h=A.HOLES.find(q=>q.ref===ref);if(!h)continue;const P=h.p,g=P[P.length-1],a=P[P.length-2],dx=g[0]-a[0],dy=g[1]-a[1],l=Math.hypot(dx,dy),ux=dx/l,uy=dy/l;
+    let bx=g[0]+ux*30-uy*32,by=g[1]+uy*30+ux*32;if(A.lieAt(bx,by)!=='rough'&&A.lieAt(bx,by)!=='oob'){bx=g[0]+ux*30+uy*32;by=g[1]+uy*30-ux*32;}spots.push([bx,by,g]);}
+  if(!T.GLTFLoader){boardsOld(A);return;}
+  new T.GLTFLoader().load('ag_board.glb',gl=>{let n=0;for(const [bx,by,g] of spots){const m=gl.scene.clone(true),W=10;let z=1e9;for(const s of[-.45,0,.45])z=Math.min(z,A.H(bx+s*W*(g[1]-by)/Math.hypot(g[0]-bx,g[1]-by),by-s*W*(g[0]-bx)/Math.hypot(g[0]-bx,g[1]-by)));
+      m.scale.setScalar(W);m.position.copy(A.V(bx,by,z-.15));m.lookAt(A.V(g[0],g[1],z-.15));if(window.AG_BOARD_FLIP)m.rotateY(Math.PI);
+      m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.userData.occluder=true;if(o.material){o.material.roughness=.85;o.material.metalness=0;}}});A.scene.add(m);n++;}
+    console.log('[ag] leaderboards (model)',n);},undefined,()=>{console.warn('[ag] board model missing - flat boards');boardsOld(A);});}
 /* ---------- pine straw: the orange-brown floor under every stand of pines (ag_straw.png, from the lidar canopy and the aerial) ---------- */
 function straw(A,done){const D=A.D,Fz=D.straw;if(!Fz)return;const img=new Image();img.onload=()=>{try{
   const w=img.width,h=img.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,w,h),d=id.data,mk=new Uint8ClampedArray(d);
