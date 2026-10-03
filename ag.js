@@ -296,7 +296,17 @@ function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.hei
   for(let i=0;i<260;i++){const a=r()*6.283,rr=Math.pow(r(),.55)*54,cx=64+Math.cos(a)*rr,cy=66+Math.sin(a)*rr*.6;x.fillStyle=BL[Math.floor(r()*BL.length)];x.beginPath();x.arc(cx,cy,2.2+r()*2.4,0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
 function lineClear(A,x,y){const l=A.lieAt(x,y);return !(l==='tee'||l==='green'||l==='bunker'||l==='fairway'||l==='water');}
-function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE;
+function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE,mode=window.AG_BUSH||'cross8';
+  if(mode==='dome')return plantsDome(A,list);
+  /* azaleas as blossom cards: 'cross8' = eight cards evenly spaced round the centre (16 triangles), 'cross3' = the original three */
+  const n=mode==='cross3'?3:8,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+  for(let k=0;k<n;k++){const g=g0.clone();const sc=(n===8&&k%2)?.86:1;g.scale(sc,sc*(n===8&&k%2?.94:1),1);g.rotateY(k*Math.PI/n);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
+  for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
+    L.forEach((p,i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),hsh(p[0],p[1])*6.28);m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-.08),q,new T.Vector3(p[2]*1.25,p[2],p[2]*1.25));M.setMatrixAt(i,m);});
+    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);}
+  console.log('[ag] azaleas ('+mode+')',list.length);}
+function plantsDome(A,list){const T=A.THREE;
   /* each azalea is a real bush now: a lumpy, flat-bottomed dome of blossom over dark leaves (about 60 triangles, one draw call per colour) */
   const ico=new T.IcosahedronGeometry(1,1),pos=ico.attributes.position,P=[],U=[],C=[];
   const lump=(x,y,z)=>1+.13*Math.sin(x*5.1+y*2.3)+.1*Math.sin(z*4.7-x*3.1)+.08*Math.cos(y*6.3+z*2.2);
