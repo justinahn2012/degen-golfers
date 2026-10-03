@@ -11,8 +11,12 @@
 
 setTimeout(function(){
 "use strict";
-const D=window.COURSE;/*COURSE-EXT*/const EXT=(k,...a)=>{const X=window.COURSE_EXT;if(!X||typeof X[k]!=='function')return;try{return X[k](...a);}catch(e){console.warn('course ext '+k,e);}};let EXTAPI=null;function mkAPI(){if(EXTAPI)return EXTAPI;EXTAPI={THREE,D,get scene(){return scene;},get renderer(){return renderer;},get camera(){return camera;},get sun(){return sun;},get HEMI(){return HEMI;},get SKY(){return SKY;},get WT(){return WT;},get LINQ(){return LINQ;},get sunDir(){return sunDir;},get skyMat(){return skyMat;},H:(x,y)=>H(x,y),baseH:(x,y)=>baseH(x,y),V:(x,y,z)=>V(x,y,z),lieAt:(x,y)=>lieAt(x,y),inP:(P,x,y)=>inP(P,x,y),dPL:(x,y,l)=>dPL(x,y,l),grad:(x,y)=>grad(x,y),rnd:()=>rnd(),get TREES(){return TREES;},get THASH(){return THASH;},get IMPS(){return IMPS;},get mkImp(){return window.__MKIMP;},get GREENS(){return GREENS;},get TEES(){return TEES;},get BUNKERS(){return BUNKERS;},get WATER(){return WATER;},get FAIRWAYS(){return FAIRWAYS;},get PATHS(){return PATHS;},get MAIN(){return MAIN;},get HOLES(){return HOLES;},get ctx(){return ctx;},get mx(){return mx;},get tex(){return tex;},get maskT(){return maskT;},get box(){return{X0,X1,Y0,Y1,WW,HH};},get outer(){return outer;},get HERO(){return HERO;},IMC:m=>IMC(m),linearize:o=>linearize(o),addSolid:(x,y,z,r,hz)=>addSolid(x,y,z,r,hz)};return EXTAPI;}
+const D=window.COURSE;/*COURSE-EXT*/const EXT=(k,...a)=>{const X=window.COURSE_EXT;if(!X||typeof X[k]!=='function')return;try{return X[k](...a);}catch(e){console.warn('course ext '+k,e);}};let EXTAPI=null;function mkAPI(){if(EXTAPI)return EXTAPI;EXTAPI={THREE,D,get scene(){return scene;},get renderer(){return renderer;},get camera(){return camera;},get sun(){return sun;},get HEMI(){return HEMI;},get SKY(){return SKY;},get WT(){return WT;},get LINQ(){return LINQ;},get sunDir(){return sunDir;},get skyMat(){return skyMat;},H:(x,y)=>H(x,y),baseH:(x,y)=>baseH(x,y),V:(x,y,z)=>V(x,y,z),lieAt:(x,y)=>lieAt(x,y),inP:(P,x,y)=>inP(P,x,y),dPL:(x,y,l)=>dPL(x,y,l),grad:(x,y)=>grad(x,y),rnd:()=>rnd(),get TREES(){return TREES;},get THASH(){return THASH;},get IMPS(){return IMPS;},get mkImp(){return window.__MKIMP;},get GREENS(){return GREENS;},get TEES(){return TEES;},get BUNKERS(){return BUNKERS;},get WATER(){return WATER;},get FAIRWAYS(){return FAIRWAYS;},get PATHS(){return PATHS;},get MAIN(){return MAIN;},get HOLES(){return HOLES;},get ctx(){return ctx;},get mx(){return mx;},get tex(){return tex;},get maskT(){return maskT;},get box(){return{X0,X1,Y0,Y1,WW,HH};},get outer(){return outer;},get HERO(){return HERO;},get players(){return players;},IMC:m=>IMC(m),linearize:o=>linearize(o),addSolid:(x,y,z,r,hz)=>addSolid(x,y,z,r,hz)};return EXTAPI;}
 let GFX="ultra";try{GFX=localStorage.getItem("dg-gfx2")||"ultra";}catch(e){}
+/* a course can soften its shadows (window.SHADOW_LIFT, 0-1: how much sunlight still reaches shaded ground), so deep shade under trees
+   reads as green grass in shadow instead of near-black (the ACES curve crushes dark values). Patched before anything compiles. */
+try{const SL=+window.SHADOW_LIFT;if(SL>0&&SL<1){const L=SL.toFixed(3),C=THREE.ShaderChunk;C.shadowmask_pars_fragment=C.shadowmask_pars_fragment.replace(/return shadow;\s*}\s*$/,'return mix('+L+',1.,shadow);\n}');
+  C.lights_fragment_begin=C.lights_fragment_begin.split('? getShadow( directionalShadowMap[ i ]').join('? '+L+'+(1.-'+L+')*getShadow( directionalShadowMap[ i ]');}}catch(e){console.warn('shadow lift',e);}
 const LINQ={value:0};let COMP=null,GRADE=null;const MOBILE=matchMedia("(pointer:coarse)").matches;let DRS=1,FT=16,DRSnext=0;function basePR(){return Math.min(GFX==="ultra"?(MOBILE?1.6:2):(MOBILE?1.15:1.25),window.devicePixelRatio||1);}
 const YD=0.9144, TOYD=1.0936, TOFT=3.2808;
 const $=id=>document.getElementById(id);
@@ -670,7 +674,7 @@ function* genTufts(x0,y0,tee,out){const list=[];
  list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);out.tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));m.toArray(out.m,i*16);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);c.toArray(out.c,i*3);});}
 function applyTufts(d){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const n=Math.max(1,d.n),M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,n));
  M.instanceMatrix.array.set(d.m.subarray(0,n*16));M.instanceColor.array.set(d.c.subarray(0,n*3));M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;
- M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;tufts=M;linearize(M);scene.add(M);}
+ M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;M.receiveShadow=true;tufts=M;linearize(M);scene.add(M);}
 function buildTufts(x0,y0){const d={},it=genTufts(x0,y0,!!(cur&&cur.lie==='tee'),d);while(!it.next().done);applyTufts(d);}
 /* the scheduler: one prepared spot at a time, a few milliseconds of work per frame (never while the swing bar runs) */
 const GRASS={job:null,key:null,ready:null};let GRASS_DEFER=false;
@@ -2153,7 +2157,25 @@ function updWild(now,dt){
 function updOcc(){let on=0;const p=cur;OCC.uCamP.value.copy(camera.position);
   if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2')&&!(overhead&&state==='aim')){OCC.uTgt.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));on=1;OCC.uOccK.value=.9;OCC.uOccDk.value=0;}
   else if(p&&p.ball&&(state==='flight'||state==='result'||state==='replay')){OCC.uTgt.value.copy(p.ball.b.position);on=1;OCC.uOccK.value=.62;OCC.uOccDk.value=.45;}
-  OCC.uOccOn.value=on;}
+  OCC.uOccOn.value=on;try{updSee();}catch(e){}}
+/* ---------- see-through: every plant and structure closer to the camera than the golfer is cut away (dithered edge), plus a 1.6 m
+   corridor right up to the golfer, so a canopy, branch or bush between the camera and the player never blocks the view. In flight the
+   camera only clears what is within 3 m of the lens. Ground, grass blades and tufts are never cut; shadows are unaffected. ---------- */
+const SEE={uC:{value:new THREE.Vector3()},uT:{value:new THREE.Vector3()},uR:{value:0},uOn:{value:0},next:0,n:0};
+const SEE_FS='if(uSeeOn>.5){vec3 sr=vSeeW-uSeeC;float so=1.-smoothstep(uSeeR-1.,uSeeR,length(sr));vec3 sg=uSeeT-uSeeC;float sL=length(sg);\n if(sL>.5){vec3 su=sg/sL;float sa=dot(sr,su);if(sa>0.&&sa<sL-.3)so=max(so,1.-smoothstep(1.,1.6,length(sr-su*sa)));}\n if(so>.001){float sn=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));if(sn<so)discard;}}\n';
+function seeInject(sh){sh.uniforms.uSeeC=SEE.uC;sh.uniforms.uSeeT=SEE.uT;sh.uniforms.uSeeR=SEE.uR;sh.uniforms.uSeeOn=SEE.uOn;let v=sh.vertexShader;
+  v=v.replace('#include <common>','#include <common>\nvarying vec3 vSeeW;').replace('void main() {','void main() {\nvSeeW=vec3(1e6);');
+  if(v.indexOf('#include <project_vertex>')>=0)v=v.replace('#include <project_vertex>','#include <project_vertex>\n{vec4 sw=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nsw=instanceMatrix*sw;\n#endif\nvSeeW=(modelMatrix*sw).xyz;}');
+  else if(v.indexOf('vec3 wp=')>=0)v=v.replace('gl_Position=projectionMatrix*mvPosition;','gl_Position=projectionMatrix*mvPosition;vSeeW=wp;');
+  sh.vertexShader=v;sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vSeeW;uniform vec3 uSeeC,uSeeT;uniform float uSeeR,uSeeOn;').replace('void main() {','void main() {\n'+SEE_FS);}
+function seePatch(m){if(!m||m.userData.see||m.isShaderMaterial||m.isRawShaderMaterial)return;const k0=String(m.customProgramCacheKey()),prev=m.onBeforeCompile;m.userData.see=1;
+  m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);seeInject(sh);};m.customProgramCacheKey=()=>k0+'|see';m.needsUpdate=true;SEE.n++;}
+function seeScan(){for(const p of players)if(p.av)p.av.traverse(o=>{o.userData.noSee=1;});scene.traverse(o=>{if(!o.isMesh||o.userData.noSee)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.see)return;
+  if(!(o.userData.occluder||o.userData.see)){if(!o.isInstancedMesh)return;if(/blade|tuft/.test(String(m.customProgramCacheKey())))return;}seePatch(m);});}
+function updSee(){const p=cur,now=performance.now()/1000;if(now>SEE.next){SEE.next=now+1.5;seeScan();}SEE.uC.value.copy(camera.position);let on=0;
+  if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&!(overhead&&state==='aim')){const t=SEE.uT.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));SEE.uR.value=Math.max(0,camera.position.distanceTo(t)-1.1);on=1;}
+  else if(state==='flight'||state==='result'||state==='replay'){SEE.uT.value.copy(camera.position);SEE.uR.value=3;on=1;}
+  SEE.uOn.value=on;}
 function crossTreeMesh(imp,cap){const P=imp.frames===8?4:2,pos=[],uv=[],fr=[],idx=[];for(let k=0;k<P;k++){const a=k/imp.frames*Math.PI*2,rx=Math.sin(a),rz=-Math.cos(a),b=k*4;
     pos.push(-.5*rx,0,-.5*rz,.5*rx,0,.5*rz,.5*rx,1,.5*rz,-.5*rx,1,-.5*rz);uv.push(0,0,1,0,1,1,0,1);fr.push(k,k,k,k);idx.push(b,b+1,b+2,b,b+2,b+3);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('aF',new THREE.Float32BufferAttribute(fr,1));g.setIndex(idx);

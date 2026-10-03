@@ -1,3 +1,6 @@
+/* Augusta: shaded ground keeps 45% of the sunlight (main.js SHADOW_LIFT), so the shade under the pines reads as green grass and
+   orange straw in shadow rather than near-black mud */
+if(window.SHADOW_LIFT==null)window.SHADOW_LIFT=.45;
 /* Ko Olina tropical trees: procedural models, shared by the atlas baker (bake.html) and the game (hero palms in ko.js).
    Heights are normalised: every tree's top sits at y = 1. */
 (function(root){
@@ -264,16 +267,67 @@ function boardsOld(A){const T=A.THREE,c=document.createElement('canvas');c.width
     for(const sx of[-W/2+.4,W/2-.4]){const p=new T.Mesh(new T.BoxGeometry(.25,1.4,.25),green);p.position.set(sx,.7,0);grp.add(p);}
     grp.position.copy(A.V(bx,by,z));grp.lookAt(A.V(g[0],g[1],z));grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.userData.occluder=true;}});A.scene.add(grp);n++;}
   console.log('[ag] leaderboards',n);}
-/* the leaderboards: the classic white Augusta board (ag_board.glb, about 10 m wide), placed where the old flat boards stood;
-   if the model can't load, the old flat boards go up instead */
+/* the leaderboards: the classic white Augusta board, built here so the lettering is sharp (the old ag_board.glb model was a scanned
+   mesh with smeared lettering). LEADERS over a HOLE / PAR grid, the round's golfers listed by score with each hole's running total
+   (red under par, green level or over, as at Augusta), a THRU panel on the left, green trim, base band and posts. One shared
+   texture for all four boards, redrawn only when a score changes. */
 function boards(A){const T=A.THREE,spots=[];
   for(const ref of['18','11','16','2']){const h=A.HOLES.find(q=>q.ref===ref);if(!h)continue;const P=h.p,g=P[P.length-1],a=P[P.length-2],dx=g[0]-a[0],dy=g[1]-a[1],l=Math.hypot(dx,dy),ux=dx/l,uy=dy/l;
     let bx=g[0]+ux*30-uy*32,by=g[1]+uy*30+ux*32;if(A.lieAt(bx,by)!=='rough'&&A.lieAt(bx,by)!=='oob'){bx=g[0]+ux*30+uy*32;by=g[1]+uy*30-ux*32;}spots.push([bx,by,g]);}
-  if(!T.GLTFLoader){boardsOld(A);return;}
-  new T.GLTFLoader().load('ag_board.glb',gl=>{let n=0;for(const [bx,by,g] of spots){const m=gl.scene.clone(true),W=10;let z=1e9;for(const s of[-.45,0,.45])z=Math.min(z,A.H(bx+s*W*(g[1]-by)/Math.hypot(g[0]-bx,g[1]-by),by-s*W*(g[0]-bx)/Math.hypot(g[0]-bx,g[1]-by)));
-      m.scale.setScalar(W);m.position.copy(A.V(bx,by,z-.15));m.lookAt(A.V(g[0],g[1],z-.15));if(window.AG_BOARD_FLIP)m.rotateY(Math.PI);
-      m.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.userData.occluder=true;if(o.material){o.material.roughness=.85;o.material.metalness=0;}}});A.scene.add(m);n++;}
-    console.log('[ag] leaderboards (model)',n);},undefined,()=>{console.warn('[ag] board model missing - flat boards');boardsOld(A);});}
+  const GRN='#0b5c37',RED='#c8102e',INK='#1d211f',F='"Barlow Condensed","Arial Narrow",Arial,sans-serif';
+  const HL=A.HOLES.filter(h=>/^\d+$/.test(h.ref)).slice().sort((p,q)=>+p.ref - +q.ref).slice(0,18);
+  /* panel sizes (m): main 8.6 x 4.8 with a 0.4 m arch over LEADERS; THRU panel 1.8 x 2.3 to its left; both sit on a 0.55 m green band */
+  const WP=8.6,HP=4.8,AR=.4,AW=3.6,Y0=2.6,WT=1.8,HT=2.3,XT=-WP/2-.25-WT/2;
+  const mkC=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+  const cM=mkC(2048,1024),cT=mkC(512,512),LW=2048,LH=Math.round(2048*(HP+AR)/WP);      /* main canvas drawn in a 2048 x LH space, squeezed to 1024 */
+  const tM=new T.CanvasTexture(cM),tT=new T.CanvasTexture(cT);for(const t of[tM,tT]){t.encoding=T.sRGBEncoding;t.anisotropy=8;}
+  const last=n=>{const w=String(n||'').trim().split(/\s+/);return (w[w.length-1]||'').toUpperCase();};
+  const rows=()=>{const P=(A.players||[]).filter(p=>p&&p.name);return P.map(p=>{const cd=p.card||{},cum=[];let s=0,pr=0,n=0;
+      HL.forEach((h,i)=>{const k=A.HOLES.indexOf(h);if(cd[k]!=null){s+=cd[k];pr+=+h.par||4;n++;cum[i]=s-pr;}});return{name:last(p.name),tp:n?s-pr:null,n,cum};})
+    .sort((a,b)=>(a.tp==null)-(b.tp==null)||(a.tp-b.tp)||(b.n-a.n));};
+  const fit=(x,txt,mw,size,wt)=>{let s=size;x.font=wt+' '+s+'px '+F;while(s>10&&x.measureText(txt).width>mw){s-=2;x.font=wt+' '+s+'px '+F;}};
+  const sc=v=>v==null?'':v===0?'E':String(Math.abs(v));
+  function draw(R){const x=cM.getContext('2d');x.setTransform(1,0,0,1024/LH,0,0);
+    x.fillStyle='#f6f5f0';x.fillRect(0,0,LW,LH);
+    const ax0=LW/2-AW/2/WP*LW,ax1=LW/2+AW/2/WP*LW,ah=AR/(HP+AR)*LH;            /* the white above the flat top only exists under the arch */
+    x.fillStyle=GRN;x.textAlign='center';x.textBaseline='middle';x.font='700 150px '+F;x.save();x.translate(LW/2,ah*.55+70);x.scale(1.18,1);x.fillText('L E A D E R S',0,0);x.restore();
+    const gx0=34,gx1=LW-34,gy0=ah+160,gy1=LH-30,nR=12,rh=(gy1-gy0)/nR,cP=78,cN=440,cw=(gx1-gx0-cP-cN)/18;
+    for(let r=0;r<nR;r++)for(let c=-2;c<18;c++){const X=c===-2?gx0:c===-1?gx0+cP:gx0+cP+cN+c*cw,W=c===-2?cP:c===-1?cN:cw,Y=gy0+r*rh;
+      x.fillStyle=r<2?'#eef0e9':'#fbfaf6';x.fillRect(X+3,Y+3,W-6,rh-6);x.strokeStyle='#c4c9c0';x.lineWidth=3;x.strokeRect(X+3,Y+3,W-6,rh-6);}
+    x.fillStyle=GRN;x.fillRect(gx0,gy0+2*rh-4,gx1-gx0,8);x.fillRect(gx0+cP+cN-4,gy0,8,gy1-gy0);
+    const fs=Math.round(rh*.64);x.textBaseline='middle';
+    x.textAlign='left';x.fillStyle=GRN;x.font='700 '+fs+'px '+F;x.fillText('HOLE',gx0+cP+22,gy0+rh*.53);x.fillText('PAR',gx0+cP+22,gy0+rh*1.53);
+    x.textAlign='center';HL.forEach((h,i)=>{const cx=gx0+cP+cN+(i+.5)*cw;x.fillText(h.ref,cx,gy0+rh*.53);x.fillText(String(h.par||4),cx,gy0+rh*1.53);});
+    R.slice(0,10).forEach((p,j)=>{const Y=gy0+(j+2.53)*rh;x.textAlign='center';x.fillStyle=GRN;x.font='700 '+fs+'px '+F;if(p.tp!=null)x.fillText(String(j+1),gx0+cP/2,Y);
+      x.textAlign='left';x.fillStyle=INK;fit(x,p.name,cN-44,fs,'700');x.fillText(p.name,gx0+cP+22,Y);
+      x.textAlign='center';x.font='700 '+fs+'px '+F;p.cum.forEach((v,i)=>{if(v==null)return;x.fillStyle=v<0?RED:GRN;x.fillText(sc(v),gx0+cP+cN+(i+.5)*cw,Y);});});
+    x.strokeStyle=GRN;x.lineWidth=14;x.lineJoin='round';x.beginPath();x.moveTo(7,ah+7);x.lineTo(ax0,ah+7);x.quadraticCurveTo(LW/2,7-ah,ax1,ah+7);x.lineTo(LW-7,ah+7);x.lineTo(LW-7,LH-7);x.lineTo(7,LH-7);x.closePath();x.stroke();
+    tM.needsUpdate=true;
+    const y=cT.getContext('2d');y.setTransform(1,0,0,1,0,0);y.fillStyle='#f6f5f0';y.fillRect(0,0,512,512);y.strokeStyle=GRN;y.lineWidth=12;y.strokeRect(6,6,500,500);
+    const th=R.reduce((m,p)=>Math.max(m,p.n),0);y.fillStyle=GRN;y.textAlign='center';y.textBaseline='middle';y.font='700 112px '+F;y.fillText('THRU',178,96);
+    y.fillStyle='#fbfaf6';y.fillRect(334,40,140,112);y.strokeStyle='#c4c9c0';y.lineWidth=3;y.strokeRect(334,40,140,112);y.fillStyle=INK;y.fillText(th?String(th):'',404,98);
+    y.fillStyle=GRN;y.fillRect(24,176,464,6);
+    R.slice(0,3).forEach((p,j)=>{const Y=240+j*96;y.fillStyle='#fbfaf6';y.fillRect(28,Y-40,330,82);y.fillRect(368,Y-40,116,82);y.strokeStyle='#c4c9c0';y.strokeRect(28,Y-40,330,82);y.strokeRect(368,Y-40,116,82);
+      y.textAlign='left';y.fillStyle=INK;fit(y,p.name,300,64,'700');y.fillText(p.name,44,Y+3);y.textAlign='center';y.font='700 64px '+F;y.fillStyle=p.tp!=null&&p.tp<0?RED:GRN;y.fillText(sc(p.tp),426,Y+3);});
+    tT.needsUpdate=true;}
+  let sig='';const upd=()=>{try{const R=rows(),s=JSON.stringify(R);if(s!==sig){sig=s;draw(R);}}catch(e){console.warn('[ag] board draw',e);}};
+  /* geometry: an extruded white body with green edges, the lettered face just in front, the THRU panel, base bands and posts */
+  const green=new T.MeshLambertMaterial({color:0x0b5c37}),faceM=new T.MeshLambertMaterial({map:tM,emissive:0x6e6e6e,emissiveMap:tM}),faceT=new T.MeshLambertMaterial({map:tT,emissive:0x6e6e6e,emissiveMap:tT});/* a little self-light so the white face reads white even with the sun behind it */
+  const shp=new T.Shape(),h0=HP;shp.moveTo(-WP/2,0);shp.lineTo(WP/2,0);shp.lineTo(WP/2,h0);shp.lineTo(AW/2,h0);shp.quadraticCurveTo(0,h0+AR*2,-AW/2,h0);shp.lineTo(-WP/2,h0);shp.lineTo(-WP/2,0);
+  const body=new T.ExtrudeGeometry(shp,{depth:.3,bevelEnabled:false,curveSegments:16});body.translate(0,0,-.15);
+  const face=new T.ShapeGeometry(shp,16),uv=face.attributes.uv,ps=face.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,(ps.getX(i)+WP/2)/WP,ps.getY(i)/(HP+AR));
+  const bodyT=new T.BoxGeometry(WT,HT,.26),faceTg=new T.PlaneGeometry(WT-.12,HT-.12);
+  const box=(w,h,d,m,px,py,pz)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(px,py,pz);return o;};
+  const one=()=>{const g=new T.Group(),b=new T.Mesh(body,green);b.position.y=Y0;g.add(b);const f=new T.Mesh(face,faceM);f.position.set(0,Y0,.2);g.add(f);
+    g.add(box(WP+.1,.55,.36,green,0,Y0-.275,0));g.add(box(.9,Y0-.55+.3,.5,green,0,(Y0-.55)/2-.15,0));for(const sx of[-WP/2+.6,WP/2-.6])g.add(box(.3,Y0-.55+.3,.3,green,sx,(Y0-.55)/2-.15,0));
+    const tb=new T.Mesh(bodyT,green);tb.position.set(XT,Y0+HT/2,0);g.add(tb);const tf=new T.Mesh(faceTg,faceT);tf.position.set(XT,Y0+HT/2,.18);g.add(tf);
+    g.add(box(WT+.1,.55,.32,green,XT,Y0-.275,0));g.add(box(.3,Y0-.55+.3,.3,green,XT,(Y0-.55)/2-.15,0));g.add(box(.5,.12,.2,green,(XT+WT/2-WP/2)/2,Y0+.6,0));
+    return g;};
+  let n=0;for(const [bx,by,g] of spots){const grp=one(),Wd=12.5,dl=Math.hypot(g[0]-bx,g[1]-by),qx=(g[1]-by)/dl,qy=-(g[0]-bx)/dl;let z=1e9;for(const s of[-.5,-.2,.1,.4])z=Math.min(z,A.H(bx+s*Wd*qx,by+s*Wd*qy));
+    grp.position.copy(A.V(bx,by,z-.15));grp.lookAt(A.V(g[0],g[1],z-.15));if(window.AG_BOARD_FLIP)grp.rotateY(Math.PI);
+    grp.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.userData.occluder=true;}});try{A.linearize(grp);}catch(e){}A.scene.add(grp);n++;}
+  upd();setInterval(upd,2000);try{if(document.fonts&&document.fonts.load)document.fonts.load('700 60px "Barlow Condensed"').then(()=>{sig='';upd();});}catch(e){}
+  console.log('[ag] leaderboards (built)',n);}
 /* ---------- pine straw: the orange-brown floor under every stand of pines (ag_straw.png, from the lidar canopy and the aerial) ---------- */
 function straw(A,done){const D=A.D,Fz=D.straw;if(!Fz)return;const img=new Image();img.onload=()=>{try{
   const w=img.width,h=img.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,w,h),d=id.data,mk=new Uint8ClampedArray(d);
