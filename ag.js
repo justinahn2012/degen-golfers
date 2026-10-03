@@ -295,7 +295,7 @@ function azaleas(A,mask){const D=A.D,Fz=D.straw,L=[];if(!mask||!Fz)return;const 
     if(i<1||j<1||i>=w-1||j>=h-1)continue;const v=d[(j*w+i)*4];if(v<120)continue;
     const edge=d[(j*w+i+1)*4]<120||d[(j*w+i-1)*4]<120||d[((j+1)*w+i)*4]<120||d[((j-1)*w+i)*4]<120||d[(j*w+Math.min(w-1,i+2))*4]<120||d[(j*w+Math.max(0,i-2))*4]<120;
     const sig=['10','12','13','16'].some(r=>{const hl=A.HOLES.find(q=>q.ref===r);if(!hl)return false;const g=hl.p[hl.p.length-1];return Math.hypot(jx-g[0],jy-g[1])<70;});
-    if((!edge&&!sig)||!nearPlay(jx,jy))continue;const cl=Math.sin(jx*.09)*Math.cos(jy*.08)+.5*Math.sin((jx-jy)*.05);if(cl<(sig?-.6:.15))continue;
+    if((!edge&&!sig)||!nearPlay(jx,jy))continue;if(A.HOLES.some(hl=>{const t0=hl.p[0],t1=hl.p[1],L0=Math.hypot(t1[0]-t0[0],t1[1]-t0[1])||1,ux=(t1[0]-t0[0])/L0,uy=(t1[1]-t0[1])/L0,rx=jx-t0[0],ry=jy-t0[1],al=rx*ux+ry*uy;return al>-3&&al<45&&Math.abs(-rx*uy+ry*ux)<7;}))continue;/* never in front of a tee: keep the first 45 m of every line of play clear */const cl=Math.sin(jx*.09)*Math.cos(jy*.08)+.5*Math.sin((jx-jy)*.05);if(cl<(sig?-.6:.15))continue;
     const kind=Math.floor(hsh(Math.floor(jx/9),Math.floor(jy/9))*4);L.push([jx,jy,2.0+hsh(jx*3,jy)*1.3,kind]);if(L.length>9000)break;}
   plants(A,L);console.log('[ag] azaleas',L.length);}
 /* ---------- hero pines: near the golfer, the game swaps sprites for real 3D models. Augusta's are loblollies built by the

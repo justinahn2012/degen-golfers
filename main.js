@@ -456,6 +456,7 @@ const GMESH=[];
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();const mm=new THREE.Mesh(g,gG);mm.receiveShadow=true;scene.add(mm);
   const cell=new Uint8Array((nx-1)*(ny-1));for(let q=0;q<I.length;q+=6){const k=I[q],ci=k%nx,cj=(k-ci)/nx;cell[cj*(nx-1)+ci]=1;}mm.userData.grid={x0,y0,st,nx,ny,P,cell};GMESH.push(mm);}}
 /* the drawn height of a green's own fine mesh at (x,y), triangle for triangle (null off the greens): a ball on a green is shown resting on it */
+function DRAWNH(x,y){let g=null;try{g=GDRAW(x,y);}catch(e){}if(g!=null)return g;let h=-1e9;try{h=HDRAW(x,y);}catch(e){}return h>-1e8?h:H(x,y);}/* the height of the ground as drawn at (x,y): a green's or bunker's fine mesh, else the coarse ground */
 function GDRAW(x,y){let best=null;for(const m of GMESH.concat(BMESH)){const G=m.userData.grid,fi=(x-G.x0)/G.st,fj=(y-G.y0)/G.st,i=Math.floor(fi),j=Math.floor(fj);if(i<0||j<0||i>=G.nx-1||j>=G.ny-1||(G.cell&&!G.cell[j*(G.nx-1)+i]))continue;
   const u=fi-i,v=fj-j,a=j*G.nx+i,P=G.P,ha=P[a*3+1],hb=P[(a+1)*3+1],hc=P[(a+G.nx)*3+1],hd=P[(a+G.nx+1)*3+1];const h=u+v<=1?ha+(hb-ha)*u+(hc-ha)*v:hd+(hc-hd)*(1-u)+(hb-hd)*(1-v);if(best==null||h>best)best=h;}return best;}/* where two greens' meshes overlap, the higher one is what you see */
 
@@ -916,10 +917,10 @@ mk('driver',withModel(wood(1,dh&&dh.tint&&!dh.c?S({map:T.carbon,color:new THREE.
       window._spiderP.then(gl=>{if(gl)put(gl);});
     }
     if(PSTYLE==='std'||PSTYLE==='blackout'||PSTYLE==='oilslick'){/* the standard putter model (blackout and oil-slick are the same head in their colours): the drawn blade above shows only until it has loaded */
-      window._pstdP=window._pstdP||new Promise(res=>new THREE.GLTFLoader().load('putter_std.glb',res,undefined,()=>res(null)));
-      window._pstdP.then(gl=>{if(!gl)return;const hd=gl.scene.getObjectByName('pHead'),nk=gl.scene.getObjectByName('pNeck');if(!hd||!nk)return;
+      const PFILE=PSTYLE==='oilslick'?'putter_oil.glb':'putter_std.glb';window._pstdPs=window._pstdPs||{};window._pstdPs[PFILE]=window._pstdPs[PFILE]||new Promise(res=>new THREE.GLTFLoader().load(PFILE,res,undefined,()=>res(null)));if(PFILE==='putter_std.glb')window._pstdP=window._pstdPs[PFILE];
+      window._pstdPs[PFILE].then(gl=>{if(!gl)return;const hd=gl.scene.getObjectByName('pHead'),nk=gl.scene.getObjectByName('pNeck');if(!hd||!nk)return;
         hb.children.forEach(c=>c.visible=false);hg.children.forEach(c=>{if(c!==hb)c.visible=false;});
-        const tint=(lk&&lk.putterTint)||(PSTYLE==='blackout'?'#1b1c1f':PSTYLE==='oilslick'?'#1f44b8':null),dark=PSTYLE==='blackout',mk2=(o,par,list)=>o.traverse(q=>{if(!q.isMesh)return;let mt=q.material;if(tint){mt=mt.clone();mt.color=new THREE.Color(tint);mt.metalness=dark?.45:.95;mt.roughness=dark?.55:.24;}const m=new THREE.Mesh(q.geometry,mt);if(env&&m.material&&!m.material.envMap){m.material.envMap=env;m.material.envMapIntensity=1.1;m.material.needsUpdate=true;}m.castShadow=true;par.add(m);list&&list.push(m);});
+        const oil=PSTYLE==='oilslick',tint=(lk&&lk.putterTint)||(PSTYLE==='blackout'?'#1b1c1f':null)/* Shaw's colours are painted into putter_oil.glb */,dark=PSTYLE==='blackout',mk2=(o,par,list)=>o.traverse(q=>{if(!q.isMesh)return;let mt=q.material;if(tint){mt=mt.clone();mt.color=new THREE.Color(tint);mt.metalness=dark?.45:.95;mt.roughness=dark?.55:.24;}else if(oil){mt=mt.clone();mt.metalness=.9;mt.roughness=.26;}const m=new THREE.Mesh(q.geometry,mt);if(env&&m.material&&!m.material.envMap){m.material.envMap=env;m.material.envMapIntensity=1.1;m.material.needsUpdate=true;}m.castShadow=true;par.add(m);list&&list.push(m);});
         const hm=[];mk2(hd,hb,hm);hb.userData.hm=hm;const ng=new THREE.Group();mk2(nk,ng);hb.add(ng);
         hb.userData.axisMount={xj:.0106,zc:-.0043,y:.0163,fx:.0037,fcz:.0303,fcy:.0214};hb.userData.neckModel={g:ng,L0:.0839};hb.userData.neck=hb.userData.neck||[];hb.userData.sEnd=.125;
         const fr=new THREE.Mesh(new THREE.CylinderGeometry(.0052,.0058,.016,24),S({color:0x0b0b0d,metalness:.4,roughness:.3}));fr.position.y=.129;hg.add(fr);
@@ -2281,12 +2282,12 @@ function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const
   for(const tag in put){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
 let INTRO_D=0;
 function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.aim);}catch(e){console.warn('hero',e);}const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
-  {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(H(gx+sx,gy+sy)+H(gx-sx,gy-sy)+H(gx,gy))/3));}p.av.rotation.y=a;
+  {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(DRAWNH(gx+sx,gy+sy)+DRAWNH(gx-sx,gy-sy)+DRAWNH(gx,gy))/3));}p.av.rotation.y=a;/* feet on the ground you can see (the drawn surface), not the true one under it */
   /* putting: pose the stroke at impact, measure exactly where the putter face is, and set the golfer so the face meets the ball -
      exact for every body and stance (the women's taller address lengthens the putter to reach the turf) */
   if(pt){try{const g=p.av;g.updateMatrixWorld(true);try{applyPose(g,swingPose('addr',0,0,true),'putter');g.updateMatrixWorld(true);levelPutter(g);}catch(e){console.warn('level putter',e);}applyPose(g,swingPose('down',1,.5,true),'putter');g.updateMatrixWorld(true);const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;
     if(pc&&pc.userData.hb){pc.updateMatrixWorld(true);const f=pc.userData.hb.localToWorld(pc.userData.hb.userData.fc?pc.userData.hb.userData.fc.clone():new THREE.Vector3(.0175+.0214,.013,.049)),b=V(p.x,p.y,0),dx=b.x-f.x,dz=b.z-f.z;
-      if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(H(gx2+sx,gy2+sy)+H(gx2-sx,gy2-sy)+H(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
+      if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(DRAWNH(gx2+sx,gy2+sy)+DRAWNH(gx2-sx,gy2-sy)+DRAWNH(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
   applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return lie==='green'?Math.round(m*TOFT)+' ft':Math.max(1,Math.round(m*TOYD))+' yds';}
