@@ -279,6 +279,8 @@ function straw(A,done){const D=A.D,Fz=D.straw;if(!Fz)return;const img=new Image(
   const w=img.width,h=img.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,w,h),d=id.data,mk=new Uint8ClampedArray(d);
   for(let i=0;i<d.length;i+=4){const a=d[i]/255,p=i/4,px=p%w,py=(p/w)|0,n=hsh(px*.37,py*.53),k=.8+.35*n;d[i]=Math.min(255,112*k);d[i+1]=Math.min(255,66*k);d[i+2]=Math.min(255,38*k);d[i+3]=Math.round(a*240);}
   x.putImageData(id,0,0);const c=A.ctx,B=A.box,S=c.canvas.width;c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(cv,(Fz.x0-B.X0)/B.WW*S,(B.Y1-Fz.y1)/B.HH*S,(Fz.x1-Fz.x0)/B.WW*S,(Fz.y1-Fz.y0)/B.HH*S);c.restore();
+  /* the ground shader lays a needle-litter texture over the straw (main.js setGroundStraw) */
+  try{if(window.setGroundStraw)window.setGroundStraw(img,Fz.x0,Fz.y0,Fz.x1,Fz.y1);}catch(e){console.warn('[ag] straw detail',e);}
   /* no grass blades or tufts poking up through the pine straw */
   window.NOGRASS=(px,py)=>{const i=Math.floor((px-Fz.x0)/(Fz.x1-Fz.x0)*w),j=Math.floor((Fz.y1-py)/(Fz.y1-Fz.y0)*h);return i>=0&&j>=0&&i<w&&j<h&&mk[(j*w+i)*4]>70;};
   /* straw takes no turf detail: mark it as path in the surface mask */
