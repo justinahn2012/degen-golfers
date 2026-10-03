@@ -2293,6 +2293,18 @@ function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.a
     if(pc&&pc.userData.hb){pc.updateMatrixWorld(true);const f=pc.userData.hb.localToWorld(pc.userData.hb.userData.fc?pc.userData.hb.userData.fc.clone():new THREE.Vector3(.0175+.0214,.013,.049)),b=V(p.x,p.y,0),dx=b.x-f.x,dz=b.z-f.z;
       if(Math.hypot(dx,dz)<.6){g.position.x+=dx;g.position.z+=dz;const nx=g.position.x,nz=g.position.z,sx=Math.cos(a)*.2,sy=Math.sin(a)*.2,gx2=nx,gy2=-nz;g.position.y=(DRAWNH(gx2+sx,gy2+sy)+DRAWNH(gx2-sx,gy2-sy)+DRAWNH(gx2,gy2))/3;}}}catch(e){console.warn('putt fit',e);}}
   applyPose(p.av,swingPose('addr',0,0,!!pt),clubType(p.club));seatBag(p);}
+
+/* when the pin is out of the picture while aiming (overhead view, or turned away), a small tag at the screen edge points to it */
+let PINEDGE=null;
+function updPinEdge(){if(!PINEDGE){PINEDGE=document.createElement('div');PINEDGE.id='pinEdge';PINEDGE.style.cssText='position:fixed;z-index:30;pointer-events:none;display:none;font:700 15px/1 "Barlow Condensed",system-ui,sans-serif;color:#1d2a1f;background:#f2c94c;border-radius:16px;padding:6px 11px 6px 9px;box-shadow:0 2px 10px rgba(0,0,0,.4);white-space:nowrap;';document.body.appendChild(PINEDGE);}
+  if(state!=='aim'||!cur||CURT||cur.lie==='green'){PINEDGE.style.display='none';return;}
+  const W=innerWidth,Hh=innerHeight,pn=$('panel'),pb=pn?pn.getBoundingClientRect().top:Hh*.8,v=V(PIN.x,PIN.y,H(PIN.x,PIN.y)+1.5).project(camera),behind=v.z>1;
+  let sx=(v.x+1)/2*W,sy=(1-v.y)/2*Hh;const m=30;
+  if(!behind&&sx>m&&sx<W-m&&sy>m&&sy<pb-m){PINEDGE.style.display='none';return;}
+  const cx=W/2,cy=pb/2;let ddx=sx-cx,ddy=sy-cy;if(behind){ddx=-ddx;ddy=-ddy;}if(Math.abs(ddx)+Math.abs(ddy)<1e-3)ddy=-1;
+  const k=Math.min(Math.abs((W/2-m-50)/(ddx||1e-6)),Math.abs((pb/2-m-24)/(ddy||1e-6))),ex=cx+ddx*k,ey=cy+ddy*k,ang=Math.atan2(ddy,ddx)*180/Math.PI;
+  PINEDGE.innerHTML='<span style="display:inline-block;transform:rotate('+ang.toFixed(0)+'deg);margin-right:5px">&#10140;</span>Pin '+fmtDist(dist(cur),cur.lie);
+  PINEDGE.style.display='block';PINEDGE.style.left=Math.round(ex-PINEDGE.offsetWidth/2)+'px';PINEDGE.style.top=Math.round(ey-PINEDGE.offsetHeight/2)+'px';}
 function scoreName(p){const d=p.strokes-PAR;if(p.strokes===1)return'Hole in one';return({'-3':'Albatross','-2':'Eagle','-1':'Birdie','0':'Par','1':'Bogey','2':'Double bogey','3':'Triple bogey'})[d]||('+'+d);}
 function fmtDist(m,lie){return lie==='green'?Math.round(m*TOFT)+' ft':Math.max(1,Math.round(m*TOYD))+' yds';}
 
@@ -2912,7 +2924,9 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
     else if(overhead&&state==='aim'){const d=dist(p),mx=(p.x+PIN.x)/2,my=(p.y+PIN.y)/2;want=V(mx-dx*d*.25,my-dy*d*.25,z+Math.max(25,d*.85));look=V(mx,my,z);}
     else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75);look=V(p.x+dx*4,p.y+dy*4,z);}
     else{/* blind tee shot (a dune or bank rising in front): lift the camera until the eye line clears it */
-       let lift=0;for(let s=8;s<=90;s+=6){const q=H(p.x+dx*s,p.y+dy*s)-z-2.1,need=q-(s+7.5)*.02;if(need>lift)lift=need;}lift=Math.min(9,Math.max(0,lift*1.15));
+       /* only when the landing area itself is hidden behind a rise - looking up a hill needs no lift */
+       let lift=0;try{const Dt=Math.max(30,Math.min(carryOf(p,p.club)*.95,dist(p))),tz=H(p.x+dx*Dt,p.y+dy*Dt)+1,dB=7.5;
+         let found=-1;for(let L=0;L<=6;L+=.5){const ez=z+2.1+L;let ok=true;for(let s=8;s<Dt-10;s+=6){const lz=ez+(tz-ez)*(s+dB)/(Dt+dB);if(H(p.x+dx*s,p.y+dy*s)+.6>lz){ok=false;break;}}if(ok){found=L;break;}}lift=found>0?found:0;}catch(e){lift=0;}/* if even 6 m up can't see over it (a long uphill like Augusta 8), stay at eye level and look up the hill */
        want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1+lift);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2+lift*.35);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
@@ -2950,17 +2964,19 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(want&&look&&!fly&&state!=='menu'){
     if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2')&&!overhead){
       /* behind the golfer: dodge UP (and only a little closer), never forward past them - the tree in front of them stays in view */
-      const G=p.av.position;for(let i=0;i<12;i++){if(!treeHit(want.x,-want.z,want.y))break;const d=Math.hypot(want.x-G.x,want.z-G.z);if(d>3.2){want.x+=(G.x-want.x)*.08;want.z+=(G.z-want.z)*.08;}want.y+=.45;}
+      const G=p.av.position;for(let i=0;i<16;i++){if(!treeHit(want.x,-want.z,want.y))break;const d=Math.hypot(want.x-G.x,want.z-G.z);if(d>3.4&&i<9){want.x+=(G.x-want.x)*.12;want.z+=(G.z-want.z)*.12;}else want.y+=.45;}/* closer first, then up */
       if(want.y>look.y){const dz=want.y-look.y;look.y-=Math.min(.8,dz*.15);}
        /* keep the golfer and his club head in the picture: tilt the view down until the ball (where the club head sits) is clear above the
           control panel. This also covers a camera that had to climb out of a tree - it now looks down at the golfer instead of over him. */
        if(!(p.intro&&now<p.intro)){try{const pn=$('panel'),Hh=innerHeight||1,ptop=pn?pn.getBoundingClientRect().top:Hh*.8,lim=Math.max(-.75,Math.min(-.2,1-2*(ptop/Hh)+.14)),
          B=V(p.x,p.y,H(p.x,p.y)),dhL=Math.hypot(look.x-want.x,look.z-want.z)||1,dhB=Math.hypot(B.x-want.x,B.z-want.z)||1,tH=Math.tan(camera.fov*Math.PI/360),
          pL=Math.atan2(look.y-want.y,dhL),pB=Math.atan2(B.y-want.y,dhB);
-         if(Math.tan(pB-pL)/tH<lim){const pN=pB-Math.atan(lim*tH);look.y=want.y+Math.tan(pN)*dhL;}}catch(e){}}}
+         const low=()=>{const a=Math.hypot(look.x-want.x,look.z-want.z)||1,b=Math.hypot(B.x-want.x,B.z-want.z)||1;return Math.tan(Math.atan2(B.y-want.y,b)-Math.atan2(look.y-want.y,a))/tH<lim;};
+         if(!(CLUBS[p.club].putt)){const ax=Math.cos(p.aim),ay=Math.sin(p.aim);for(let k=0;k<7&&low();k++){const nx=want.x-ax,nz=want.z+ay;if(treeHit(nx,-nz,want.y))break;want.x=nx;want.z=nz;}}/* step back first: the golfer rises in the frame without looking straight down */
+         if(low()){const dhL2=Math.hypot(look.x-want.x,look.z-want.z)||1,dhB2=Math.hypot(B.x-want.x,B.z-want.z)||1,pB2=Math.atan2(B.y-want.y,dhB2),pN=pB2-Math.atan(lim*tH);look.y=want.y+Math.tan(pN)*dhL2;}}catch(e){}}}
     else{for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:(INTRO_D>3?3+Math.min(4,INTRO_D/12):3)));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
-  camera.position.copy(camPos);camera.lookAt(camLook);if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
+  camera.position.copy(camPos);camera.lookAt(camLook);try{updPinEdge();}catch(e){}if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
   flagG.rotation.y=wind.a;try{animFlag(now);}catch(e){}

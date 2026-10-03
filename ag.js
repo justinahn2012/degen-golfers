@@ -280,7 +280,7 @@ function straw(A,done){const D=A.D,Fz=D.straw;if(!Fz)return;const img=new Image(
   for(let i=0;i<d.length;i+=4){const a=d[i]/255,p=i/4,px=p%w,py=(p/w)|0,n=hsh(px*.37,py*.53),k=.8+.35*n;d[i]=Math.min(255,112*k);d[i+1]=Math.min(255,66*k);d[i+2]=Math.min(255,38*k);d[i+3]=Math.round(a*240);}
   x.putImageData(id,0,0);const c=A.ctx,B=A.box,S=c.canvas.width;c.save();c.setTransform(1,0,0,1,0,0);c.drawImage(cv,(Fz.x0-B.X0)/B.WW*S,(B.Y1-Fz.y1)/B.HH*S,(Fz.x1-Fz.x0)/B.WW*S,(Fz.y1-Fz.y0)/B.HH*S);c.restore();
   /* no grass blades or tufts poking up through the pine straw */
-  window.NOGRASS=(px,py)=>{const i=Math.floor((px-Fz.x0)/(Fz.x1-Fz.x0)*w),j=Math.floor((Fz.y1-py)/(Fz.y1-Fz.y0)*h);return i>=0&&j>=0&&i<w&&j<h&&mk[(j*w+i)*4]>110;};
+  window.NOGRASS=(px,py)=>{const i=Math.floor((px-Fz.x0)/(Fz.x1-Fz.x0)*w),j=Math.floor((Fz.y1-py)/(Fz.y1-Fz.y0)*h);return i>=0&&j>=0&&i<w&&j<h&&mk[(j*w+i)*4]>70;};
   /* straw takes no turf detail: mark it as path in the surface mask */
   const m=A.mx;m.save();m.setTransform(1,0,0,1,0,0);const cv2=document.createElement('canvas');cv2.width=w;cv2.height=h;const x2=cv2.getContext('2d'),id2=x2.createImageData(w,h);
   for(let i=0;i<mk.length;i+=4){id2.data[i]=255;id2.data[i+1]=255;id2.data[i+2]=0;id2.data[i+3]=mk[i]>110?255:0;}x2.putImageData(id2,0,0);
