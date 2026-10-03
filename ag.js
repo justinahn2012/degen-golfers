@@ -165,7 +165,11 @@ const X={};
 const hsh=(x,y)=>{const s=Math.sin(x*12.9898+y*78.233)*43758.5453;return s-Math.floor(s);};
 /* ---------- trees: every crown from the 2018 Georgia lidar. Loblolly pine (crown carried high on a bare trunk), hardwood, or flowering dogwood ---------- */
 X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.clear();const S=[[],[],[]];
-  for(const q of D.tl){const x=q[0],y=q[1],sp=q[4],t={x,y,gz:A.H(x,y),h:q[2],r:q[3],fir:sp===0,v:Math.floor(hsh(x,y)*(sp===0?2.999:1.999))};if(sp===0)t.hero='lob'+t.v;TR.push(t);S[sp].push(t);
+  for(const q of D.tl){/* Collisions (ball and the aim camera) use the game's broadleaf model for every tree here: a crown held high (centred at 62% of
+       the height) over a bare trunk. Loblolly pines are built like that. The game's 'fir' model is a cone starting 2 m off the
+       ground, which made the aim camera find itself inside a pine 4 m away and climb to a straight-down view. Crown radius
+       for collisions is capped at 30% of the height and 10 m. The 3D hero swap for pines is set by the hero tag. */
+    const x=q[0],y=q[1],sp=q[4],t={x,y,gz:A.H(x,y),h:q[2],r:Math.min(q[3],Math.max(3,.3*q[2]),10),fir:false,v:Math.floor(hsh(x,y)*(sp===0?2.999:1.999))};if(sp===0)t.hero='lob'+t.v;TR.push(t);S[sp].push(t);
     const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
   const ld=u=>{const t=new T.TextureLoader().load(u);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;};
   A.scene.add(A.mkImp(S[0],ld('ag_lobAtlas.webp'),8,3,[1.05,1.05,1.05],.733),A.mkImp(S[1],ld(window.ASSETS.broadAtlas),4,2,[1.216,1.03],1),A.mkImp(S[2],ld('ag_dogwAtlas.webp'),4,2,[1.05,1.05],1.554));
