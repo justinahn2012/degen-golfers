@@ -294,12 +294,26 @@ function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.hei
   for(let i=0;i<260;i++){const a=r()*6.283,rr=Math.pow(r(),.55)*54,cx=64+Math.cos(a)*rr,cy=66+Math.sin(a)*rr*.6;x.fillStyle=BL[Math.floor(r()*BL.length)];x.beginPath();x.arc(cx,cy,2.2+r()*2.4,0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
 function lineClear(A,x,y){const l=A.lieAt(x,y);return !(l==='tee'||l==='green'||l==='bunker'||l==='fairway'||l==='water');}
-function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
-  for(const ang of[0,Math.PI/3,2*Math.PI/3]){const g=g0.clone();g.rotateY(ang);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
-  for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
-    L.forEach((p,i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),hsh(p[0],p[1])*6.28);m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-.08),q,new T.Vector3(p[2]*1.25,p[2],p[2]*1.25));M.setMatrixAt(i,m);});
-    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);}}
+function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE;
+  /* each azalea is a real bush now: a lumpy, flat-bottomed dome of blossom over dark leaves (about 60 triangles, one draw call per colour) */
+  const ico=new T.IcosahedronGeometry(1,1),pos=ico.attributes.position,P=[],U=[],C=[];
+  const lump=(x,y,z)=>1+.13*Math.sin(x*5.1+y*2.3)+.1*Math.sin(z*4.7-x*3.1)+.08*Math.cos(y*6.3+z*2.2);
+  for(let f=0;f<pos.count;f+=3){const tri=[0,1,2].map(k=>new T.Vector3().fromBufferAttribute(pos,f+k));if(tri.every(v=>v.y<-.35))continue;
+    for(const v of tri){const yy=Math.max(-.2,v.y),r=lump(v.x,v.y,v.z),px=v.x*r,pz=v.z*r,py=(yy+.2)*.78*r;P.push(px,py,pz);
+      U.push(Math.atan2(v.z,v.x)/6.283*2.4+.5,py*1.6);const sh=.5+.55*Math.min(1,py/.85);C.push(sh,sh,sh);}}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setAttribute('color',new T.Float32BufferAttribute(C,3));geo.computeVertexNormals();
+  for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const tx=bushTex(T,k);
+    const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:tx,vertexColors:true}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
+    L.forEach((p,i)=>{q.setFromAxisAngle(new T.Vector3(0,1,0),hsh(p[0],p[1])*6.28);const s=p[2]*.62,e=.85+hsh(p[1],p[0])*.3;m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-.05),q,new T.Vector3(s*e,s*(.85+hsh(p[0]*2,p[1])*.35),s/e));M.setMatrixAt(i,m);});
+    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);}
+  console.log('[ag] azalea bushes',list.length,'triangles each',P.length/9);}
+/* blossom skin for the bushes: dense flowers in the bush's colour over dark green leaves, tiling */
+function bushTex(T,kind){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');let s=kind*977+29;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  const BL=[['#e5508f','#f06ea6','#d43f7f','#f590bb'],['#c2207a','#d63a8c','#a8146a','#e05aa0'],['#d42a3a','#e8454f','#b81e2c','#f06a6f'],['#fbf7f4','#ffffff','#efe8e6','#f7eef2']][kind];
+  x.fillStyle='#2b4420';x.fillRect(0,0,256,256);
+  for(let i=0;i<700;i++){x.fillStyle=['#2f4a22','#3a5a2a','#24391a','#41622e'][Math.floor(r()*4)];const cx=r()*256,cy=r()*256;x.beginPath();x.ellipse(cx,cy,3+r()*4,1.6+r()*2,r()*3.14,0,7);x.fill();}
+  for(let i=0;i<1400;i++){const cx=r()*256,cy=r()*256,rr=2.2+r()*3.2;x.fillStyle=BL[Math.floor(r()*BL.length)];x.beginPath();x.arc(cx,cy,rr,0,7);x.fill();if(r()<.35){x.fillStyle='rgba(255,255,255,.35)';x.beginPath();x.arc(cx-rr*.3,cy-rr*.3,rr*.35,0,7);x.fill();}}
+  const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;}
 function azaleas(A,mask){const D=A.D,Fz=D.straw,L=[];if(!mask||!Fz)return;const {w,h,d}=mask,G=A.GREENS;
   /* along the pine-straw edge near greens and tees: clumps of pink, magenta, red and white */
   const nearPlay=(x,y)=>A.HOLES.some(hl=>{const t=hl.p[0],g=hl.p[hl.p.length-1];return Math.hypot(x-g[0],y-g[1])<75||Math.hypot(x-t[0],y-t[1])<45;});

@@ -2562,7 +2562,7 @@ function finish(){state='done';const hi=ROUND.list[ROUND.k];for(const p of playe
     lg.innerHTML=[['e',3,'Eagle or better'],['b',4,'Birdie'],['',5,'Par'],['bo',6,'Bogey'],['db',7,'Double or worse']].map(q=>'<span class="it"><span class="scm'+(q[0]?' '+q[0]:'')+'">'+q[1]+'</span>'+q[2]+'</span>').join('');}
   $('cSub').textContent=last?'Round complete at '+D.short:'Hole '+HOLE.ref+' complete';$('cTitle').textContent=last?'Final card':'Scorecard';
   $('againBtn').textContent=last?'Back to the roster':'Next: hole '+HOLES[ROUND.list[ROUND.k+1]].ref;$('quitBtn').hidden=last;
-  setTimeout(()=>{$('card').hidden=false;if(last){try{hsLoad().then(()=>hsAfterRound());}catch(e){console.warn('hs',e);}}},1200);}
+  setTimeout(()=>{$('card').hidden=false;requestAnimationFrame(()=>{try{const sc=$('cGrid').parentNode;sc.scrollLeft=sc.scrollWidth;}catch(e){}});/* latest holes in view */if(last){try{hsLoad().then(()=>hsAfterRound());}catch(e){console.warn('hs',e);}}},1200);}
 
 /* scorecard marks, the way golfers write them: circle = birdie, double circle = eagle or better, square = bogey, double square = double bogey or worse */
 (function(){const st=document.createElement('style');st.textContent=`
