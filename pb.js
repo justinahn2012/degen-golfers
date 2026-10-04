@@ -256,5 +256,33 @@ function ground(A){const D=A.D,G=D.ground;if(!G)return;const img=new Image();img
 function linksTurf(A){const c=A.ctx,S=c.canvas.width,B=256;c.save();c.setTransform(1,0,0,1,0,0);for(let y=0;y<S;y+=B){const h=Math.min(B,S-y),id=c.getImageData(0,y,S,h),d=id.data;for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];if(g>r+6&&g>b){d[i]=Math.min(255,r*1.1+8);d[i+1]=Math.min(255,g*1.03);d[i+2]=b*.86;}}c.putImageData(id,0,y);}c.restore();A.tex.needsUpdate=true;}   /* in 256-row strips: no 64 MB copy of the ground canvas */
 function asphalt(A){const c=A.ctx;c.save();c.lineCap=c.lineJoin='round';for(const f of A.D.f){if(f.k!=='cartpath')continue;c.strokeStyle='#4a4b4d';c.lineWidth=2.6;c.beginPath();f.p.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();}c.restore();A.tex.needsUpdate=true;}
 X.decor=function(A){for(const [n,f] of[['houses',houses],['turf',linksTurf],['paths',asphalt],['ground',ground]]){try{f(A);}catch(e){console.warn('[pb] '+n,e);}}};
+/* ---------- out of bounds on the coast: you're out when the ball actually goes off the cliffs (the sea, the cliff faces, the beaches),
+   not where the course outline happens to stop. The outline in the map data is broken on the coast: its closing edge is a straight
+   chord from the 4th/5th to the 11th, so the 6th, 7th, 8th and the cliff-top rough beyond were all "outside the course". Here:
+   - sea (pb_seacourse.png), cliff rock and beach (pb_ground.png R and G) are out, everywhere;
+   - land between that chord and the sea is in play, and so is land near a hole within 120 m of the sea (17th green, 18th tee);
+   - inland the course outline still decides (homes and roads stay out of bounds). Greens, tees and fairways are never touched. */
+(function(){try{const D=window.COURSE,gc=(D.f.find(f=>f.k==='golf_course'&&f.n===D.name)||{}).p;if(!gc)return;
+  let A=null,B=null,bl=0;for(let i=0;i<gc.length;i++){const a=gc[(i+gc.length-1)%gc.length],b=gc[i],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l>bl){bl=l;A=a;B=b;}}
+  const ux=(B[0]-A[0])/bl,uy=(B[1]-A[1])/bl;let nx=-uy,ny=ux;const t0=D.holes[2].p[0];if((t0[0]-A[0])*nx+(t0[1]-A[1])*ny>0){nx=-nx;ny=-ny;}
+  const inQuad=(x,y)=>{const u=(x-A[0])*ux+(y-A[1])*uy,v=(x-A[0])*nx+(y-A[1])*ny;return u>=0&&u<=bl&&v>=0&&v<=450;};
+  const SEG=[];for(const h of D.holes)for(let i=1;i<h.p.length;i++)SEG.push([h.p[i-1],h.p[i]]);
+  const nearHole=(x,y,r)=>{for(const [a,b] of SEG){const vx=b[0]-a[0],vy=b[1]-a[1],L2=vx*vx+vy*vy||1,t=Math.max(0,Math.min(1,((x-a[0])*vx+(y-a[1])*vy)/L2));if(Math.hypot(x-a[0]-vx*t,y-a[1]-vy*t)<r)return true;}return false;};
+  const inPoly=(p,x,y)=>{let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c;}return c;};
+  const KEEP=D.f.filter(f=>f.k==='green'||f.k==='tee'||f.k==='fairway').map(f=>{const P=f.p;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const q of P){x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1]);}return{P,x0,y0,x1,y1};});
+  const keep=(x,y)=>KEEP.some(k=>x>=k.x0&&x<=k.x1&&y>=k.y0&&y<=k.y1&&inPoly(k.P,x,y));
+  const ex=window.COURSE_EXTRA||{},G=D.ground||ex.ground,S=D.seac;let SEA=null,GR=null;
+  const load=(src,cb)=>{const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(im,0,0);cb(x.getImageData(0,0,im.width,im.height).data,im.width,im.height);}catch(e){console.warn('[pb] oob mask',e);}};im.src=src;};
+  if(S)load(S.img,(d,w,h)=>{const a=new Uint8Array(w*h);for(let i=0;i<w*h;i++)a[i]=d[i*4];SEA={a,w,h};});
+  const loadG=()=>{const g=D.ground;if(g&&g.img)load(g.img,(d,w,h)=>{const a=new Uint8Array(w*h);for(let i=0;i<w*h;i++)a[i]=(d[i*4]>127?1:0)|(d[i*4+1]>127?2:0);GR={a,w,h,g};});else setTimeout(loadG,500);};loadG();
+  const sea=(x,y)=>{if(!SEA)return false;const i=Math.floor((x-S.x0)/(S.x1-S.x0)*SEA.w),j=Math.floor((S.y1-y)/(S.y1-S.y0)*SEA.h);return i<0||j<0||i>=SEA.w||j>=SEA.h?false:SEA.a[j*SEA.w+i]>8;};
+  const rockBeach=(x,y)=>{if(!GR)return false;const g=GR.g,i=Math.floor((x-g.x0)/(g.x1-g.x0)*GR.w),j=Math.floor((g.y1-y)/(g.y1-g.y0)*GR.h);return i<0||j<0||i>=GR.w||j>=GR.h?false:GR.a[j*GR.w+i]>0;};
+  const coastal=(x,y)=>{for(const rr of[30,60,90,120])for(let k=0;k<16;k++){const a=k/16*6.2832;if(sea(x+Math.cos(a)*rr,y+Math.sin(a)*rr))return true;}return false;};
+  /* coastal land near a hole, on an 8 m grid built once the sea mask is in (lieAt runs thousands of times per shot) */
+  let CG=null;const CS=8,buildCG=()=>{const w=Math.ceil((S.x1-S.x0)/CS),h=Math.ceil((S.y1-S.y0)/CS),a=new Uint8Array(w*h);
+    for(let j=0;j<h;j++)for(let i=0;i<w;i++){const x=S.x0+(i+.5)*CS,y=S.y0+(j+.5)*CS;if(!sea(x,y)&&nearHole(x,y,60)&&coastal(x,y))a[j*w+i]=1;}CG={a,w,h};};
+  window.COURSE_OOB=(x,y)=>{if(!SEA)return null;if(!CG)buildCG();if((sea(x,y)||rockBeach(x,y))&&!keep(x,y))return'oob';if(inQuad(x,y))return'in';
+    const i=Math.floor((x-S.x0)/CS),j=Math.floor((y-S.y0)/CS);return i>=0&&j>=0&&i<CG.w&&j<CG.h&&CG.a[j*CG.w+i]?'in':null;};
+  console.log('[pb] coastal out of bounds: off the cliffs only');}catch(e){console.warn('[pb] coastal oob',e);}})();
 window.COURSE_EXT=X;
 })();

@@ -102,7 +102,9 @@ function onCartPath(x,y){if(!inP(MAIN,x,y))return false;for(const c of CPATHS){i
 function plan_isPutt(c){return !!(c&&c.putt);}
 function lieAt(x,y){
   if(ISL&&Math.hypot(x-ISL.x,y-ISL.y)<40){for(const g of GREENS)if(inP(g,x,y))return'green';for(const b of BUNKERS)if(inP(b,x,y))return'bunker';if(nearGreenEdge(x,y))return'fringe';}
-  if(!inP(MAIN,x,y))return'oob';
+  /* a course can rule on out of bounds itself (window.COURSE_OOB: 'oob', 'in' = playable even outside the boundary polygon, or null) */
+  const co=window.COURSE_OOB?window.COURSE_OOB(x,y):null;if(co==='oob')return'oob';
+  if(co!=='in'&&!inP(MAIN,x,y))return'oob';
   if(inOBX(x,y))return'oob';
   if(inGulch(x,y))return'water';
   for(const w of WATER)if(inP(w,x,y))return'water';
