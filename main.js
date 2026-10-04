@@ -274,17 +274,17 @@ function buildCdaDecor(){if(D.trees!=='ponderosa')return;const treesNear=(x,y)=>
   /* spreading juniper: a low mound clothed in a fine scale-leaf foliage texture (blue-green sprays with darker hollows), its outline broken
      up by feathery spray cards, so each bank reads as dense, textured shrub rather than a smooth blob */
   const cvs=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;t.anisotropy=4;return t;};
-  const JCOL=['#3f6149','#4d735a','#587f63','#35523d','#6a9274','#2c4533'];
+  const JCOL=['#46704f','#557f60','#628c6c','#3b5c44','#7aa184','#2f4a37','#8fb59a','#6b9473'];
   const spray=(x,cx,cy,len,ang,w)=>{x.save();x.translate(cx,cy);x.rotate(ang);x.lineCap='round';x.lineWidth=w;x.beginPath();x.moveTo(0,0);x.quadraticCurveTo(len*.5,len*.12,len,0);x.stroke();
      for(let k=1;k<6;k++){const t=k/6*len;x.lineWidth=w*.7;x.beginPath();x.moveTo(t,0);x.lineTo(t+len*.14,-len*.12);x.moveTo(t,0);x.lineTo(t+len*.14,len*.12);x.stroke();}x.restore();};
-  const jTex=cvs(512,512,(x,W,H2)=>{x.fillStyle='#1d3024';x.fillRect(0,0,W,H2);let s=5;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  const jTex=cvs(512,512,(x,W,H2)=>{x.fillStyle='#253d2c';x.fillRect(0,0,W,H2);let s=5;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
      for(let i=0;i<5200;i++){const cx=r()*W,cy=r()*H2,len=7+r()*14,ang=r()*6.283;x.strokeStyle=JCOL[Math.floor(r()*JCOL.length)];for(const ox of[-W,0,W])for(const oy of[-H2,0,H2])if(cx+ox>-30&&cx+ox<W+30&&cy+oy>-30&&cy+oy<H2+30)spray(x,cx+ox,cy+oy,len,ang,1.6+r()*1.2);}});
   jTex.wrapS=jTex.wrapT=THREE.RepeatWrapping;jTex.repeat.set(3,2);
   const jCard=cvs(256,256,(x,W,H2)=>{let s=11;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};for(let i=0;i<110;i++){const a=-Math.PI/2+(r()-.5)*2.4,len=40+r()*80;x.strokeStyle=JCOL[Math.floor(r()*JCOL.length)];spray(x,W/2+(r()-.5)*60,H2-4,len,a,2.4+r()*1.6);}});
-  if(JP.length){const g=new THREE.SphereGeometry(1,12,6,0,6.2832,0,Math.PI*.62),P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i),k=1+.16*Math.sin(x*5.1+z*3.7)*Math.cos(y*4.2)+.08*Math.sin(x*11.3-z*9.1);P.setXYZ(i,x*k,y*k-.18,z*k);}g.computeVertexNormals();
-    const jmat=new THREE.MeshStandardMaterial({color:0xffffff,map:jTex,bumpMap:jTex,bumpScale:.03,roughness:.92,metalness:0});
+  if(JP.length){const g=new THREE.SphereGeometry(1,10,4,0,6.2832,0,Math.PI*.62),P=g.attributes.position;/* 70 triangles (was 132): the skin carries the detail */for(let i=0;i<P.count;i++){const x=P.getX(i),y=P.getY(i),z=P.getZ(i),k=1+.16*Math.sin(x*5.1+z*3.7)*Math.cos(y*4.2)+.08*Math.sin(x*11.3-z*9.1);P.setXYZ(i,x*k,y*k-.18,z*k);}g.computeVertexNormals();{const C=[];for(let i=0;i<P.count;i++){const y=P.getY(i),t=Math.max(0,Math.min(1,(y+.18)/.9));const v=.58+.5*t;C.push(v*.97,v,v*.95);}g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));}/* darker hollows at the base, sunlit crown */
+    const jmat=new THREE.MeshStandardMaterial({color:0xffffff,map:jTex,bumpMap:jTex,bumpScale:.03,roughness:.92,metalness:0,vertexColors:true});
     const jm=IMC(new THREE.InstancedMesh(g,jmat,JP.length)),m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();
-    JP.forEach((p,i)=>{const s=p[2];q.setFromAxisAngle(new THREE.Vector3(0,1,0),R()*6.28);m.compose(V(p[0],p[1],H(p[0],p[1])-.1*s),q,new THREE.Vector3(s*1.15,s*.2,s*1.15));jm.setMatrixAt(i,m);c.setHSL(.3+R()*.06,.22+R()*.15,.5+R()*.14);jm.setColorAt(i,c);});
+    JP.forEach((p,i)=>{const s=p[2];q.setFromAxisAngle(new THREE.Vector3(0,1,0),R()*6.28);m.compose(V(p[0],p[1],H(p[0],p[1])-.1*s),q,new THREE.Vector3(s*1.12,s*.3,s*1.12));jm.setMatrixAt(i,m);c.setHSL(.3+R()*.06,.2+R()*.15,.58+R()*.14);jm.setColorAt(i,c);});
     jm.castShadow=true;jm.receiveShadow=true;jm.frustumCulled=false;linearize(jm);scene.add(jm);
     /* spray cards round each mound's edge and a few on top */
     if(window.__MKIMP){try{const jt=new THREE.TextureLoader().load('juniperAtlas.webp');jt.encoding=THREE.sRGBEncoding;jt.anisotropy=4;

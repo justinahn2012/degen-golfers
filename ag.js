@@ -36,6 +36,14 @@ KOT.barkTex=function(T,kind){return canvasTex(T,128,256,(x,W,H)=>{const r=rng(ki
 KOT.clusterTex=function(T,kind){return canvasTex(T,256,256,(x,W,H)=>{const r=rng(kind.length*17+3);
   const pal={lob:['#2f4a1f','#385626','#2a4219','#41612a','#33501f'],dogw:['#f4f2ea','#ffffff','#ece9de','#f7f4ec','#5f8a3a'],dfir:['#2b4826','#34552c','#253f21','#3c5f31','#2f4e29'],monkey:['#3d6b2b','#4a7a31','#2f5a22','#56863a','#35612a'],broad:['#4f7d34','#5d8c3c','#426f2c','#6a9844','#3b6528'],cook:['#2d5230','#35603a','#274a2a','#3f6b40'],scrub:['#5a7a3a','#6a8a44','#4a6a30','#77924c']}[kind];
   const n=kind==='monkey'?520:(kind==='cook'||kind==='dfir'||kind==='lob')?760:kind==='scrub'?900:kind==='dogw'?420:300;
+  if(kind==='dogw'){/* flowering dogwood: open flowers of four notched white bracts round a green-gold eye, a few dark leaves and twigs between */
+    x.strokeStyle='#4a3a2c';x.lineCap='round';for(let i=0;i<26;i++){const a=r()*6.283,l=W*(.18+r()*.26);x.lineWidth=1+r()*1.4;x.beginPath();x.moveTo(W/2,H/2);x.lineTo(W/2+Math.cos(a)*l,H/2+Math.sin(a)*l*.9);x.stroke();}
+    for(let i=0;i<70;i++){const a=r()*6.283,rr=Math.pow(r(),.6)*W*.44;x.save();x.translate(W/2+Math.cos(a)*rr,H/2+Math.sin(a)*rr*.9);x.rotate(r()*6.283);x.fillStyle=['#4f7a34','#3e6a2a','#5d8a3c'][Math.floor(r()*3)];x.beginPath();x.ellipse(0,0,7,3.4,0,0,7);x.fill();x.restore();}
+    for(let i=0;i<150;i++){const a=r()*6.283,rr=Math.pow(r(),.55)*W*.45,cx=W/2+Math.cos(a)*rr,cy=H/2+Math.sin(a)*rr*.9,sz=4.2+r()*2.6,rot=r()*1.57;x.save();x.translate(cx,cy);x.rotate(rot);
+      const tone=['#ffffff','#f7f5ee','#efece2','#fbfaf4'][Math.floor(r()*4)];for(let k=0;k<4;k++){x.save();x.rotate(k*Math.PI/2);x.fillStyle=tone;x.beginPath();x.moveTo(0,0);x.quadraticCurveTo(sz*.9,-sz*.55,sz*1.25,-.15*sz);x.lineTo(sz*1.05,0);x.lineTo(sz*1.25,.15*sz);x.quadraticCurveTo(sz*.9,sz*.55,0,0);x.fill();
+        x.fillStyle='rgba(150,110,90,.55)';x.beginPath();x.arc(sz*1.12,0,sz*.13,0,7);x.fill();x.restore();}
+      x.fillStyle=r()<.5?'#b5b04a':'#9aa63e';x.beginPath();x.arc(0,0,sz*.28,0,7);x.fill();x.strokeStyle='rgba(120,120,105,.35)';x.lineWidth=.7;x.beginPath();x.moveTo(-sz*1.1,0);x.lineTo(sz*1.1,0);x.moveTo(0,-sz*1.1);x.lineTo(0,sz*1.1);x.stroke();x.restore();}
+    return;}
   for(let i=0;i<n;i++){const a=r()*6.283,rr=Math.pow(r(),.6)*W*.46,cx=W/2+Math.cos(a)*rr,cy=H/2+Math.sin(a)*rr*.9;x.save();x.translate(cx,cy);x.rotate(r()*6.283);
     x.fillStyle=pal[Math.floor(r()*pal.length)];
     if(kind==='cook'||kind==='dfir'||kind==='lob'){x.fillRect(-7,-1,14,2);x.fillRect(-1,-5,2,10);}

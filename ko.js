@@ -157,7 +157,7 @@ X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.c
     D.tl=D.tl.concat(add);console.log('[ko] road screen trees',add.length);}
   for(const q of D.tl){const x=q[0],y=q[1],h=q[2],r=q[3],sp=SP[q[4]],u=hsh(x,y);
     let v=0;if(sp==='palm')v=Math.floor(u*2.999);else if(sp==='monkey')v=r/h>.72?1:0;else v=u<.5?0:1;
-    const t={x,y,gz:A.H(x,y),h,r,fir:sp==='cook',v,sp,hero:sp+v};/* 3D model near the golfer for every species (heroInit) */
+    const t={x,y,gz:A.H(x,y),h,r,fir:sp==='cook',v,sp,hero:sp==='palm'?'palm'+v:null};
     TR.push(t);L[sp].push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);
     for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
   const TL=new T.TextureLoader();
@@ -203,13 +203,10 @@ X.farWater=function(w,A){const T=A.THREE,D=A.D,S=D.sea,WM=window.__WM;
   const o=A.outer;if(o)o.position.y=Math.min(o.position.y,D.far.lakeH-3);console.log('[ko] ocean');};
 
 /* ---------- hero palms: full 3D coconut palms (the same models the impostors were baked from) near the golfer ---------- */
-X.heroInit=function(HERO,A){const T=A.THREE;
-  const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
-  const add=(tag,g,N,noYaw)=>{g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});if(ms.length<2)return;const B=mk(ms[0],N),L=mk(ms[ms.length-1],N),X=ms.slice(1,-1).map(me=>mk(me,N));HERO[tag]={B,L,X:X.length?X:null,h:1,N,k:1,noYaw};};
-  for(let v=0;v<3;v++)add('palm'+v,KOT.palm(T,v),6,true);
-  const MK={monkey:v=>KOT.monkey(T,v),cook:v=>KOT.cook(T,v),broad:v=>KOT.broad(T,v),plum:v=>KOT.plum(T,v),scrub:v=>KOT.broad(T,v,undefined,'scrub')};
-  let n=0;for(const sp in MK)for(let v=0;v<2;v++){try{add(sp+v,MK[sp](v),sp==='scrub'?8:5,false);n++;}catch(e){console.warn('[ko] hero '+sp+v,e);}}
-  console.log('[ko] hero palms ready, other species',n);};
+X.heroInit=function(HERO,A){const T=A.THREE;for(let v=0;v<3;v++){const g=KOT.palm(T,v);g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});
+    const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
+    HERO['palm'+v]={B:mk(ms[0],6),L:mk(ms[1],6),h:1,N:6,k:1,noYaw:true};}
+  console.log('[ko] hero palms ready');};
 
 /* ---------- ground paint: roads, beaches, red-dirt drainage ditches, the red-tinted cart paths, a tropical grade on the turf ---------- */
 function paintGround(A){const D=A.D,c=A.ctx,m=A.mx,B=A.box,MP=A.MAIN.p;
@@ -282,11 +279,18 @@ function rockGeo(T,seed){const g=new T.IcosahedronGeometry(1,2),p=g.attributes.p
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=1+.22*Math.sin(x*2.3+o[0])*Math.cos(z*2.1+o[1])+.12*Math.sin(y*4.7+o[2])+.06*Math.sin((x+z)*7.1);p.setXYZ(i,x*k,y*k*.72,z*k);}
   g.computeVertexNormals();return g;}
 function rocks(A,list,cols,rough){if(!list.length)return;const T=A.THREE;const geos=[rockGeo(T,3),rockGeo(T,8),rockGeo(T,13)];
-  const tex=ctex(T,cv(128,128,(x,W,H)=>{const r=KOT.rng(4);x.fillStyle='#fff';x.fillRect(0,0,W,H);for(let i=0;i<900;i++){const k=150+r()*105|0;x.fillStyle='rgba('+k+','+k+','+k+','+(.25+r()*.35)+')';x.fillRect(r()*W,r()*H,1+r()*3,1+r()*3);}}),1);
-  geos.forEach((geo,gi)=>{const L=list.filter((_,i)=>i%3===gi);if(!L.length)return;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshStandardMaterial({map:tex,roughness:rough||.95,metalness:0,flatShading:true}),L.length));
+  const tex=ctex(T,cv(256,256,(x,W,H)=>{const r=KOT.rng(4);x.fillStyle='#e6e2da';x.fillRect(0,0,W,H);
+    for(let i=0;i<240;i++){const v=r();x.fillStyle=v<.4?'rgba(90,84,76,.22)':v<.75?'rgba(255,252,246,.25)':'rgba(150,128,100,.22)';x.beginPath();x.ellipse(r()*W,r()*H,6+r()*24,4+r()*14,r()*3.14,0,7);x.fill();}
+    for(let i=0;i<4200;i++){const v=r();x.fillStyle=v<.5?'rgba(60,56,50,.5)':v<.85?'rgba(255,255,250,.45)':'rgba(130,100,70,.4)';x.fillRect(r()*W,r()*H,1+r()*1.6,1+r()*1.6);}
+    for(let i=0;i<160;i++){x.fillStyle='rgba(50,46,42,.55)';x.beginPath();x.arc(r()*W,r()*H,.8+r()*2.2,0,7);x.fill();}
+    x.strokeStyle='rgba(45,40,36,.5)';x.lineWidth=1;for(let i=0;i<12;i++){let px=r()*W,py=r()*H;x.beginPath();x.moveTo(px,py);for(let k=0;k<6;k++){px+=(r()-.5)*30;py+=(r()-.5)*30;x.lineTo(px,py);}x.stroke();}
+    for(let i=0;i<60;i++){x.fillStyle=r()<.5?'rgba(170,180,130,.5)':'rgba(205,200,160,.45)';x.beginPath();x.arc(r()*W,r()*H,2+r()*6,0,7);x.fill();}}),1);
+  tex.wrapS=tex.wrapT=T.RepeatWrapping;
+  for(const g of geos){const p=g.attributes.position,n=g.attributes.normal,C=[];for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),ny=n.getY(i),nz=.5+.5*Math.sin(x*3.1+z*2.7)*Math.cos(z*2.3-x*1.7),m=Math.min(1,Math.max(0,(ny-.4)/.45))*Math.min(1,Math.max(0,nz*1.6-.3)),wet=y<-.1?.7:1;C.push((1-m*.45)*wet,(1-m*.15)*wet,(1-m*.58)*wet);}g.setAttribute('color',new T.Float32BufferAttribute(C,3));}
+  geos.forEach((geo,gi)=>{const L=list.filter((_,i)=>i%3===gi);if(!L.length)return;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshStandardMaterial({map:tex,roughness:rough||.95,metalness:0,flatShading:true,vertexColors:true,envMapIntensity:.6}),L.length));
     const m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();L.forEach((p,i)=>{q.setFromEuler(new T.Euler((hsh(p[0],p[1])-.5)*.4,hsh(p[1],p[0])*6.28,(hsh(p[0]+1,p[1])-.5)*.4));
       m.compose(A.V(p[0],p[1],p[3]),q,new T.Vector3(p[2],p[2]*(p[4]||1),p[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],p[3],p[2]*.95,p[2]*(p[4]||1)*.68);c.set(cols[Math.floor(hsh(p[0]*3,p[1])*cols.length)]);M.setColorAt(i,c);});
-    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;M.userData.occluder=true;A.scene.add(M);});}
+    M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;M.userData.occluder=true;try{A.linearize(M);}catch(e){}A.scene.add(M);});}
 
 /* ---------- tropical plantings: red ti, crotons, yellow-green shrubs (crossed leaf cards) ---------- */
 function plantTex(T,kind){return ctex(T,cv(128,128,(x,W,H)=>{const r=KOT.rng(kind*7+1);const pal=[['#b3162a','#8e1024','#d8283a','#6e0f24','#c21f3a'],['#d9a21e','#b8c43a','#e06a1a','#8fb53a','#c43a24'],['#9ec23a','#b4d24a','#7ea62c','#c8dc5a']][kind];
