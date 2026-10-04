@@ -157,7 +157,7 @@ X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.c
     D.tl=D.tl.concat(add);console.log('[ko] road screen trees',add.length);}
   for(const q of D.tl){const x=q[0],y=q[1],h=q[2],r=q[3],sp=SP[q[4]],u=hsh(x,y);
     let v=0;if(sp==='palm')v=Math.floor(u*2.999);else if(sp==='monkey')v=r/h>.72?1:0;else v=u<.5?0:1;
-    const t={x,y,gz:A.H(x,y),h,r,fir:sp==='cook',v,sp,hero:sp==='palm'?'palm'+v:null};
+    const t={x,y,gz:A.H(x,y),h,r,fir:sp==='cook',v,sp,hero:sp+v};/* 3D model near the golfer for every species (heroInit) */
     TR.push(t);L[sp].push(t);const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);
     for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
   const TL=new T.TextureLoader();
@@ -203,10 +203,13 @@ X.farWater=function(w,A){const T=A.THREE,D=A.D,S=D.sea,WM=window.__WM;
   const o=A.outer;if(o)o.position.y=Math.min(o.position.y,D.far.lakeH-3);console.log('[ko] ocean');};
 
 /* ---------- hero palms: full 3D coconut palms (the same models the impostors were baked from) near the golfer ---------- */
-X.heroInit=function(HERO,A){const T=A.THREE;for(let v=0;v<3;v++){const g=KOT.palm(T,v);g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});
-    const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
-    HERO['palm'+v]={B:mk(ms[0],6),L:mk(ms[1],6),h:1,N:6,k:1,noYaw:true};}
-  console.log('[ko] hero palms ready');};
+X.heroInit=function(HERO,A){const T=A.THREE;
+  const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
+  const add=(tag,g,N,noYaw)=>{g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});if(ms.length<2)return;const B=mk(ms[0],N),L=mk(ms[ms.length-1],N),X=ms.slice(1,-1).map(me=>mk(me,N));HERO[tag]={B,L,X:X.length?X:null,h:1,N,k:1,noYaw};};
+  for(let v=0;v<3;v++)add('palm'+v,KOT.palm(T,v),6,true);
+  const MK={monkey:v=>KOT.monkey(T,v),cook:v=>KOT.cook(T,v),broad:v=>KOT.broad(T,v),plum:v=>KOT.plum(T,v),scrub:v=>KOT.broad(T,v,undefined,'scrub')};
+  let n=0;for(const sp in MK)for(let v=0;v<2;v++){try{add(sp+v,MK[sp](v),sp==='scrub'?8:5,false);n++;}catch(e){console.warn('[ko] hero '+sp+v,e);}}
+  console.log('[ko] hero palms ready, other species',n);};
 
 /* ---------- ground paint: roads, beaches, red-dirt drainage ditches, the red-tinted cart paths, a tropical grade on the turf ---------- */
 function paintGround(A){const D=A.D,c=A.ctx,m=A.mx,B=A.box,MP=A.MAIN.p;

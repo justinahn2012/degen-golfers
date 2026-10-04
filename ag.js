@@ -172,7 +172,7 @@ X.trees=function(A){const T=A.THREE,D=A.D,TR=A.TREES,TH=A.THASH;TR.length=0;TH.c
        the height) over a bare trunk. Loblolly pines are built like that. The game's 'fir' model is a cone starting 2 m off the
        ground, which made the aim camera find itself inside a pine 4 m away and climb to a straight-down view. Crown radius
        for collisions is capped at 30% of the height and 10 m. The 3D hero swap for pines is set by the hero tag. */
-    const x=q[0],y=q[1],sp=q[4],t={x,y,gz:A.H(x,y),h:q[2],r:Math.min(q[3],Math.max(3,.3*q[2]),10),fir:false,v:Math.floor(hsh(x,y)*(sp===0?2.999:1.999))};if(sp===0)t.hero='lob'+t.v;TR.push(t);S[sp].push(t);
+    const x=q[0],y=q[1],sp=q[4],t={x,y,gz:A.H(x,y),h:q[2],r:Math.min(q[3],Math.max(3,.3*q[2]),10),fir:false,v:Math.floor(hsh(x,y)*(sp===0?2.999:1.999))};if(sp===0)t.hero='lob'+t.v;else if(sp===2&&KOT.dogw)t.hero='dogw'+t.v;TR.push(t);S[sp].push(t);
     const R2=Math.ceil(t.r/10)+1,cx=Math.floor(x/10),cy=Math.floor(y/10);for(let i=-R2;i<=R2;i++)for(let j=-R2;j<=R2;j++){const k=(cx+i)+','+(cy+j);let a=TH.get(k);if(!a)TH.set(k,a=[]);a.push(t);}}
   const ld=u=>{const t=new T.TextureLoader().load(u);t.encoding=T.sRGBEncoding;t.anisotropy=4;return t;};
   A.scene.add(A.mkImp(S[0],ld('ag_lobAtlas.webp'),8,3,[1.05,1.05,1.05],.733),A.mkImp(S[1],ld(window.ASSETS.broadAtlas),4,2,[1.216,1.03],1),A.mkImp(S[2],ld('ag_dogwAtlas.webp'),4,2,[1.05,1.05],1.554));
@@ -396,6 +396,9 @@ function azaleas(A,mask){const D=A.D,Fz=D.straw,L=[];if(!mask||!Fz)return;const 
 X.heroInit=function(HERO,A){const T=A.THREE;if(!window.KOT||!KOT.lob)return;for(let v=0;v<3;v++){const g=KOT.lob(T,v);g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});
     const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
     HERO['lob'+v]={B:mk(ms[0],8),L:mk(ms[1],8),h:1,N:8,k:1,noYaw:false};}
+  if(KOT.dogw)for(let v=0;v<2;v++){try{const g=KOT.dogw(T,v);g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});if(ms.length<2)continue;
+    const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
+    const X=ms.slice(1,-1).map(me=>mk(me,6));HERO['dogw'+v]={B:mk(ms[0],6),L:mk(ms[ms.length-1],6),X:X.length?X:null,h:1,N:6,k:1,noYaw:false};}catch(e){console.warn('[ag] hero dogwood',e);}}
   console.log('[ag] hero loblollies ready');};
 X.decor=function(A){for(const [n,f] of[['houses',houses],['emerald',emerald],['navy',navyWater],['surfaces',creekSurfaces],['bridges',bridges],['wall',creekWall],['boards',boards]]){try{f(A);}catch(e){console.warn('[ag] '+n,e);}}
   try{straw(A,mask=>{try{azaleas(A,mask);}catch(e){console.warn('[ag] azaleas',e);}});}catch(e){console.warn('[ag] straw',e);}

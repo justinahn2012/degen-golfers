@@ -2383,12 +2383,11 @@ function heroUpdate(x,y,aim){if(!HERO.fir||!HERO.dec||!TREES.length)return;const
   const cam=camera.position,near=TREES.map(t=>({t,d:Math.hypot(t.x-x,t.y-y)})).filter(o=>o.d<30&&o.t._impM).sort((a,b)=>a.d-b.d);
   const put={};for(const k in HERO)if(HERO[k]&&HERO[k].B)put[k]=0;
   for(const {t} of near){const tag=t.hero!==undefined?t.hero:(t.fir?'fir':'dec'),H=tag?HERO[tag]:null;if(!H||!H.B||put[tag]>=H.N)continue;
-    /* keep as a (fading) sprite any tree whose canopy could sit between the camera and the golfer */
-    {const cr=Math.max(3.5,t.h*.3),vx=x-cx,vy=y-cy,L2=vx*vx+vy*vy||1,u=Math.max(0,Math.min(1,((t.x-cx)*vx+(t.y-cy)*vy)/L2)),dd=Math.hypot(t.x-(cx+vx*u),t.y-(cy+vy*u));if(dd<cr)continue;}
+    /* trees between the camera and the golfer are 3D too now: the see-through cuts away whatever part would block the view */
     if(!t._m0){t._m0=new THREE.Matrix4();t._impM.getMatrixAt(t._impI,t._m0);}t._impM.setMatrixAt(t._impI,z0);t._impM.instanceMatrix.needsUpdate=true;HERO.on.push(t);
     const k=t.h/H.h*(H.k||(t.fir?1.02:1.08)),yaw=H.noYaw?0:((t.x*12.9898+t.y*78.233)%6.283);q.setFromAxisAngle(new THREE.Vector3(0,1,0),yaw);m.compose(V(t.x,t.y,t.gz-.15),q,s.set(k,k,k));
-    const i=put[tag]++;H.B.setMatrixAt(i,m);H.L.setMatrixAt(i,m);const g=.86+((t.x*7.1+t.y*3.3)%1+1)%1*.18;c.setRGB(g*.97,g,g*.95);H.L.setColorAt(i,c);H.B.setColorAt(i,c.setRGB(1,1,1));}
-  for(const tag in put){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
+    const i=put[tag]++;H.B.setMatrixAt(i,m);H.L.setMatrixAt(i,m);if(H.X)for(const M of H.X)M.setMatrixAt(i,m);const g=.86+((t.x*7.1+t.y*3.3)%1+1)%1*.18;c.setRGB(g*.97,g,g*.95);H.L.setColorAt(i,c);H.B.setColorAt(i,c.setRGB(1,1,1));}
+  for(const tag in put){const H=HERO[tag];H.B.count=H.L.count=put[tag];H.B.instanceMatrix.needsUpdate=H.L.instanceMatrix.needsUpdate=true;if(H.X)for(const M of H.X){M.count=put[tag];M.instanceMatrix.needsUpdate=true;}if(H.L.instanceColor)H.L.instanceColor.needsUpdate=true;}}
 let INTRO_D=0;
 function posGolfer(p,rot){try{if(!HERO.loading)heroInit();heroUpdate(p.x,p.y,p.aim);}catch(e){console.warn('hero',e);}const a=p.aim,pt=CLUBS[p.club].putt,m=p.look&&p.look.lefty?-1:1,off=((p.av.userData.rig&&p.av.userData.rig.skel)?p.av.userData.rig.ballZ:.78)*m;let gx=p.x-Math.sin(a)*off,gy=p.y+Math.cos(a)*off;const ab=animBall(p);if(ab){const s=p.av.scale.x||1,bz=ab.bz*m;gx=p.x-(ab.bx*Math.cos(a)+bz*Math.sin(a))*s;gy=p.y+(-ab.bx*Math.sin(a)+bz*Math.cos(a))*s;}
   {const sx=Math.cos(a)*.2,sy=Math.sin(a)*.2;p.av.position.copy(V(gx,gy,(DRAWNH(gx+sx,gy+sy)+DRAWNH(gx-sx,gy-sy)+DRAWNH(gx,gy))/3));}p.av.rotation.y=a;/* feet on the ground you can see (the drawn surface), not the true one under it */
