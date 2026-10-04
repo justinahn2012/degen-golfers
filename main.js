@@ -1803,7 +1803,7 @@ function makeGolfer(p){const g=buildAvatar(p);g.visible=false;scene.add(g);retur
 
 
 /* ---------- golfers (placeholders until the real roster is in) ---------- */
-const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot, once every 3 holes'},dial:{n:'Dialed in',d:'near-perfect contact on one shot'},read:{n:'Green reader',d:'shows the true putt line for the rest of the hole'},hl:{n:'Lucky shot',d:'+10% carry and near-perfect contact on one shot'},bounce:{n:'Consistency King',d:'always on: contact tightens right after a bad shot',passive:true}};
+const ABIL={rip:{n:'Grip it and rip it',d:'+12% carry on one shot, once every 3 holes'},dial:{n:'Dialed in',d:'near-perfect contact on one shot'},read:{n:'Green reader',d:'shows the true putt line for the rest of the hole'},hl:{n:'Lucky shot',d:'on one approach inside 200 yds: strike it well with the right club and it can finish by the pin, or drop'},bounce:{n:'Consistency King',d:'always on: contact tightens right after a bad shot',passive:true}};
 const B=(pow,acc,sg,put,rec)=>({pow,acc,sg,put,rec});
 const BASE=[
  {id:'grey-snap',name:'Sherif Reda',hcp:36,st:[71,38,40,56,26],ab:'rip',color:'#e67e22',look:{shaft:{band:'#c08d1a'},putter:'blackout',skin:'#d9a883',cap:{style:'back',color:'#8a9098'},top:{type:'hoodie',color:'#202024'},legs:{color:'#d9d9d6'},shoes:'#6b4a33'}},
@@ -1899,7 +1899,27 @@ function solidAt(x,y,z){const a=SHASH.get(Math.floor(x/5)+','+Math.floor(y/5));i
 function rockSeg(x0,y0,z0,x1,y1,z1){if(!SOLIDS.length)return null;if(Math.min(z0-H(x0,y0),z1-H(x1,y1))>4)return null;const n=Math.max(2,Math.ceil(Math.hypot(x1-x0,y1-y0,z1-z0)/.3));
   for(let k=1;k<=n;k++){const u=k/n,x=x0+(x1-x0)*u,y=y0+(y1-y0)*u,z=z0+(z1-z0)*u,s=solidAt(x,y,z);if(s)return{x,y,z,s};}return null;}
 const TS=.72;
-function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;if(p.boost==='hl')carry*=1.10;
+/* ---------- Lucky shot (ability 'hl'): no extra distance. On an approach or short shot (inside 200 yds, not a putt) that is struck
+   well and already finishes reasonably near the pin, it can turn into a highlight: the ball ends up 0.35-1.65 m from the hole, or in
+   it. The better the club matches the distance (its full carry vs the distance to the pin), the better the odds:
+     chance of the highlight = (28% + 22% x club match) x strike quality;  share of those that drop = 14% + 10% x club match
+     (x0.7 from beyond 140 m). Club match is 1 within 6% of the distance, falling to 0 at 15% off.
+   The real flight is kept and gently bent toward the new finish (none at launch, all of it by touchdown); the roll keeps its shape. */
+function luckyShot(p,err,r){if(p.boost!=='hl'||!r||r.holed||r.oob||r.tree||r.rock||r.mishit||r.sky||r.skull||r.sandX||!r.pts||r.pts.length<8)return;
+  const D=Math.hypot(PIN.x-p.x,PIN.y-p.y);if(D>200*YD||D<4||Math.abs(err)>.6)return;
+  const d0=Math.hypot(r.x-PIN.x,r.y-PIN.y);if(d0>Math.max(3,D*.15))return;
+  const stock=carryOf(p,p.club),cm=Math.max(0,Math.min(1,(.15-Math.abs(stock-D)/D)/.09)),q=1-.5*Math.abs(err)/.6;
+  if(Math.random()>(.28+.22*cm)*q)return;
+  const hole=Math.random()<(.14+.1*cm)*(D>140?.7:1);if(!hole&&d0<1.65)return;/* already a tap-in */
+  let tx=PIN.x,ty=PIN.y;if(!hole){const ux=d0>.01?(r.x-PIN.x)/d0:-Math.cos(p.aim),uy=d0>.01?(r.y-PIN.y)/d0:-Math.sin(p.aim),rr=.35+Math.random()*1.3;tx=PIN.x+ux*rr;ty=PIN.y+uy*rr;}
+  if(['water','oob','bunker'].includes(lieAt(tx,ty)))return;
+  const P=r.pts,dX=tx-r.x,dY=ty-r.y;const iL=Math.min(110,P.length-1);/* planFull's flight is its first 111 points (no tree or rock hit here); touchdown is the last of them */
+  const t0=P[0].t,tL=Math.max(1e-3,P[iL].t-t0);
+  for(let i=1;i<P.length;i++){const q2=P[i],g0=H(q2.x,q2.y),up=q2.z-g0;let w=1;if(i<iL){const u=Math.max(0,Math.min(1,(q2.t-t0)/tL));w=u*u*(3-2*u);}
+    q2.x+=dX*w;q2.y+=dY*w;const g1=H(q2.x,q2.y);q2.z=i<iL?q2.z+(g1-g0)*w:g1+Math.max(0,up);}
+  const L=P[P.length-1];if(hole){L.x=PIN.x;L.y=PIN.y;L.z=H(PIN.x,PIN.y)+.021;P.push({t:L.t+.14,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});}
+  r.x=tx;r.y=ty;r.holed=hole;r.oob=false;r.lucky=true;}
+function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
   let mh=!c.putt?p.mishit:null;const drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const bump=shp==='Bump & run'&&bumpOK(p.club);if(bump){carry=bumpCarry(p,p.club)*Math.min(power,1.05);MHA=2/Math.max(3,c.apex*(.3+.7*Math.min(power,1.05)));MHT=.55;}const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
   /* greenside bunker: an explosion shot - low, weak and blunted. Full power just reaches the far edge of the green; running the bar all the way through the red (110%) blades it ~70 yds over */
@@ -2423,7 +2443,7 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
   p.mishit=null;/* tops and chunks only when the bar runs all the way through the red zone (110%); inside the red zone it's just a wild one */if(swingPow>=1.099&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
   if(swingPow>1&&!p.mishit){err*=1+(swingPow-1)*8;err+=(Math.random()-.5)*(swingPow-1)*12;}else if(p.mishit){err=err*.5+(Math.random()-.5)*.8;}
   err=Math.max(-3,Math.min(3,err));p.lastErr=err;p.prev={x:p.x,y:p.y};
-  plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
+  plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);if(!c.putt)try{luckyShot(p,err,plan);}catch(e){console.warn('lucky shot',e);}plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
   p.strokes++;if(p.boost){p.boost=null;}if(p.buzzQ&&p.buzzQ.length){p.buzzQ=p.buzzQ.map(x=>x-1).filter(x=>x>0);p.buzz=p.buzzQ.length?Math.max(...p.buzzQ):0;}else if(p.buzz>0)p.buzz--;
   state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;try{SND.whoosh(clubType(p.club),swingPow,DS);}catch(e){}swingAnim={p,t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(c.putt?Math.max(.28,DS*(.8+.35*Math.min(1,swingPow))):(_K.fin-_K.imp)/ANIM.fps*Math.max(.35,(()=>{const t=clubType(p.club),pw=Math.min(1,swingPow);return t==='wedge'?.4+.6*pw:.6+.4*pw;})())):0,type:clubType(p.club)};/* shorter follow-through takes proportionally less time, so the tempo stays natural */
   ring.visible=false;aimLine.visible=false;readLine.visible=false;trailPts=[];setRibbon([]);refresh();}
@@ -2732,7 +2752,7 @@ function updMeter(){const p=cur;if(!p)return;const c=CLUBS[p.club],tol=tolFor(p,
 function updAim(){const p=cur;if(!p||state!=='aim'){ring.visible=aimLine.visible=readLine.visible=false;return;}const c=CLUBS[p.club],dx=Math.cos(p.aim),dy=Math.sin(p.aim);
   if(c.putt){ring.visible=false;const d=dist(p),pts=[];for(let i=0;i<=30;i++){const s=d*i/30;pts.push(V(p.x+dx*s,p.y+dy*s,H(p.x+dx*s,p.y+dy*s)+.03));}setLine(aimLine,pts);aimLine.visible=true;
     if(readOn){const r=simRoll(p.x,p.y,0,0,0,true,false);const v0=puttV0(p.x,p.y,p.aim,d);const rr=simRoll(p.x,p.y,dx*v0,dy*v0,0,true,false);setLine(readLine,rr.pts.map(q=>V(q.x,q.y,q.z+.02)));readLine.visible=true;}else readLine.visible=false;}
-  else{const cr=carryOf(p,p.club)*(p.boost==='rip'?1.12:p.boost==='hl'?1.1:1),ex=p.x+dx*cr,ey=p.y+dy*cr;ring.position.copy(V(ex,ey,H(ex,ey)+.3));ring.visible=true;
+  else{const cr=carryOf(p,p.club)*(p.boost==='rip'?1.12:1),ex=p.x+dx*cr,ey=p.y+dy*cr;ring.position.copy(V(ex,ey,H(ex,ey)+.3));ring.visible=true;
     const pts=[];for(let i=0;i<=40;i++){const s=cr*i/40,x=p.x+dx*s,y=p.y+dy*s;pts.push(V(x,y,H(x,y)+.25));}setLine(aimLine,pts);aimLine.visible=true;readLine.visible=false;}
   posGolfer(p,0);}
 function cycleClub(k){if(state!=='aim')return;const al=clubsFor(cur);let i=al.indexOf(cur.club);i=(i+k+al.length)%al.length;cur.club=al[i];if(CLUBS[cur.club].putt)cur.pmax=Math.max(2.5,Math.min(40,dist(cur)*1.3+.8));refresh();updMeter();}
