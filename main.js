@@ -657,13 +657,17 @@ const MULCH=[],MULCHG=new Map();
 function inMulch(x,y){const L=MULCHG.get(Math.floor(x/8)+','+Math.floor(y/8));if(!L)return false;for(const b of L)if(x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1&&inPoly(b.p,x,y))return true;return false;}
 function IMC(M){if(!M.instanceColor)M.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1,M.count)*3).fill(1),3);return M;}
 function onPath(x,y){if(MULCH.length&&inMulch(x,y))return true;if(window.NOGRASS&&window.NOGRASS(x,y))return true;/* a course can mark ground with no grass blades or tufts (Augusta's pine straw) */const gx=Math.floor(x-X0),gy=Math.floor(y-Y0);return gx>=0&&gy>=0&&gx<WW&&gy<HH&&PGRID[gy*WW+gx]===1;}
-function* genTufts(x0,y0,tee,out){const list=[];
- for(let i=0,NT=20000,NN=7000;i<NT;i++){if(i%1500===1499)yield;const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const L=TUFT[(tee&&r<3.5)?'tee':lieAt(x,y)];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
+function* genTufts(x0,y0,tee,out){const list=[],fl=[],FA=window.FESCUE_AT;
+ for(let i=0,NT=20000,NN=7000;i<NT;i++){if(i%1500===1499)yield;const r=(i<NN?6:26)*Math.sqrt(Math.random()),a=Math.random()*6.283,x=x0+Math.cos(a)*r,y=y0+Math.sin(a)*r;if(r<.6)continue;if(GREENS.some(g=>Math.hypot(x-g.cx,y-g.cy)<g.R+4)||onPath(x,y))continue;const lie=lieAt(x,y);if(FA&&lie==='rough'&&FA(x,y)){if(r>1.6&&Math.random()<.13)fl.push([x,y]);continue;}const L=TUFT[(tee&&r<3.5)?'tee':lie];if(!L||Math.random()>L.p)continue;list.push([x,y,L]);}
  const n=Math.max(1,list.length),m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(),c=new THREE.Color(),AX=new THREE.Vector3(0,1,0);out.m=new Float32Array(n*16);out.c=new Float32Array(n*3);out.tv=new Float32Array(n);out.n=list.length;
- list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);out.tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));m.toArray(out.m,i*16);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);c.toArray(out.c,i*3);});}
+ list.forEach((t,i)=>{const L=t[2],hh=L.h[0]+Math.random()*(L.h[1]-L.h[0]);out.tv[i]=L.v[Math.random()<.5?0:1];q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.015),q,s.set(hh,hh,hh));m.toArray(out.m,i*16);c.set(L.c).offsetHSL((Math.random()-.5)*.03,0,(Math.random()-.5)*.06);c.toArray(out.c,i*3);});
+ out.fn=fl.length;out.fm=new Float32Array(Math.max(1,fl.length)*16);out.fc=new Float32Array(Math.max(1,fl.length)*3);
+ fl.forEach((t,i)=>{const hh=.3+Math.random()*.3,w=hh*(.75+Math.random()*.3);q.setFromAxisAngle(AX,Math.random()*6.28);m.compose(V(t[0],t[1],H(t[0],t[1])-.03),q,s.set(w,hh,w));m.toArray(out.fm,i*16);const v=Math.random();c.setRGB(.98+v*.14,.94+v*.12,.84+Math.random()*.14);c.toArray(out.fc,i*3);});}
 function applyTufts(d){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}const n=Math.max(1,d.n),M=IMC(new THREE.InstancedMesh(tuftGeo,tuftMat,n));
  M.instanceMatrix.array.set(d.m.subarray(0,n*16));M.instanceColor.array.set(d.c.subarray(0,n*3));M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;
- M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;M.receiveShadow=true;tufts=M;linearize(M);scene.add(M);}
+ M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;M.receiveShadow=true;tufts=M;linearize(M);scene.add(M);
+ if(fescT){scene.remove(fescT);fescT.dispose&&fescT.dispose();fescT=null;}
+ if(d.fn){const F=IMC(new THREE.InstancedMesh(fescGeo(),fescMat(),d.fn));F.instanceMatrix.array.set(d.fm.subarray(0,d.fn*16));F.instanceColor.array.set(d.fc.subarray(0,d.fn*3));F.instanceMatrix.needsUpdate=true;F.instanceColor.needsUpdate=true;F.frustumCulled=false;F.receiveShadow=true;F.userData.noSee=1;linearize(F);fescT=F;scene.add(F);}}
 function buildTufts(x0,y0){const d={},it=genTufts(x0,y0,!!(cur&&cur.lie==='tee'),d);while(!it.next().done);applyTufts(d);}
 /* the scheduler: one prepared spot at a time, a few milliseconds of work per frame (never while the swing bar runs) */
 const GRASS={job:null,key:null,ready:null};let GRASS_DEFER=false;
@@ -2231,6 +2235,19 @@ function bushes(list,kinds,opt){opt=opt||{};if(!list||!list.length)return 0;cons
       c.setHSL(0,0,.86+v*.18);MC.setColorAt(i,c);MD.setColorAt(i,c);});
     for(const M of[MC,MD]){M.castShadow=opt.shadow!==false;M.receiveShadow=true;M.frustumCulled=false;M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;scene.add(M);}n+=L.length;});
   return n;}
+/* ---------- links fescue near the ball (a course sets window.FESCUE_AT(x,y)): tall, wispy golden clumps with seed heads in place of
+   the short green tufts. Four crossed cards each, drawn at runtime, rebuilt with the tufts every shot ---------- */
+function fescGeo(){if(fescGeo.g)return fescGeo.g;const g0=new THREE.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+  for(let k=0;k<4;k++){const g=g0.clone();g.rotateY(k*Math.PI/4);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();return fescGeo.g=geo;}
+function fescMat(){if(fescMat.m)return fescMat.m;const t=bushCanvas((x,r)=>{x.lineCap='round';
+    const gold=['#d8c27a','#c9a95a','#e2cf8e','#b89a4e','#d2b46a','#e8d9a0'],sage=['#9aa070','#8a925e','#a8a87a'];
+    for(let i=0;i<110;i++){const lean=(r()-.5)*1.7,l=110+r()*140,bx=128+(r()-.5)*44,ex=bx+Math.sin(lean)*l,ey=255-Math.cos(lean)*l*(.8+r()*.2),cx=bx+Math.sin(lean)*l*.25,cy=255-l*.6;
+      x.strokeStyle=bushPick(r,r()<.22?sage:gold);x.lineWidth=1+r()*1.6;x.beginPath();x.moveTo(bx,255);x.quadraticCurveTo(cx,cy,ex,ey);x.stroke();}
+    for(let i=0;i<26;i++){const lean=(r()-.5)*.9,l=170+r()*80,bx=128+(r()-.5)*30,ex=bx+Math.sin(lean)*l,ey=255-Math.cos(lean)*l;x.strokeStyle='#c4a862';x.lineWidth=1;x.beginPath();x.moveTo(bx,255);x.lineTo(ex,ey);x.stroke();
+      for(let k=0;k<7;k++){const u=k/7,px=ex-Math.sin(lean)*u*30+(r()-.5)*6,py=ey+Math.cos(lean)*u*30;x.fillStyle=bushPick(r,['#d9c48a','#c4a862','#e6d6a2','#b8964e']);x.beginPath();x.ellipse(px,py,1.6,3.2,lean+(r()-.5)*.8,0,7);x.fill();}}},5151);
+  return fescMat.m=new THREE.MeshLambertMaterial({map:t,alphaTest:.4,side:THREE.DoubleSide});}
+let fescT=null;
 function crossTreeMesh(imp,cap){const P=imp.frames===8?4:2,pos=[],uv=[],fr=[],idx=[];for(let k=0;k<P;k++){const a=k/imp.frames*Math.PI*2,rx=Math.sin(a),rz=-Math.cos(a),b=k*4;
     pos.push(-.5*rx,0,-.5*rz,.5*rx,0,.5*rz,.5*rx,1,.5*rz,-.5*rx,1,-.5*rz);uv.push(0,0,1,0,1,1,0,1);fr.push(k,k,k,k);idx.push(b,b+1,b+2,b,b+2,b+3);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setAttribute('aF',new THREE.Float32BufferAttribute(fr,1));g.setIndex(idx);

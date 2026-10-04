@@ -73,6 +73,7 @@ function houses(A){const T=A.THREE,D=A.D,P=[],C=[],R=[],RC=[],c=new T.Color();co
 /* ---------- native fescue: the golden unmown rough of the club's photos, mapped from the aerial (cc_fescue.png), painted onto the ground ---------- */
 function fescue(A){const D=A.D,Fz=D.fescue;if(!Fz)return;const img=new Image();img.onload=()=>{try{
   const w=img.width,h=img.height,cv=document.createElement('canvas');cv.width=w;cv.height=h;const x=cv.getContext('2d');x.drawImage(img,0,0);const id=x.getImageData(0,0,w,h),d=id.data,mk=new Uint8ClampedArray(d);
+  window.FESCUE_AT=(px,py)=>{const i=Math.floor((px-Fz.x0)/(Fz.x1-Fz.x0)*w),j=Math.floor((Fz.y1-py)/(Fz.y1-Fz.y0)*h);return i>=0&&j>=0&&i<w&&j<h&&mk[(j*w+i)*4]>120;};/* main.js grows tall golden fescue clumps here near the ball */
   for(let i=0;i<d.length;i+=4){const a=d[i]/255,n=(Math.sin(i*.0137)*43758.5453)%1,k=.86+.28*Math.abs(n);d[i]=Math.min(255,204*k);d[i+1]=Math.min(255,170*k);d[i+2]=Math.min(255,98*k);d[i+3]=Math.round(a*215);}/* Chambers Bay: deep golden fescue */
   x.putImageData(id,0,0);const c=A.ctx,B=A.box,S=c.canvas.width;c.save();c.setTransform(1,0,0,1,0,0);
   c.restore();
@@ -108,7 +109,7 @@ function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.hei
   const nf=kind==3?40:kind==0?140:90;for(let i=0;i<nf;i++){const a=r()*6.283,rr=Math.pow(r(),.7)*48,cx=64+Math.cos(a)*rr,cy=(kind==1?40:58)+Math.sin(a)*rr*(kind==1?.9:.6);x.fillStyle=P[1][Math.floor(r()*P[1].length)];
     x.beginPath();x.arc(cx,cy,kind==2?5+r()*3:kind==0?2+r()*1.6:2.5+r()*2,0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
-function plants(A,list){if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+function plants(A,list){if(!list.length)return;if(A.bushes){const n=A.bushes(list,['broom','wildflower','rhodo','brush']);console.log('[pl] bushes',n);return;}/* full bushes (main.js) */const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
   for(const ang of[0,Math.PI/3,2*Math.PI/3]){const g=g0.clone();g.rotateY(ang);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
   for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
