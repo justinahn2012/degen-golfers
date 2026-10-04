@@ -2602,7 +2602,9 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
     if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':LIE_NAME[p.lie];}
     else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
-    if(p.strokes>=10){p.done=true;big='Picked up';small=p.name+' takes a 10';cel=startCeleb(p,'hips');}}
+}
+  /* 10 is the most anyone takes on a hole: checked after every shot, penalties included (an out of bounds at 9 used to play on to 11, 12...) */
+  if(!r.holed&&!p.done&&p.strokes>=10){small=(r.oob?big+'. ':'')+p.name+' takes a 10';p.strokes=10;p.done=true;big='Picked up';cel=startCeleb(p,'hips');}
   placeBall(p,p.x,p.y,r.holed?H(p.x,p.y)-.06:H(p.x,p.y)+.021);toast(big,small);state='result';refresh();
   let rp=false;try{rp=worthReplay(r,p);}catch(e){dgErr(e,'replay check');}if(rp){setTimeout(safe(()=>{if(state==='result'){CELEB=null;startReplay(r,p,safe(()=>startTurn(),'next turn'));}},'replay'),cel?Math.max(4600,CELEB?Math.round(CELEB.dur*1000)+600:0):1300);}else setTimeout(safe(()=>{if(state==='result'){CELEB=null;startTurn();}},'next turn'),cel?Math.max(4800,CELEB?Math.round(CELEB.dur*1000)+800:0):r.holed?2600:2100);}
 function toPar(v){return v===0?'E':(v>0?'+':'')+v;}
