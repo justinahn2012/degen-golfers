@@ -4,8 +4,8 @@
   const load=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error(src));document.body.appendChild(s);});
   const status=t=>{const l=document.getElementById('load');if(l)l.textContent=t;};
   try{
-    const [A,F,FONT,jp,ws,nc,cda,AN,F3,ko,cc,cb,ag]=await Promise.all([J('assets.json'),J('faces.json'),J('font.json'),J('jp.json'),J('ws.json'),J('nc.json'),J('cda.json'),J('anims.json').catch(()=>null),null,J('ko.json').catch(()=>null),J('cc.json').catch(()=>null),J('cb.json').catch(()=>null),J('ag.json').catch(()=>null)])/*AG-COURSE*/;/*CC-COURSE*//*COURSE-EXT*/
-    window.ASSETS=A;window.ANIMS=AN;window.FACE3D=null;window.FACES=F;window.LOGO_FONT=FONT;window.COURSES={jp,ws,nc,cda};if(ko)window.COURSES.ko=ko;if(cc)window.COURSES.cc=cc;if(cb)window.COURSES.cb=cb;if(ag)window.COURSES.ag=ag;/*CB-COURSE*/
+    const [A,F,FONT,jp,ws,nc,cda,AN,F3,ko,cc,cb,ag,pb]=await Promise.all([J('assets.json'),J('faces.json'),J('font.json'),J('jp.json'),J('ws.json'),J('nc.json'),J('cda.json'),J('anims.json').catch(()=>null),null,J('ko.json').catch(()=>null),J('cc.json').catch(()=>null),J('cb.json').catch(()=>null),J('ag.json').catch(()=>null),J('pb.json').catch(()=>null)])/*PB-COURSE*//*AG-COURSE*/;/*CC-COURSE*//*COURSE-EXT*/
+    window.ASSETS=A;window.ANIMS=AN;window.FACE3D=null;window.FACES=F;window.LOGO_FONT=FONT;window.COURSES={jp,ws,nc,cda};if(ko)window.COURSES.ko=ko;if(cc)window.COURSES.cc=cc;if(cb)window.COURSES.cb=cb;if(ag)window.COURSES.ag=ag;if(pb)window.COURSES.pb=pb;/*CB-COURSE*/
     (function(){let B=null;try{const s=sessionStorage.getItem('dg-boot');if(s){B=JSON.parse(s);sessionStorage.removeItem('dg-boot');}}catch(e){}
  if(!B){try{const m=location.hash.match(/dg=([^&]+)/);if(m){B=JSON.parse(decodeURIComponent(m[1]));try{history.replaceState(null,'',location.pathname+location.search);}catch(e){location.hash='';}}}catch(e){}}
  let k='jp';try{k=(B&&B.c)||localStorage.getItem('dg-course')||'jp';}catch(e){if(B&&B.c)k=B.c;}if(!COURSES[k])k='jp';
