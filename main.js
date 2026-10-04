@@ -2652,15 +2652,18 @@ const hsTP=tp=>tp===0?'E':(tp>0?'+':'')+tp,hsSort=(a,b)=>a.tp-b.tp||a.s-b.s||a.t
 function hsPending(){try{return JSON.parse(localStorage.getItem('dg-hs-pending')||'[]');}catch(e){return[];}}
 function hsAll(){const seen=new Set(HS.board.map(r=>r.rid));return HS.board.concat(hsPending().filter(r=>!seen.has(r.rid)).map(r=>r.tp==null?Object.assign({},r,{tp:r.s-r.par}):r)/* not yet on the server: work out to-par here */);}
 function hsRows(tab){return hsAll().filter(r=>tab==='all'||r.c===tab).sort(hsSort).slice(0,10);}
-function hsRender(mark){const el=$('hs');if(!el)return;const tabs=['all','jp','ws','nc','cda'];
-  let h='<h2>Leaderboard</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'">'+(t==='all'?'All courses':HS_CN[t])+'</button>').join('')+'</div><div class="board">';
+const HS_ORDER=['jp','ws','nc','cc','cb','cda','pb','ko','ag'];/* same order as COURSE_ORDER (which is declared later in the file, after the menu is first built) */
+const HS_TAB={jp:'Jefferson',ws:'West Seattle',nc:'China Creek',cc:'Coal Creek',cb:'Chambers',cda:"Coeur d'Alene",pb:'Pebble',ko:'Ko Olina',ag:'Augusta'};
+function hsRender(mark){const el=$('hs');if(!el)return;const tabs=['all'].concat(HS_ORDER.filter(k=>HS_CN[k]),Object.keys(HS_CN).filter(k=>!HS_ORDER.includes(k)));/* every course, in course-select order */
+  let h='<h2>Leaderboard</h2><div class="crest">The Degen Golfers Invitational</div><div class="tabs">'+tabs.map(t=>'<button data-t="'+t+'" class="'+(HS.tab===t?'on':'')+'" style="flex:0 0 auto">'+(t==='all'?'All courses':(HS_TAB[t]||HS_CN[t]))+'</button>').join('')+'</div><div class="board">';
   const L=hsRows(HS.tab);
   h+='<table><tr><th>Place</th><th>Initials</th><th>Character</th>'+(HS.tab==='all'?'<th>Course</th>':'')+'<th style="text-align:right">Score</th></tr>';
   for(let k=0;k<10;k++){const r=L[k],cls=r?(r.tp<0?'hsu':r.tp>0?'hso':'hse'):'';
     h+=r?'<tr class="hr'+(k+1)+(mark&&r.rid===mark?' me':'')+'"><td class="hspos">'+(k+1)+'</td><td class="hsini">'+esc(r.i)+'</td><td class="hsg">'+esc(r.g.split(' ')[0])+'</td>'+(HS.tab==='all'?'<td class="hscr">'+(HS_CS[r.c]||r.c.toUpperCase())+'</td>':'')+'<td class="hssc"><span class="'+cls+'">'+hsTP(r.tp)+'</span><small>'+r.s+'</small></td></tr>'
       :'<tr class="empty"><td class="hspos">'+(k+1)+'</td><td class="hsini">&middot;&middot;&middot;</td><td class="hsg"></td>'+(HS.tab==='all'?'<td class="hscr"></td>':'')+'<td class="hssc">&mdash;</td></tr>';}
   h+='</table></div><div class="note">'+(HS.online===false?'Offline — showing scores saved on this phone':'Full eighteen-hole rounds · lowest score to par')+'</div>';
-  el.innerHTML=h;el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{HS.tab=b.dataset.t;hsRender(mark);});}
+  el.innerHTML=h;const tb=el.querySelector('.tabs');if(tb){tb.style.cssText+=';display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:6px';const on=tb.querySelector('.on');if(on)tb.scrollLeft=Math.max(0,on.offsetLeft-tb.clientWidth/2+on.clientWidth/2);}
+  el.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{HS.tab=b.dataset.t;hsRender(mark);});}
 function hsFlush(){const P=hsPending();if(!P.length)return Promise.resolve();return Promise.all(P.map(e=>fetch('/api/scores',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(e)}).then(r=>r.ok?e.rid:null).catch(()=>null)))
   .then(ok=>{const done=new Set(ok.filter(Boolean));try{localStorage.setItem('dg-hs-pending',JSON.stringify(P.filter(e=>!done.has(e.rid))));}catch(e){}});}
 function hsLoad(mark){hsRender(mark);return hsFlush().then(()=>fetch('/api/scores',{cache:'no-store'})).then(r=>r.ok?r.json():Promise.reject(r.status))
@@ -3038,6 +3041,20 @@ function stillCheck(){const t=performance.now()/1000,dt=Math.min(.1,Math.max(.00
   else{MOVEF=0;STILL+=dt;if(!BOOST&&STILL>.6&&t-UNB_T>1.2&&stillPR()>normPR()+.05){BOOST=true;PR_DIRTY=true;}}}
 function overheadMode(on){if(on===OVH_ON)return;OVH_ON=on;try{if(tufts)tufts.visible=!on;renderer.shadowMap.autoUpdate=!on;renderer.shadowMap.needsUpdate=true;
   applyPR();}catch(e){}}
+/* ---------- flyover heights: the camera used to ride the raw ground height under it, so every hump and dip of a hilly hole came
+   through as a bump. Built once per hole along the hole line (2 m steps):
+   - camera: the highest ground within 44 m either side (and 25 m behind, where the camera actually sits), then a Gaussian blur
+     (sigma 26 m), then never less than 4 m over the ground right there. Local, so a big hill near the green doesn't lift the whole
+     flight the way a single maximum would; smooth, so it glides over humps instead of tracing them.
+   - look point: the ground blurred (sigma 20 m), so the aim point doesn't jitter either. ---------- */
+let FLYP=null;
+function flyProf(){if(FLYP&&FLYP.h===H1&&FLYP.L===HOLE_LEN)return FLYP;const L=HOLE_LEN,st=2,S0=-30,n=Math.ceil((L+100-S0)/st)+1,g=new Float32Array(n),gc=new Float32Array(n);
+  for(let i=0;i<n;i++){const sv=Math.max(0,Math.min(L,S0+i*st)),a=plAt(H1,sv),over=S0+i*st-sv;const x=a.x+a.tx*over,y=a.y+a.ty*over;g[i]=H(x,y);gc[i]=Math.max(g[i],H(x-a.tx*25,y-a.ty*25));}
+  const mx=(arr,w)=>{const o=new Float32Array(n);for(let i=0;i<n;i++){let m=-1e9;for(let j=Math.max(0,i-w);j<=Math.min(n-1,i+w);j++)m=Math.max(m,arr[j]);o[i]=m;}return o;};
+  const blur=(arr,sg)=>{const r=Math.ceil(sg*3),K=[];let ks=0;for(let j=-r;j<=r;j++){const k=Math.exp(-j*j/(2*sg*sg));K.push(k);ks+=k;}const o=new Float32Array(n);for(let i=0;i<n;i++){let v=0;for(let j=-r;j<=r;j++){const q=Math.max(0,Math.min(n-1,i+j));v+=arr[q]*K[j+r];}o[i]=v/ks;}return o;};
+  let cz=blur(mx(gc,22),13);for(let i=0;i<n;i++)cz[i]=Math.max(cz[i],gc[i]+4);cz=blur(cz,3);for(let i=0;i<n;i++)cz[i]=Math.max(cz[i],gc[i]+4);
+  const lz=blur(g,10);const at=(arr,s)=>{const f=(s-S0)/st,i=Math.max(0,Math.min(n-2,Math.floor(f))),u=Math.max(0,Math.min(1,f-i));return arr[i]+(arr[i+1]-arr[i])*u;};
+  return FLYP={h:H1,L,c:s=>at(cz,s),l:s=>at(lz,s)};}
 function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'curtain');CURT=null;}const now=performance.now()/1000,rawDt=now-last,dt=Math.min(.05,rawDt);last=now;if(rawDt<.25){FT=FT*.92+rawDt*1000/((PACE===2||PAN_PACE===2)?2:1)*.08;if(now>DRSnext&&!BOOST&&state==='aim'&&!CURT&&now>flyUntil+1&&!(cur&&cur.intro&&now<cur.intro)){if(FT>21&&DRS>.6&&(!COMP||DRS>.85)){DRS=Math.max(.6,DRS-(COMP?.15:.1));applyPR();DRSnext=now+(COMP?12:1.5);}else if(FT<14.5&&DRS<1&&!COMP){DRS=Math.min(1,DRS+.05);applyPR();DRSnext=now+3;}}}
   if(GRASS.job&&state!=='s1'&&state!=='s2'){try{grassStep(MOBILE?3:4);}catch(e){console.warn('grass',e);GRASS.job=null;}}
   if(GRASS.ready&&cur&&state==='aim'&&GRASS.key===grassKey(cur.x,cur.y,cur.lie==='tee')){try{grassUse(cur.x,cur.y,cur.lie==='tee');}catch(e){console.warn('grass',e);}}
@@ -3084,11 +3101,11 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
   if(state==='s1'){if(S1&&!(p&&p.over))swingU=Math.min(1.1,(now-S1.t0)*S1.rate);else swingU+=dt*(p&&CLUBS[p.club].putt?.75*PUTT_MS:1.0)*wob*meterSpd(p);if(swingU>=1.1){swingU=1.1;swingPow=1.1;state='s2';meterS2(p);}updMeter();}
   else if(state==='s2'){if(S2&&!(p&&p.over))swingU=S2.u0-(now-S2.t0)*S2.rate;else swingU-=dt*1.45*(p&&CLUBS[p.club].putt?PUTT_MS:1)*wob*meterSpd(p);if(swingU<-.15){swingU=-.15;mStop();fire(-.15);}updMeter();}
   else if(state==='flight')updMeter();
-  if(fly){const tt=now-flyStart,L=HOLE_LEN;
-    if(tt<FLY_OUT){const u=Math.min(1,tt/FLY_OUT),e=u*u*(3-2*u),a=plAt(H1,e*L*.92),b=plAt(H1,Math.min(L,e*L*.92+70));want=V(a.x-a.tx*25,a.y-a.ty*25,H(a.x,a.y)+38-e*16);look=V(b.x,b.y,H(b.x,b.y)+2);}
+  if(fly){const tt=now-flyStart,L=HOLE_LEN,F=flyProf();
+    if(tt<FLY_OUT){const u=Math.min(1,tt/FLY_OUT),e=u*u*(3-2*u),sa=e*L*.92,sb=Math.min(L,sa+70),a=plAt(H1,sa),b=plAt(H1,sb);want=V(a.x-a.tx*25,a.y-a.ty*25,F.c(sa)+38-e*16);look=V(b.x,b.y,F.l(sb)+2);}
     else{/* reverse dolly: glide back down the fairway still facing the green, sinking toward the golfer, and settle on the normal golfer camera */
-      const v=Math.min(1,(tt-FLY_OUT)/FLY_BACK),e=v*v*(3-2*v),s0=L*.92,sg=p?Math.max(0,plProj(H1,p.x,p.y)-7.5):0,s=s0+(sg-s0)*e,a=plAt(H1,s),b=plAt(H1,Math.min(L,s+70+(s0-s)*.25));
-      want=V(a.x-a.tx*25*(1-e),a.y-a.ty*25*(1-e),H(a.x,a.y)+22*(1-e)+2.1*e);look=V(b.x,b.y,H(b.x,b.y)+2*(1-e)+1.2*e);
+      const v=Math.min(1,(tt-FLY_OUT)/FLY_BACK),e=v*v*(3-2*v),s0=L*.92,sg=p?Math.max(0,plProj(H1,p.x,p.y)-7.5):0,s=s0+(sg-s0)*e,sb=Math.min(L,s+70+(s0-s)*.25),a=plAt(H1,s),b=plAt(H1,sb);
+      want=V(a.x-a.tx*25*(1-e),a.y-a.ty*25*(1-e),F.c(s)+22*(1-e)+2.1*e);look=V(b.x,b.y,F.l(sb)+2*(1-e)+1.2*e);
       if(p){const w=Math.max(0,Math.min(1,(v-.62)/.38)),k2=w*w*(3-2*w),dx=Math.cos(p.aim),dy=Math.sin(p.aim),z=H(p.x,p.y),aw=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1),al=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2);want.lerp(aw,k2);look.lerp(al,k2);}}}
   if(CELEB&&state==='result'&&now>=CELEB.t0-.2&&CELEB.p.av){const g=CELEB.p.av,c=g.userData.rig.B.spine_03.getWorldPosition(new THREE.Vector3()),f=g.localToWorld(new THREE.Vector3(0,0,1)).sub(g.position).setY(0).normalize(),sd=new THREE.Vector3(-f.z,0,f.x);
     want=c.clone().addScaledVector(f,3.1).addScaledVector(sd,(CELEB.kind==='pump'?-1.6:.9)*(CELEB.p.look&&CELEB.p.look.lefty?-1:1)).add(new THREE.Vector3(0,CELEB.kind==='pump'?.05:.15,0));look=c.clone().add(new THREE.Vector3(0,CELEB.kind==='pump'?.15:.05,0));}
