@@ -2166,8 +2166,12 @@ function seePatch(m){if(!m||m.userData.see||m.isShaderMaterial||m.isRawShaderMat
 function seeScan(){for(const p of players)if(p.av)p.av.traverse(o=>{o.userData.noSee=1;});scene.traverse(o=>{if(!o.isMesh||o.userData.noSee)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.see)return;
   if(!(o.userData.occluder||o.userData.see)){if(!o.isInstancedMesh)return;if(/blade|tuft/.test(String(m.customProgramCacheKey())))return;}seePatch(m);});}
 function updSee(){const p=cur,now=performance.now()/1000;if(now>SEE.next){SEE.next=now+1.5;seeScan();}SEE.uC.value.copy(camera.position);let on=0;
-  if(p&&p.av&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&!(overhead&&state==='aim')){const t=SEE.uT.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));SEE.uR.value=Math.max(0,camera.position.distanceTo(t)-1.1);on=1;}
-  else if(state==='flight'||state==='result'||state==='replay'){SEE.uT.value.copy(camera.position);SEE.uR.value=3;on=1;}
+  /* only with the normal shot camera (within 16 m of the golfer): during the hole flyover the camera is hundreds of metres away, and
+     cutting everything nearer than the golfer emptied the course. Any other time only what is within 3 m of the lens is cleared. */
+  const aimCam=p&&p.av&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&!(overhead&&state==='aim');let d=1e9;
+  if(aimCam){SEE.uT.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));d=camera.position.distanceTo(SEE.uT.value);}
+  if(aimCam&&d<16){SEE.uR.value=Math.max(0,d-1.1);on=1;}
+  else if(aimCam||state==='flight'||state==='result'||state==='replay'){SEE.uT.value.copy(camera.position);SEE.uR.value=3;on=1;}
   SEE.uOn.value=on;}
 /* ---------- shrubs and flowers as real bushes (the Augusta azalea build, shared by every course): eight crossed cards round the centre
    carry the leaves and flowers up close, and a lumpy 15-triangle dome skinned in the same plant fills the gaps from a distance.
