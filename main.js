@@ -2163,15 +2163,14 @@ function seeInject(sh){sh.uniforms.uSeeC=SEE.uC;sh.uniforms.uSeeT=SEE.uT;sh.unif
   sh.vertexShader=v;sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vSeeW;uniform vec3 uSeeC,uSeeT;uniform float uSeeR,uSeeOn;').replace('void main() {','void main() {\n'+SEE_FS);}
 function seePatch(m){if(!m||m.userData.see||m.isShaderMaterial||m.isRawShaderMaterial)return;const k0=String(m.customProgramCacheKey()),prev=m.onBeforeCompile;m.userData.see=1;
   m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);seeInject(sh);};m.customProgramCacheKey=()=>k0+'|see';m.needsUpdate=true;SEE.n++;}
-function seeScan(){for(const p of players)if(p.av)p.av.traverse(o=>{o.userData.noSee=1;});scene.traverse(o=>{if(!o.isMesh||o.userData.noSee)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.see)return;
-  if(!(o.userData.occluder||o.userData.see)){if(!o.isInstancedMesh)return;if(/blade|tuft/.test(String(m.customProgramCacheKey())))return;}seePatch(m);});}
-function updSee(){const p=cur,now=performance.now()/1000;if(now>SEE.next){SEE.next=now+1.5;seeScan();}SEE.uC.value.copy(camera.position);let on=0;
+function seeScan(){for(const p of players)if(p.av&&!p.av.userData.noSeeDone){p.av.userData.noSeeDone=1;p.av.traverse(o=>{o.userData.noSee=1;});}const hero=new Set();for(const k in HERO){const H=HERO[k];if(H&&H.B){hero.add(H.B);hero.add(H.L);if(H.X)H.X.forEach(M=>hero.add(M));}}scene.traverse(o=>{if(!o.isMesh||o.userData.noSee)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.see)return;
+  if(!(o.userData.occluder||o.userData.see||hero.has(o))){if(!o.isInstancedMesh||!(m.alphaTest>0))return;if(/blade|tuft/.test(String(m.customProgramCacheKey())))return;}seePatch(m);});}
+function updSee(){const p=cur,now=performance.now()/1000;if(now>SEE.next&&state==='aim'){SEE.next=now+3;seeScan();}SEE.uC.value.copy(camera.position);let on=0;
   /* only with the normal shot camera (within 16 m of the golfer): during the hole flyover the camera is hundreds of metres away, and
-     cutting everything nearer than the golfer emptied the course. Any other time only what is within 3 m of the lens is cleared. */
+     cutting everything nearer than the golfer emptied the course. Off the rest of the time (flight, replays): it costs nothing then. */
   const aimCam=p&&p.av&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&!(overhead&&state==='aim');let d=1e9;
   if(aimCam){SEE.uT.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));d=camera.position.distanceTo(SEE.uT.value);}
   if(aimCam&&d<16){SEE.uR.value=Math.max(0,d-1.1);on=1;}
-  else if(aimCam||state==='flight'||state==='result'||state==='replay'){SEE.uT.value.copy(camera.position);SEE.uR.value=3;on=1;}
   SEE.uOn.value=on;}
 /* ---------- shrubs and flowers as real bushes (the Augusta azalea build, shared by every course): eight crossed cards round the centre
    carry the leaves and flowers up close, and a lumpy 15-triangle dome skinned in the same plant fills the gaps from a distance.
@@ -3084,7 +3083,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
          if(low()){const dhL2=Math.hypot(look.x-want.x,look.z-want.z)||1,dhB2=Math.hypot(B.x-want.x,B.z-want.z)||1,pB2=Math.atan2(B.y-want.y,dhB2),pN=pB2-Math.atan(lim*tH);look.y=want.y+Math.tan(pN)*dhL2;}}catch(e){}}}
     else{for(let i=0;i<14;i++){if(!treeHit(want.x,-want.z,want.y))break;want.lerp(look,.12);want.y+=.35;}}}
   if(want){const k=1-Math.exp(-dt*(fly?6:state==='flight'?4:(INTRO_D>3?3+Math.min(4,INTRO_D/12):3)));if(fly){camPos.copy(want);camLook.copy(look);}else if(state==='replay'&&RP&&!RP.snapped){camPos.copy(want);camLook.copy(look);RP.snapped=1;}else if(state==='replay'){camPos.lerp(want,Math.min(1,k*2.2));camLook.lerp(look,Math.min(1,k*3));}else if(plan&&plan.cam&&plan.cam.snap&&state==='flight'){camPos.copy(want);camLook.copy(look);plan.cam.snap=0;}else{camPos.lerp(want,k);camLook.lerp(look,plan&&plan.cam&&plan.cam.p&&state!=='aim'?Math.min(1,k*2.5):k);}}
-  camera.position.copy(camPos);camera.lookAt(camLook);try{updPinEdge();}catch(e){}if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
+  camera.position.copy(camPos);camera.lookAt(camLook);/* the off-screen 'Pin 123 yds' edge tag is gone (round 81): it rebuilt itself every frame and popped up during the face close-up */if(cur&&cur.av){const t=cur.av.position;sun.target.position.copy(t);sun.position.copy(t).add(SUNOFF);}if(p&&p.over&&state!=='flight')camera.rotateZ(Math.sin(now*1.3)*.025*Math.min(3,p.over));
   // wind arrow relative to view
   const fx=camLook.x-camPos.x,fy=-(camLook.z-camPos.z),cf=Math.atan2(fy,fx);$('wArrow').style.transform='rotate('+((cf-wind.a)*180/Math.PI)+'deg)';
   flagG.rotation.y=wind.a;try{animFlag(now);}catch(e){}

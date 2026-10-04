@@ -397,7 +397,7 @@ X.heroInit=function(HERO,A){const T=A.THREE;if(!window.KOT||!KOT.lob)return;for(
     const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
     HERO['lob'+v]={B:mk(ms[0],8),L:mk(ms[1],8),h:1,N:8,k:1,noYaw:false};}
   if(KOT.dogw)for(let v=0;v<2;v++){try{const g=KOT.dogw(T,v);g.updateMatrixWorld(true);const ms=[];g.traverse(o=>{if(o.isMesh)ms.push(o);});if(ms.length<2)continue;
-    const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=true;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};
+    const mk=(me,N)=>{const geo=me.geometry.clone();geo.applyMatrix4(me.matrixWorld);const mt=me.material;mt.userData.lin=1;const M=A.IMC(new T.InstancedMesh(geo,mt,N));M.count=0;M.castShadow=false;M.receiveShadow=true;M.frustumCulled=false;A.scene.add(M);return M;};/* no shadow pass for the 3D dogwoods (cost) */
     const X=ms.slice(1,-1).map(me=>mk(me,6));HERO['dogw'+v]={B:mk(ms[0],6),L:mk(ms[ms.length-1],6),X:X.length?X:null,h:1,N:6,k:1,noYaw:false};}catch(e){console.warn('[ag] hero dogwood',e);}}
   console.log('[ag] hero loblollies ready');};
 X.decor=function(A){for(const [n,f] of[['houses',houses],['emerald',emerald],['navy',navyWater],['surfaces',creekSurfaces],['bridges',bridges],['wall',creekWall],['boards',boards]]){try{f(A);}catch(e){console.warn('[ag] '+n,e);}}
