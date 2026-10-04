@@ -78,6 +78,19 @@ function fescue(A){const D=A.D,Fz=D.fescue;if(!Fz)return;const img=new Image();i
   c.drawImage(cv,(Fz.x0-B.X0)/B.WW*S,(B.Y1-Fz.y1)/B.HH*S,(Fz.x1-Fz.x0)/B.WW*S,(Fz.y1-Fz.y0)/B.HH*S);c.restore();A.tex.needsUpdate=true;console.log('[cc] fescue painted');}catch(e){console.warn('[cc] fescue',e);}};img.src=Fz.img;}
 /* ---------- rocky creek banks (as in the club's photos of 1, 3, 7 and the 17th's cascade) ---------- */
 function rockGeo(T,seed){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;let r=seed*9.7;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=1+.25*Math.sin(x*2.3+r)*Math.cos(z*2.1+r*.7)+.12*Math.sin(y*4.7+r*1.3);p.setXYZ(i,x*k,y*k*.7,z*k);}g.computeVertexNormals();return g;}
+/* creek stones: a granite skin (speckle, lichen, hairline cracks) instead of plain grey plastic, moss on the upward faces, the wet
+   lower half darker, colours in linear space so they sit at true brightness */
+function rockSkin(T){if(rockSkin.t)return rockSkin.t;const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');let s=4111;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  x.fillStyle='#b3afa6';x.fillRect(0,0,256,256);
+  for(let i=0;i<260;i++){const v=r();x.fillStyle=v<.33?'rgba(70,68,64,.28)':v<.66?'rgba(150,146,138,.3)':'rgba(110,104,92,.3)';x.beginPath();x.ellipse(r()*256,r()*256,6+r()*26,4+r()*16,r()*3.14,0,7);x.fill();}
+  for(let i=0;i<5000;i++){const v=r();x.fillStyle=v<.45?'rgba(40,38,36,.55)':v<.8?'rgba(200,198,192,.5)':'rgba(120,96,70,.45)';x.fillRect(r()*256,r()*256,1+r()*1.5,1+r()*1.5);}
+  x.strokeStyle='rgba(35,33,30,.5)';x.lineWidth=1;for(let i=0;i<14;i++){let px=r()*256,py=r()*256;x.beginPath();x.moveTo(px,py);for(let k=0;k<6;k++){px+=(r()-.5)*30;py+=(r()-.5)*30;x.lineTo(px,py);}x.stroke();}
+  for(let i=0;i<70;i++){x.fillStyle=r()<.5?'rgba(170,176,130,.55)':'rgba(196,192,150,.5)';x.beginPath();x.arc(r()*256,r()*256,2+r()*6,0,7);x.fill();}
+  const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;return rockSkin.t=t;}
+function rockMoss(T,g){const p=g.attributes.position,n=g.attributes.normal,C=[];for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),ny=n.getY(i);
+    const nz=.5+.5*Math.sin(x*3.1+z*2.7)*Math.cos(z*2.3-x*1.7),m=Math.min(1,Math.max(0,(ny-.35)/.45))*Math.min(1,Math.max(0,nz*1.6-.2)),wet=y<-.05?.72:1;
+    C.push((1-m*.42)*wet,(1-m*.12)*wet,(1-m*.55)*wet);}g.setAttribute('color',new T.Float32BufferAttribute(C,3));return g;}
+function rockMat(T){return new T.MeshStandardMaterial({map:rockSkin(T),vertexColors:true,roughness:.93,metalness:0,flatShading:true,envMapIntensity:.55});}
 function creekRocks(A){const T=A.THREE,D=A.D,L=[],D17=[],near=(x,y)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<110);
   for(const l of D.creek||[])for(let i=1;i<l.length;i++){const a=l[i-1],b=l[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len;
     for(let s=0;s<len;s+=1.3){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;for(const sd of[-1,1]){const u=hsh(x*sd,y),o=2.0+u*.9;if(u<.25||!lineClear(A,x,y,1))continue;L.push([x+nx*sd*o,y+ny*sd*o,.28+hsh(y,x*sd)*.55]);}}}
@@ -87,13 +100,13 @@ function creekRocks(A){const T=A.THREE,D=A.D,L=[],D17=[],near=(x,y)=>A.HOLES.som
    if(h17&&pools.length){const g=h17.p[h17.p.length-1],pr=h17.p[h17.p.length-2],fx=g[0]-pr[0],fy=g[1]-pr[1],fl=Math.hypot(fx,fy),ux=fx/fl,uy=fy/fl,sx=-uy,sy=ux;
      let mx=0,my=0;pools.forEach(w=>{mx+=w.cx;my+=w.cy;});mx/=pools.length;my/=pools.length;
      for(let s=-22;s<=22;s+=.9)for(let r=0;r<3;r++){const x=mx+sx*s+ux*(r-1)*1.6+(hsh(s,r)-.5)*.8,y=my+sy*s+uy*(r-1)*1.6+(hsh(r,s)-.5)*.8;D17.push([x,y,.6+hsh(x,y)*.9]);}}}
-  if(!L.length)return;const geos=[rockGeo(T,1),rockGeo(T,2),rockGeo(T,3)],cols=['#8b8a84','#76746d','#9a978e','#6a6862','#a3a097'],m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();
-  geos.forEach((g,gi)=>{const S=L.filter((_,i)=>i%3===gi);if(!S.length)return;const M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.95,flatShading:true}),S.length));
+  if(!L.length)return;const geos=[rockMoss(T,rockGeo(T,1)),rockMoss(T,rockGeo(T,2)),rockMoss(T,rockGeo(T,3))],cols=['#8b8a84','#76746d','#9a978e','#6a6862','#a3a097'],m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color();
+  geos.forEach((g,gi)=>{const S=L.filter((_,i)=>i%3===gi);if(!S.length)return;const M=A.IMC(new T.InstancedMesh(g,rockMat(T),S.length));
     S.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.35),q,new T.Vector3(p[2],p[2],p[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],A.H(p[0],p[1])-p[2]*.35,p[2]*.9,p[2]*.65);c.set(cols[Math.floor(hsh(p[1],p[0])*cols.length)]);M.setColorAt(i,c);});
-    M.castShadow=true;M.receiveShadow=true;A.scene.add(M);});
-  if(D17.length){const g=rockGeo(T,5),M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.9,flatShading:true}),D17.length)),dk=['#3d3a37','#4a4642','#2f2c29','#55504a'];
+    M.castShadow=true;M.receiveShadow=true;try{A.linearize(M);}catch(e){}A.scene.add(M);});
+  if(D17.length){const g=rockMoss(T,rockGeo(T,5)),M=A.IMC(new T.InstancedMesh(g,rockMat(T),D17.length)),dk=['#3d3a37','#4a4642','#2f2c29','#55504a'];
     D17.forEach((p,i)=>{q.setFromEuler(new T.Euler(0,hsh(p[0],p[1])*6.28,0));m.compose(A.V(p[0],p[1],A.H(p[0],p[1])-p[2]*.25),q,new T.Vector3(p[2]*1.2,p[2],p[2]*1.1));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(p[0],p[1],A.H(p[0],p[1])-p[2]*.25,p[2]*1.05,p[2]*.65);c.set(dk[Math.floor(hsh(p[1],p[0])*dk.length)]);M.setColorAt(i,c);});
-    M.castShadow=true;M.receiveShadow=true;M.userData.occluder=true;/* the landing camera climbs over the 17th's boulder band */A.scene.add(M);}
+    M.castShadow=true;M.receiveShadow=true;try{A.linearize(M);}catch(e){}M.userData.occluder=true;/* the landing camera climbs over the 17th's boulder band */A.scene.add(M);}
   console.log('[cc] creek rocks',L.length,'17th cascade',D17.length);}
 /* ---------- the PNW plantings from the club's photos: Scotch broom (yellow) in the native areas, wildflower and rhododendron
    beds by the tees, thick brush in 'dry' penalty areas. Crossed leaf cards, textures drawn at runtime (no files) ---------- */
@@ -104,7 +117,7 @@ function plantTex(T,kind){const c=document.createElement('canvas');c.width=c.hei
     x.beginPath();x.arc(cx,cy,kind==2?5+r()*3:kind==0?2+r()*1.6:2.5+r()*2,0,7);x.fill();}
   const t=new T.CanvasTexture(c);t.encoding=T.sRGBEncoding;return t;}
 function lineClear(A,x,y,rock){const l=A.lieAt(x,y);return !(l==='tee'||l==='green'||l==='bunker'||(!rock&&l==='fairway'));}/* plantings and stones go where they really are, ahead of tees included; never on a tee, green or bunker, and plants not on fairway cuts (stones may line a creek where it crosses one) */
-function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
+function plants(A,list){list=list.filter(p=>lineClear(A,p[0],p[1]));if(!list.length)return;if(A.bushes){const n=A.bushes(list,['broom','wildflower','rhodo','brush']);console.log('[pl] bushes',n);return;}/* broom, wildflowers, rhododendrons, brush as full bushes (main.js) */const T=A.THREE,g0=new T.PlaneGeometry(1,1);g0.translate(0,.5,0);const P=[],U=[],I=[];let o=0;
   for(const ang of[0,Math.PI/3,2*Math.PI/3]){const g=g0.clone();g.rotateY(ang);P.push(...g.attributes.position.array);U.push(...g.attributes.uv.array);I.push(...Array.from(g.index.array).map(v=>v+o));o+=g.attributes.position.count;}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(P,3));geo.setAttribute('uv',new T.Float32BufferAttribute(U,2));geo.setIndex(I);geo.computeVertexNormals();
   for(let k=0;k<4;k++){const L=list.filter(p=>p[3]===k);if(!L.length)continue;const M=A.IMC(new T.InstancedMesh(geo,new T.MeshLambertMaterial({map:plantTex(T,k),alphaTest:.45,side:T.DoubleSide}),L.length)),m=new T.Matrix4(),q=new T.Quaternion();
@@ -140,10 +153,10 @@ function rockyCreeks(A){const T=A.THREE,D=A.D;if(!(D.creek||[]).length||!window.
   const L=[],near=(x,y)=>A.HOLES.some(h=>A.dPL(x,y,h.p)<110);
   for(const l of D.creek)for(let i=1;i<l.length;i++){const a=l[i-1],b=l[i],dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);if(!len)continue;const nx=-dy/len,ny=dx/len;
     for(let s=0;s<len;s+=.9){const x=a[0]+dx*s/len,y=a[1]+dy*s/len;if(!near(x,y))continue;const u=hsh(x,y),o=(u-.5)*2.4;L.push([x+nx*o,y+ny*o,.18+hsh(y,x)*.32]);}}
-  if(L.length){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)*.55);g.computeVertexNormals();
-    const M=A.IMC(new T.InstancedMesh(g,new T.MeshStandardMaterial({roughness:.7,flatShading:true}),L.length)),m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color(),cols=['#5b5850','#6e6a61','#4a4842','#7c776c'];
+  if(L.length){const g=new T.IcosahedronGeometry(1,1),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)*.55);g.computeVertexNormals();rockMoss(T,g);
+    const M=A.IMC(new T.InstancedMesh(g,rockMat(T),L.length)),m=new T.Matrix4(),q=new T.Quaternion(),c=new T.Color(),cols=['#5b5850','#6e6a61','#4a4842','#7c776c'];
     L.forEach((s,i)=>{q.setFromEuler(new T.Euler(0,hsh(s[0],s[1])*6.28,0));m.compose(A.V(s[0],s[1],A.H(s[0],s[1])-s[2]*.2),q,new T.Vector3(s[2],s[2],s[2]));M.setMatrixAt(i,m);if(A.addSolid)A.addSolid(s[0],s[1],A.H(s[0],s[1])-s[2]*.2,s[2]*.9,s[2]*.5);c.set(cols[Math.floor(hsh(s[1],s[0])*cols.length)]);M.setColorAt(i,c);});
-    M.receiveShadow=true;A.scene.add(M);}
+    M.receiveShadow=true;try{A.linearize(M);}catch(e){}A.scene.add(M);}
   console.log('[rc] creek strips restyled',n,'channel stones',L.length);}
 X.decor=function(A){try{dryHazards(A);}catch(e){console.warn('dry',e);}try{rockyCreeks(A);}catch(e){console.warn('creeks',e);}for(const [n,f] of[['skyline',skyline],['needle',needle],['rainier',rainier],['houses',houses],['fescue',fescue],['rocks',creekRocks]]){try{f(A);}catch(e){console.warn('[cc] '+n,e);}}};
 window.COURSE_EXT=X;
