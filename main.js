@@ -1854,7 +1854,15 @@ function driverTotal(pw){return pw<=65?180+(pw-32)*70/33:250+(pw-65)*70/34;}
 /* the buzz: every beer under your limit is its own 6-shot buzz, and they stack - each one working adds +3% distance and a 25% bigger sweet spot */
 const BUZZ_SHOTS=6;function buzzN(p){return p.buzzQ?p.buzzQ.length:(p.buzz>0?1:0);}
 function powMult(p){return driverTotal(ST(p,'pow'))/(245*1.13)*(1+.03*buzzN(p));}
-function lieMult(p,lie,c){if(lie==='rough')return(c===CLUBS[1]||c===CLUBS[2]?.82:.88)+ST(p,'rec')*.0007;if(lie==='bunker')return c.sand?.88+ST(p,'rec')*.001:.6+ST(p,'rec')*.0015;return 1;}
+/* ---------- native fescue (Chambers Bay): the course has only three grasses, native, fairway and green, and the native is thick,
+   wispy fescue over soft sand: hard to get a club through, easy to lose a ball in. A course marks it with window.FESCUE_AT; it plays as
+   rough with a heavier price: carry 30% (fairway woods) to 78% (wedges) of normal, better with a high recovery stat; a sweet spot about
+   half the size; and a ball that finishes in it is lost 12% of the time (stroke and distance, like out of bounds). ---------- */
+function nativeAt(x,y,lie){return lie==='rough'&&!!window.FESCUE_AT&&!!window.FESCUE_AT(x,y);}
+function lieLabel(x,y,lie){return nativeAt(x,y,lie)?'Native fescue':LIE_NAME[lie];}
+const NATIVE_K=[.30,.30,.32,.40,.50,.55,.60,.65,.70,.74,.76,.78,.78];/* woods barely get through it, so a short iron or wedge is the play */
+function nativeLost(p,r){if(!r||r.holed||r.oob||!r.pts)return;if(nativeAt(r.x,r.y,lieAt(r.x,r.y))&&Math.random()<.12){r.oob=true;r.lost=true;}}
+function lieMult(p,lie,c){if(lie==='rough'){if(p&&nativeAt(p.x,p.y,lie)){const i=CLUBS.indexOf(c);return Math.min(.92,(NATIVE_K[i]||.7)+ST(p,'rec')*.0015);}return(c===CLUBS[1]||c===CLUBS[2]?.82:.88)+ST(p,'rec')*.0007;}if(lie==='bunker')return c.sand?.88+ST(p,'rec')*.001:.6+ST(p,'rec')*.0015;return 1;}
 /* bump & run: a low runner. Carry (the bump) tops out at 70 yds with the longest eligible club (4 hybrid) down to 40 yds with the lob wedge;
    the run follows the Rule of 12 - roll : carry = 12 - club number (7 iron rolls 5x its carry, PW 2x ...), less on slower grass, capped at 90 yds of roll */
 const BUMP0=3,BUMP1=12,BUMPN=[4,5,6,7,8,9,10,10.5,11,11.5];
@@ -1865,7 +1873,7 @@ function carryOf(p,i){const c=CLUBS[i];if(p.shape==='Bump & run'&&bumpOK(i))retu
 function clubsFor(p){const r=[];CLUBS.forEach((c,i)=>{if(c.putt)return;if(i===0&&p.lie!=='tee')return;r.push(i);});r.push(PUTTER);return r;}
 const PUTT_MS=.75;/* putting meter runs at 75% of its former speed, both ways (the stroke is short, so it needs more time to judge) */
 function meterSpd(p){if(!p)return 1;const c=CLUBS[p.club];const s=c.putt?ST(p,'put'):c.wedge?(ST(p,'acc')*.5+ST(p,'sg')*.5):ST(p,'acc');return Math.max(.78,Math.min(1.1,1.12-s*.0032));}
-function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;t*=1+.25*buzzN(p);return t;}
+function tolFor(p,c){let t;if(c.putt)t=.03+ST(p,'put')*.0007;else{t=.026+ST(p,'acc')*.0006;if(c.wedge)t*=.85+ST(p,'sg')*.004;if(p.lie==='rough')t*=nativeAt(p.x,p.y,p.lie)?.5+ST(p,'rec')*.004:.8+ST(p,'rec')*.003;if(p.lie==='bunker')t*=.65+ST(p,'rec')*.004;if(p.boost==='dial'||p.boost==='hl')t*=3;}if(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2)t*=2.2;t*=1+.25*buzzN(p);return t;}
 
 let MODE='click';try{MODE=localStorage.getItem('jp-swing-mode2')||'click';}catch(e){}let swipe=null;const FLY_OUT=5.5,FLY_BACK=3.3;let flyStart=0,flyUntil=0,players=[],cur=null,state='menu',wind={x:0,y:0,sp:0,a:0},overhead=false,plan=null,flightT0=0,swingU=0,swingPow=0,swingAnim=null,readOn=false;
 const picked=new Set();const MAXP=4;
@@ -2449,7 +2457,7 @@ function fireErr(err){const p=cur,c=CLUBS[p.club];
   p.mishit=null;/* tops and chunks only when the bar runs all the way through the red zone (110%); inside the red zone it's just a wild one */if(swingPow>=1.099&&!c.putt){const hc=Math.max(0,Math.min(20,+p.hcp||0)),pm=Math.max(.03,.67*Math.pow(hc/20,1.8)),r=Math.random();p.mishit=r<pm/2?'top':r<pm?'chunk':null;}
   if(swingPow>1&&!p.mishit){err*=1+(swingPow-1)*8;err+=(Math.random()-.5)*(swingPow-1)*12;}else if(p.mishit){err=err*.5+(Math.random()-.5)*.8;}
   err=Math.max(-3,Math.min(3,err));p.lastErr=err;p.prev={x:p.x,y:p.y};
-  plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);if(!c.putt)try{luckyShot(p,err,plan);}catch(e){console.warn('lucky shot',e);}plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
+  plan=c.putt?planPutt(p,swingPow,err):planFull(p,swingPow,err);if(!c.putt)try{luckyShot(p,err,plan);}catch(e){console.warn('lucky shot',e);}if(!c.putt)try{nativeLost(p,plan);}catch(e){console.warn('native',e);}plan.pure=!c.putt&&Math.abs(err)<.35&&swingPow>.8;plan.lie=p.lie;plan.type=clubType(p.club);plan.dir=p.aim;plan.startX=p.x;plan.startY=p.y;
   p.strokes++;if(p.boost){p.boost=null;}if(p.buzzQ&&p.buzzQ.length){p.buzzQ=p.buzzQ.map(x=>x-1).filter(x=>x>0);p.buzz=p.buzzQ.length?Math.max(...p.buzzQ):0;}else if(p.buzz>0)p.buzz--;
   state='flight';const _ck=ANIM&&p.av.userData.rig&&p.av.userData.rig.skel?animClip(clubType(p.club)):null,_K=_ck&&ANIM.clips[_ck]?ANIM.clips[_ck].keys:null;const DS=_K?Math.max(.12,(_K.imp-_K.top)/ANIM.fps):(c.putt?.34:.24);flightT0=performance.now()/1000+DS;try{SND.whoosh(clubType(p.club),swingPow,DS);}catch(e){}p._lastSwing={pw:swingPow,putt:!!c.putt,type:clubType(p.club)};swingAnim={p,t0:performance.now()/1000,pw:swingPow,putt:!!c.putt,ds:DS,ft:_K?(c.putt?Math.max(.28,DS*(.8+.35*Math.min(1,swingPow))):(_K.fin-_K.imp)/ANIM.fps*Math.max(.35,(()=>{const t=clubType(p.club),pw=Math.min(1,swingPow);return t==='wedge'?.4+.6*pw:.6+.4*pw;})())):0,type:clubType(p.club)};/* shorter follow-through takes proportionally less time, so the tempo stays natural */
   ring.visible=false;aimLine.visible=false;readLine.visible=false;trailPts=[];setRibbon([]);refresh();}
@@ -2601,12 +2609,12 @@ function updCeleb(now){const A=CELEB;if(!A)return;if(state!=='result'){if(A.p&&A
     armTo(g,'l',sideL.clone().lerp(hipL,on),shL().add(V3(.6,-.2,-.25)));armTo(g,'r',sideR.clone().lerp(hipR,on),shR().add(V3(-.6,-.2,-.25)));try{celebFist(g);}catch(e){fistThumbs(g);}/* the new fist (square knuckles, wrapped fingers, thumb across) on the hips too */}}
 function finishShot(){const p=cur,r=plan;let big='',small='';
   let cel=false;if(r.holed){SND.cup();p.done=true;p.x=PIN.x;p.y=PIN.y;big=scoreName(p);small=p.name+' holes out in '+p.strokes;const dd=p.strokes-PAR;if(dd<=-1)cel=startCeleb(p,'pump');else if(dd>=2)cel=startCeleb(p,'hips');}
-  else if(r.oob){p.strokes++;const wet=lieAt(r.x,r.y)==='water';big=wet?(inGulch(r.x,r.y)?'In the gulch':'In the water'):'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small='Penalty stroke. Replaying from the previous spot.';
+  else if(r.oob){p.strokes++;const wet=lieAt(r.x,r.y)==='water';big=wet?(inGulch(r.x,r.y)?'In the gulch':'In the water'):r.lost?'Lost ball':'Out of bounds';p.x=p.prev.x;p.y=p.prev.y;small=r.lost?'Gone in the native fescue. Penalty stroke, replaying from the previous spot.':'Penalty stroke. Replaying from the previous spot.';
     if(wet&&ISL&&Math.hypot(PIN.x-ISL.x,PIN.y-ISL.y)<40){p.isleTries=(p.isleTries||0)+1;if(p.isleTries>=2){const g=GREENS.reduce((a,b)=>Math.hypot(b.cx-ISL.x,b.cy-ISL.y)<Math.hypot(a.cx-ISL.x,a.cy-ISL.y)?b:a),a=Math.atan2(p.prev.y-PIN.y,p.prev.x-PIN.x);
       let dx=PIN.x+Math.cos(a)*6,dy=PIN.y+Math.sin(a)*6;if(lieAt(dx,dy)!=='green'){dx=g.cx;dy=g.cy;}p.x=dx;p.y=dy;p.lie='green';small='Penalty stroke. Two in the lake: the boat takes you to the drop zone on the green.';}else small='Penalty stroke. One more try to land it on the island.';}}
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
-    if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':LIE_NAME[p.lie];}
-    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+LIE_NAME[p.lie].toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
+    if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':lieLabel(p.x,p.y,p.lie);}
+    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+lieLabel(p.x,p.y,p.lie).toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
 }
   /* 10 is the most anyone takes on a hole: checked after every shot, penalties included (an out of bounds at 9 used to play on to 11, 12...) */
   if(!r.holed&&!p.done&&p.strokes>=10){small=(r.oob?big+'. ':'')+p.name+' takes a 10';p.strokes=10;p.done=true;big='Picked up';cel=startCeleb(p,'hips');}
@@ -2724,7 +2732,7 @@ let toastTimer,TOAST_PEND=null;function toast(b,s){if(CURT||performance.now()/10
 /* ---------- HUD ---------- */
 
 function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p);
-  $('who').style.setProperty('--pc',p.color);$('wName').textContent=p.name+'   Stroke '+(p.strokes+1);const bs=p.beers>=blackAt(p)?'BLACKOUT, '+p.beers+' beers. Every stat halved':p.over?'You’re wasted ('+p.beers+' beers)':p.buzz>0?(buzzN(p)>1?'Buzzed ×'+buzzN(p)+', ':'Buzzed, ')+p.buzz+' shot'+(p.buzz>1?'s':'')+' left':p.beers?p.beers+' beer'+(p.beers>1?'s':''):'';$('wBeer').textContent=bs;$('wBeer').hidden=!bs;$('wBeer').dataset.bad=p.over?'1':'';const bb=$('beerBtn');bb.disabled=p.drankTurn||state!=='aim';$('wDist').textContent=fmtDist(d,p.lie)+' to pin';$('wLie').textContent=LIE_NAME[p.lie];
+  $('who').style.setProperty('--pc',p.color);$('wName').textContent=p.name+'   Stroke '+(p.strokes+1);const bs=p.beers>=blackAt(p)?'BLACKOUT, '+p.beers+' beers. Every stat halved':p.over?'You’re wasted ('+p.beers+' beers)':p.buzz>0?(buzzN(p)>1?'Buzzed ×'+buzzN(p)+', ':'Buzzed, ')+p.buzz+' shot'+(p.buzz>1?'s':'')+' left':p.beers?p.beers+' beer'+(p.beers>1?'s':''):'';$('wBeer').textContent=bs;$('wBeer').hidden=!bs;$('wBeer').dataset.bad=p.over?'1':'';const bb=$('beerBtn');bb.disabled=p.drankTurn||state!=='aim';$('wDist').textContent=fmtDist(d,p.lie)+' to pin';$('wLie').textContent=lieLabel(p.x,p.y,p.lie);
   const bd=$('board');bd.innerHTML='';for(const q of players){const s=document.createElement('span');s.style.setProperty('--pc',q.color);const fn=q.name.split(' ')[0],dup=players.filter(o=>o.name.split(' ')[0]===fn).length>1;s.textContent=(dup?fn+' '+q.name.split(' ').slice(-1)[0][0]+'.':fn)+' '+q.strokes+(q.done?' ✓':'');bd.appendChild(s);}
   $('wSpd').textContent=Math.round(wind.sp*2.237);
   if(c.putt){$('cName').innerHTML='Putter<small>Full power '+Math.round(p.pmax*TOFT)+' ft</small>';}
@@ -2734,7 +2742,7 @@ function refresh(){const p=cur;if(!p)return;const c=CLUBS[p.club];const d=dist(p
   $('swing').disabled=!(state==='aim'||state==='s1'||state==='s2'||state==='sw');const sb=$('shapeBtn');sb.textContent=p.shape||'Straight';sb.disabled=state!=='aim'||!!c.putt;sb.setAttribute('aria-pressed',String((p.shape||'Straight')!=='Straight'));
   let L='',R='';if(c.putt){const dx=Math.cos(p.aim),dy=Math.sin(p.aim),mx=p.x+dx*d/2,my=p.y+dy*d/2,g=grad(mx,my),up=g[0]*dx+g[1]*dy,side=g[0]*-dy+g[1]*dx;
       L=(Math.abs(up)<.003?'Flat':(up>0?'Uphill ':'Downhill ')+(Math.abs(up)*100).toFixed(1)+'%');R=Math.abs(side)<.003?'Straight':'Breaks '+(side>0?'right':'left')+' '+(Math.abs(side)*100).toFixed(1)+'%';}
-  else{L='Lie: <b>'+LIE_NAME[p.lie]+'</b>'+(treeAhead(p)?'  <b style="color:#f2c230">Tree in the way</b>':'')+(MODE==='swipe'&&state==='aim'?'  Swipe down on the course, then up':'');R=p.boost?'<b>'+p.abName+'</b> ready':(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2?'<b>Consistency King</b> active':'');}
+  else{L='Lie: <b>'+lieLabel(p.x,p.y,p.lie)+'</b>'+(treeAhead(p)?'  <b style="color:#f2c230">Tree in the way</b>':'')+(MODE==='swipe'&&state==='aim'?'  Swipe down on the course, then up':'');R=p.boost?'<b>'+p.abName+'</b> ready':(p.ab==='bounce'&&Math.abs(p.lastErr||0)>1.2?'<b>Consistency King</b> active':'');}
   $('iL').innerHTML=L;$('iR').innerHTML=R;updAim();}
 function pct(u){return(u+.15)/1.25*100;}
 /* ---- silky swing bar: while the bar sweeps, the phone's compositor animates it (Web Animations on transform), so it stays perfectly
