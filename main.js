@@ -669,7 +669,7 @@ function applyTufts(d){if(tufts){scene.remove(tufts);tufts.geometry.dispose();}c
  M.instanceMatrix.array.set(d.m.subarray(0,n*16));M.instanceColor.array.set(d.c.subarray(0,n*3));M.instanceMatrix.needsUpdate=true;M.instanceColor.needsUpdate=true;
  M.geometry=tuftGeo.clone();M.geometry.setAttribute('aTV',new THREE.InstancedBufferAttribute(d.tv,1));M.count=d.n;M.frustumCulled=false;M.receiveShadow=true;tufts=M;linearize(M);scene.add(M);
  if(fescT){scene.remove(fescT);fescT.dispose&&fescT.dispose();fescT=null;}
- if(d.fn){const F=IMC(new THREE.InstancedMesh(fescGeo(),fescMat(),d.fn));F.instanceMatrix.array.set(d.fm.subarray(0,d.fn*16));F.instanceColor.array.set(d.fc.subarray(0,d.fn*3));F.instanceMatrix.needsUpdate=true;F.instanceColor.needsUpdate=true;F.frustumCulled=false;F.receiveShadow=true;F.userData.noSee=1;linearize(F);fescT=F;scene.add(F);}}
+ if(d.fn){const F=IMC(new THREE.InstancedMesh(fescGeo(),fescMat(),d.fn));F.instanceMatrix.array.set(d.fm.subarray(0,d.fn*16));F.instanceColor.array.set(d.fc.subarray(0,d.fn*3));F.instanceMatrix.needsUpdate=true;F.instanceColor.needsUpdate=true;F.frustumCulled=false;F.receiveShadow=true;linearize(F);fescT=F;scene.add(F);/* clumps between the camera and the golfer go see-through like any plant */}}
 function buildTufts(x0,y0){const d={},it=genTufts(x0,y0,!!(cur&&cur.lie==='tee'),d);while(!it.next().done);applyTufts(d);}
 /* the scheduler: one prepared spot at a time, a few milliseconds of work per frame (never while the swing bar runs) */
 const GRASS={job:null,key:null,ready:null};let GRASS_DEFER=false;
@@ -2176,23 +2176,27 @@ function updOcc(){let on=0;const p=cur;OCC.uCamP.value.copy(camera.position);
 /* ---------- see-through: every plant and structure closer to the camera than the golfer is cut away (dithered edge), plus a 1.6 m
    corridor right up to the golfer, so a canopy, branch or bush between the camera and the player never blocks the view. In flight the
    camera only clears what is within 3 m of the lens. Ground, grass blades and tufts are never cut; shadows are unaffected. ---------- */
-const SEE={uC:{value:new THREE.Vector3()},uT:{value:new THREE.Vector3()},uR:{value:0},uOn:{value:0},next:0,n:0};
+const SEE={uC:{value:new THREE.Vector3()},uT:{value:new THREE.Vector3()},uR:{value:0},uN:{value:0},uOn:{value:0},next:0,n:0};
 const SEE_FS='if(uSeeOn>.5){vec3 sr=vSeeW-uSeeC;float so=1.-smoothstep(uSeeR-1.,uSeeR,length(sr));vec3 sg=uSeeT-uSeeC;float sL=length(sg);\n if(sL>.5){vec3 su=sg/sL;float sa=dot(sr,su);if(sa>0.&&sa<sL-.3)so=max(so,1.-smoothstep(1.,1.6,length(sr-su*sa)));}\n if(so>.001){float sn=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));if(sn<so)discard;}}\n';
 function seeInject(sh){sh.uniforms.uSeeC=SEE.uC;sh.uniforms.uSeeT=SEE.uT;sh.uniforms.uSeeR=SEE.uR;sh.uniforms.uSeeOn=SEE.uOn;let v=sh.vertexShader;
   v=v.replace('#include <common>','#include <common>\nvarying vec3 vSeeW;').replace('void main() {','void main() {\nvSeeW=vec3(1e6);');
   if(v.indexOf('#include <project_vertex>')>=0)v=v.replace('#include <project_vertex>','#include <project_vertex>\n{vec4 sw=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nsw=instanceMatrix*sw;\n#endif\nvSeeW=(modelMatrix*sw).xyz;}');
   else if(v.indexOf('vec3 wp=')>=0)v=v.replace('gl_Position=projectionMatrix*mvPosition;','gl_Position=projectionMatrix*mvPosition;vSeeW=wp;');
   sh.vertexShader=v;sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vSeeW;uniform vec3 uSeeC,uSeeT;uniform float uSeeR,uSeeOn;').replace('void main() {','void main() {\n'+SEE_FS);}
-function seePatch(m){if(!m||m.userData.see||m.isShaderMaterial||m.isRawShaderMaterial)return;const k0=String(m.customProgramCacheKey()),prev=m.onBeforeCompile;m.userData.see=1;
-  m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);seeInject(sh);};m.customProgramCacheKey=()=>k0+'|see';m.needsUpdate=true;SEE.n++;}
+/* grass blades and tufts: no per-pixel cut (no discard in their shaders); a blade or tuft rooted within uSeeN of the lens is simply
+   not drawn, so the long fescue blades right at the camera no longer fill the screen */
+function seeInjectNear(sh){sh.uniforms.uSeeC=SEE.uC;sh.uniforms.uSeeN=SEE.uN;sh.uniforms.uSeeOn=SEE.uOn;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform vec3 uSeeC;uniform float uSeeN,uSeeOn;').replace('#include <project_vertex>','#include <project_vertex>\n#ifdef USE_INSTANCING\nif(uSeeOn>.5&&uSeeN>0.){vec3 sio=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;if(distance(sio,uSeeC)<uSeeN)gl_Position=vec4(0.,0.,2.,1.);}\n#endif');}
+function seePatch(m,near){if(!m||m.userData.see||m.isShaderMaterial||m.isRawShaderMaterial)return;const k0=String(m.customProgramCacheKey()),prev=m.onBeforeCompile;m.userData.see=1;
+  m.onBeforeCompile=function(sh,r){if(prev)prev.call(this,sh,r);if(near)seeInjectNear(sh);else seeInject(sh);};m.customProgramCacheKey=()=>k0+(near?'|seeN':'|see');m.needsUpdate=true;SEE.n++;}
 function seeScan(){for(const p of players)if(p.av&&!p.av.userData.noSeeDone){p.av.userData.noSeeDone=1;p.av.traverse(o=>{o.userData.noSee=1;});}const hero=new Set();for(const k in HERO){const H=HERO[k];if(H&&H.B){hero.add(H.B);hero.add(H.L);if(H.X)H.X.forEach(M=>hero.add(M));}}scene.traverse(o=>{if(!o.isMesh||o.userData.noSee)return;const m=o.material;if(!m||Array.isArray(m)||m.userData.see)return;
-  if(!(o.userData.occluder||o.userData.see||hero.has(o))){if(!o.isInstancedMesh||!(m.alphaTest>0))return;if(/blade|tuft/.test(String(m.customProgramCacheKey())))return;}seePatch(m);});}
+  if(!(o.userData.occluder||o.userData.see||hero.has(o))){if(!o.isInstancedMesh)return;if(/blade|tuft/.test(String(m.customProgramCacheKey()))){seePatch(m,true);return;}if(!(m.alphaTest>0))return;}seePatch(m);});}
 function updSee(){const p=cur,now=performance.now()/1000;if(now>SEE.next&&state==='aim'){SEE.next=now+3;seeScan();}SEE.uC.value.copy(camera.position);let on=0;
   /* only with the normal shot camera (within 16 m of the golfer): during the hole flyover the camera is hundreds of metres away, and
      cutting everything nearer than the golfer emptied the course. Off the rest of the time (flight, replays): it costs nothing then. */
   const aimCam=p&&p.av&&(state==='aim'||state==='s1'||state==='s2'||state==='sw')&&!(overhead&&state==='aim');let d=1e9;
   if(aimCam){SEE.uT.value.copy(p.av.position).add(new THREE.Vector3(0,1.15,0));d=camera.position.distanceTo(SEE.uT.value);}
-  if(aimCam&&d<16){SEE.uR.value=Math.max(0,d-1.1);on=1;}
+  if(aimCam&&d<16){SEE.uR.value=Math.max(0,d-1.1);SEE.uN.value=3.6;on=1;}else SEE.uN.value=0;
   SEE.uOn.value=on;}
 /* ---------- shrubs and flowers as real bushes (the Augusta azalea build, shared by every course): eight crossed cards round the centre
    carry the leaves and flowers up close, and a lumpy 15-triangle dome skinned in the same plant fills the gaps from a distance.
