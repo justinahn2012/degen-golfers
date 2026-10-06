@@ -183,6 +183,27 @@ function buildGulch(){if(!GULCH)gulchInit();if(!GULCH.length)return;let seed=91;
 /* ---------- landmarks: the carved fox totem behind West Seattle's 3rd green (about 8 ft / 2.45 m) ---------- */
 function totemXY(){if(!/west seattle/i.test(D.name||''))return null;const h=D.holes.find(x=>x.main&&x.ref==='3');if(!h)return null;const t=h.p[0],g=h.p[h.p.length-1],L=Math.hypot(g[0]-t[0],g[1]-t[1]),tx=(g[0]-t[0])/L,ty=(g[1]-t[1])/L,rx=ty,ry=-tx;
   const GR=GREENS.reduce((a,b)=>Math.hypot(b.cx-g[0],b.cy-g[1])<Math.hypot(a.cx-g[0],a.cy-g[1])?b:a);const gr=(GR&&GR.R)||12;return[g[0]+tx*(gr+4)+rx*(gr*.65+3),g[1]+ty*(gr+4)+ry*(gr*.65+3),t];}
+/* ---------- clipped tree rows: trees trimmed into a wall (D.rows in the course data, or the list here). West Seattle: the row between
+   the 6th green and the 7th tee, on the tee side of the cart path. Each tree: a short trunk under a squared-off, rounded canopy; the
+   canopies overlap into one leafy wall. They stop balls like trees (TREES/THASH) and go see-through when between camera and golfer. ---------- */
+const TREE_ROWS={ws:[{p:[[325,-515.6],[336,-517.8],[344,-520.1],[352,-520.5]],h:5.6,w:2.4,d:1.7,gap:1.8}]};
+function buildTreeRows(){const RW=D.rows||TREE_ROWS[window.COURSE_KEY]||[];if(!RW.length)return;
+  const tex=(()=>{const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.fillStyle='#2e5634';x.fillRect(0,0,256,256);let s=11;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+    for(let i=0;i<5200;i++){const v=r();x.fillStyle=v<.3?'#24472b':v<.65?'#3a6a3e':v<.88?'#4d8048':'#6a9a5a';x.save();x.translate(r()*256,r()*256);x.rotate(r()*6.28);x.beginPath();x.ellipse(0,0,2+r()*2.6,1.1+r()*1.3,0,0,7);x.fill();x.restore();}
+    const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t;})();
+  const cg=new THREE.BoxGeometry(1,1,1,6,10,6),P=cg.attributes.position;for(let i=0;i<P.count;i++){const v=new THREE.Vector3().fromBufferAttribute(P,i).multiplyScalar(2);
+    const k=1/Math.pow(Math.pow(Math.abs(v.x),4)+Math.pow(Math.abs(v.y),4)+Math.pow(Math.abs(v.z),4),.25);v.multiplyScalar(k*.5);v.y+=.5;P.setXYZ(i,v.x,v.y,v.z);}
+  cg.computeVertexNormals();{const C=[];for(let i=0;i<P.count;i++){const y=P.getY(i),k=.62+.45*y;C.push(k,k,k);}cg.setAttribute('color',new THREE.Float32BufferAttribute(C,3));const U=cg.attributes.uv;for(let i=0;i<U.count;i++)U.setXY(i,U.getX(i)*2,U.getY(i)*3);}
+  const tg=new THREE.CylinderGeometry(.09,.13,1,6);tg.translate(0,.5,0);const list=[];
+  for(const R of RW){const pts=R.p;for(let k=1;k<pts.length;k++){const a=pts[k-1],b=pts[k],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.max(1,Math.round(L/(R.gap||2)));for(let i=(k===1?0:1);i<=n;i++){const u=i/n;list.push({x:a[0]+(b[0]-a[0])*u,y:a[1]+(b[1]-a[1])*u,ang:Math.atan2(b[1]-a[1],b[0]-a[0]),R});}}}
+  const CM=new THREE.InstancedMesh(cg,new THREE.MeshLambertMaterial({map:tex,vertexColors:true}),list.length),TM=new THREE.InstancedMesh(tg,new THREE.MeshLambertMaterial({color:0x4a3a2c}),list.length);
+  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),c=new THREE.Color();let s=5;const r=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  list.forEach((t,i)=>{const R=t.R,gz=H(t.x,t.y),hh=R.h*(.94+r()*.1),cb=1.05;q.setFromAxisAngle(new THREE.Vector3(0,1,0),-t.ang);
+    m.compose(V(t.x,t.y,gz+cb),q,new THREE.Vector3(R.w*(.95+r()*.1),hh-cb,R.d));CM.setMatrixAt(i,m);c.setHSL(.3+r()*.03,.12,.86+r()*.1);CM.setColorAt(i,c);
+    m.compose(V(t.x,t.y,gz-.1),q,new THREE.Vector3(1,cb+.4,1));TM.setMatrixAt(i,m);
+    const tr={x:t.x,y:t.y,gz,fir:false,h:hh,r:Math.max(1.1,R.d*.75),v:0,hero:null,row:true};TREES.push(tr);const cx=Math.floor(t.x/10),cy=Math.floor(t.y/10);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const k=(cx+a)+','+(cy+b);if(!THASH.has(k))THASH.set(k,[]);THASH.get(k).push(tr);}});
+  for(const M of[CM,TM]){M.castShadow=true;M.receiveShadow=true;M.userData.see=true;M.instanceMatrix.needsUpdate=true;scene.add(M);}if(CM.instanceColor)CM.instanceColor.needsUpdate=true;
+  console.log('[rows] clipped trees',list.length);}
 function buildTotem(){const TP=totemXY();if(!TP)return;let x=TP[0],y=TP[1];const t=TP[2];
   const wood=new THREE.MeshStandardMaterial({color:0xd2b48a,roughness:.9}),white=new THREE.MeshStandardMaterial({color:0xefe9dc,roughness:.85}),blk=new THREE.MeshStandardMaterial({color:0x1d1813,roughness:.7}),char=new THREE.MeshStandardMaterial({color:0x3a2a1c,roughness:.95});
   const T=new THREE.Group(),S=7.3/2.2;
@@ -2773,7 +2794,8 @@ function updAim(){const p=cur;if(!p||state!=='aim'){ring.visible=aimLine.visible
   if(c.putt){ring.visible=false;const d=dist(p),pts=[];for(let i=0;i<=30;i++){const s=d*i/30;pts.push(V(p.x+dx*s,p.y+dy*s,H(p.x+dx*s,p.y+dy*s)+.03));}setLine(aimLine,pts);aimLine.visible=true;
     if(readOn){const r=simRoll(p.x,p.y,0,0,0,true,false);const v0=puttV0(p.x,p.y,p.aim,d);const rr=simRoll(p.x,p.y,dx*v0,dy*v0,0,true,false);setLine(readLine,rr.pts.map(q=>V(q.x,q.y,q.z+.02)));readLine.visible=true;}else readLine.visible=false;}
   else{const cr=carryOf(p,p.club)*(p.boost==='rip'?1.12:1),ex=p.x+dx*cr,ey=p.y+dy*cr;ring.position.copy(V(ex,ey,H(ex,ey)+.3));ring.visible=true;
-    const pts=[];for(let i=0;i<=40;i++){const s=cr*i/40,x=p.x+dx*s,y=p.y+dy*s;pts.push(V(x,y,H(x,y)+.25));}setLine(aimLine,pts);aimLine.visible=true;readLine.visible=false;}
+    /* a straight line from the ball to the landing ring (it used to follow the ground, and drawn through hills it folded into humps and climbed the far slope) */
+    const z0=H(p.x,p.y)+.25,z1=H(ex,ey)+.3,pts=[];for(let i=0;i<=40;i++){const u=i/40,s=cr*u;pts.push(V(p.x+dx*s,p.y+dy*s,z0+(z1-z0)*u));}setLine(aimLine,pts);aimLine.visible=true;readLine.visible=false;}
   posGolfer(p,0);}
 function cycleClub(k){if(state!=='aim')return;const al=clubsFor(cur);let i=al.indexOf(cur.club);i=(i+k+al.length)%al.length;cur.club=al[i];if(CLUBS[cur.club].putt)cur.pmax=Math.max(2.5,Math.min(40,dist(cur)*1.3+.8));refresh();updMeter();}
 function nudgeAim(k){if(state!=='aim')return;cur.aim+=k*(CLUBS[cur.club].putt?.004:.008);refresh();}
@@ -3154,7 +3176,7 @@ function placeTeeDeco(){const L=c=>new THREE.MeshLambertMaterial({color:c});if(t
  {const x=t0[0]-px*7-t1.tx*3,y=t0[1]-py*7-t1.ty*3,z=H(x,y);const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,8),L(0x2d2d2d));post.position.copy(V(x,y,z+.5));G.add(post);const bw=new THREE.Mesh(new THREE.BoxGeometry(.22,.3,.14),L(0x1f5a3a));bw.position.copy(V(x,y,z+1.05));G.add(bw);
   const bx=x-t1.tx*2.5,by=y-t1.ty*2.5,bz=H(bx,by),bench=new THREE.Group(),wd=L(0x7a5534);const seat=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.4),wd);seat.position.y=.45;bench.add(seat);const back=new THREE.Mesh(new THREE.BoxGeometry(1.6,.35,.05),wd);back.position.set(0,.75,-.18);bench.add(back);for(const s of[-.7,.7]){const lg=new THREE.Mesh(new THREE.BoxGeometry(.06,.45,.4),L(0x2d2d2d));lg.position.set(s,.22,0);bench.add(lg);}bench.position.copy(V(bx,by,bz));bench.rotation.y=Math.atan2(t1.tx,t1.ty)+Math.PI;G.add(bench);}
   scene.add(G);linearize(G);}
-try{buildGulch();}catch(e){console.warn('gulch',e);}try{buildTotem();}catch(e){console.warn('totem',e);}try{buildIsleFlowers();}catch(e){console.warn('flowers',e);}try{buildCdaDecor();}catch(e){console.warn('cda decor',e);}EXT('decor',mkAPI());try{buildFarTerrain();}catch(e){console.warn('far',e);}setHole(0);linearize(scene);camLook.copy(V(PIN.x,PIN.y,0));
+try{buildTreeRows();}catch(e){console.warn('tree rows',e);}try{buildGulch();}catch(e){console.warn('gulch',e);}try{buildTotem();}catch(e){console.warn('totem',e);}try{buildIsleFlowers();}catch(e){console.warn('flowers',e);}try{buildCdaDecor();}catch(e){console.warn('cda decor',e);}EXT('decor',mkAPI());try{buildFarTerrain();}catch(e){console.warn('far',e);}setHole(0);linearize(scene);camLook.copy(V(PIN.x,PIN.y,0));
 
 function applyTOD(){const g=TOD==='gold';WARM.value=g?1:0;sun.color.set(g?0xffb574:0xffeccf);sun.intensity=g?1.6:1.95;SUNOFF.set(g?-26:-15.4,g?10:23,g?18:11.5);HEMI.color.set(g?0xf0cfa8:0xd3dae2);HEMI.groundColor.set(g?0x5a5234:0x485a36);HEMI.intensity=g?.56:.62;
   scene.fog.color.set(g?0xd9b48e:SKY);renderer.toneMappingExposure=g?.9:.95;EXT('tod',g,mkAPI());const tb=$('todBtn');if(tb)tb.textContent=g?'Tee time: Golden hour':'Tee time: Midday';}
