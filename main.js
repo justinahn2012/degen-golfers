@@ -708,15 +708,90 @@ const _c=new THREE.Color();
 function linearize(root){root.traverse(o=>{if(o.isInstancedMesh&&o.instanceColor&&!o.userData.lin){o.userData.lin=1;const a=o.instanceColor.array;for(let i=0;i<a.length;i+=3){_c.fromArray(a,i).convertSRGBToLinear().toArray(a,i);}o.instanceColor.needsUpdate=true;}
   const ms=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];for(const m of ms){if(m.userData.lin||m.isShaderMaterial)continue;m.userData.lin=1;if(m.color)m.color.convertSRGBToLinear();if(m.emissive)m.emissive.convertSRGBToLinear();if(m.map){m.map.encoding=THREE.sRGBEncoding;m.map.needsUpdate=true;}m.needsUpdate=true;}});}
 /* trunks are solid; crowns are foliage and thin branches the ball can pass through (slowed), with a small chance of catching a thick limb */
+/* ---------- tree trunks as drawn (round 98) ----------
+   The trunk a ball can hit used to be a thin made-up post (.13 m + .7% of the height), and only in the air: a rolling or hopping ball
+   went straight through it. The trunk's thickness is now read from the tree's own drawing (the impostor atlas, the median width of the
+   bare stem below the crown), it reaches up to where the crown starts, and it stops the ball in the air, on the hop and on the roll.
+   Leaves and the odds of meeting a branch are unchanged. */
+const TPROF=new Map(),TPNB=48;
+function treeProfile(M){if(TPROF.has(M))return TPROF.get(M);const I=M&&M.userData&&M.userData.imp,img=I&&I.tex&&I.tex.image;if(!img||!img.width||img.complete===false)return null;
+  let P=false;try{const sc=Math.min(1,1024/img.width),W=Math.max(8,Math.round(img.width*sc)),Hh=Math.max(8,Math.round(img.height*sc)),cv=document.createElement('canvas');cv.width=W;cv.height=Hh;
+    const x=cv.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,W,Hh);const d=x.getImageData(0,0,W,Hh).data,cw=W/I.frames,ch=Hh/I.rows,hw=[],dn=[],cb=[];
+    for(let v=0;v<I.rows;v++){const HW=new Float32Array(TPNB),DN=new Float32Array(TPNB);
+      for(let b=0;b<TPNB;b++){const py=Math.min(Hh-1,Math.max(0,Math.floor((v+1)*ch-(b+.5)/TPNB*ch)));let sw=0,sd=0,nf=0;
+        for(let f=0;f<I.frames;f++){const x0=Math.floor(f*cw),x1=Math.floor((f+1)*cw);let l=-1,r=-1,n=0;for(let px=x0;px<x1;px++)if(d[(py*W+px)*4+3]>107){if(l<0)l=px;r=px;n++;}
+          if(l>=0){sw+=(r-l+1)/2/cw;sd+=n/(r-l+1);nf++;}}
+        HW[b]=sw/I.frames;DN[b]=nf?sd/nf:0;}
+      let c0=1;for(let b=0;b<TPNB;b++)if(HW[b]*I.ratio[v]*I.aspect>.06){c0=b/TPNB;break;}/* crown base: first band wider than about 6% of the tree's height */
+      hw.push(HW);dn.push(DN);cb.push(c0);}
+    const mr=hw.map((H,v)=>{let m=0;for(const q of H)m=Math.max(m,q);return m*I.ratio[v]*I.aspect;});
+    /* trunk thickness as drawn: the solid run of pixels through the middle of each angle's picture, low on the stem (below the crown and
+       its drooping leaves), median over angles and heights; as a fraction of the tree's height */
+    const tw=cb.map((c0,v)=>{const L=[],bMax=Math.max(3,Math.min(Math.floor(c0*TPNB),Math.floor(TPNB*.15))),A=(px,py)=>d[(py*W+px)*4+3]>107;
+      for(let b=1;b<bMax;b++){const py=Math.min(Hh-1,Math.max(0,Math.floor((v+1)*ch-(b+.5)/TPNB*ch)));
+        for(let f=0;f<I.frames;f++){const x0=Math.floor(f*cw),x1=Math.floor((f+1)*cw)-1,xc=(x0+x1)>>1,lim=Math.floor(cw*.12);let s=-1;
+          for(let o=0;o<=lim&&s<0;o++){if(A(xc+o,py))s=xc+o;else if(A(xc-o,py))s=xc-o;}if(s<0)continue;let l=s,r=s;while(l>x0&&A(l-1,py))l--;while(r<x1&&A(r+1,py))r++;L.push((r-l+1)/2/cw);}}
+      L.sort((a,b)=>a-b);return L.length?L[L.length>>1]*I.ratio[v]*I.aspect:0;});
+    P={hw,dn,cb,mr,tw,rows:I.rows,ratio:I.ratio,aspect:I.aspect};}catch(e){console.warn('tree profile',e);P=false;}
+  TPROF.set(M,P);return P;}
+/* the 3D tree that replaces the picture near the golfer has its own trunk: its bark mesh's radius at the foot, per unit of tree height */
+const HTRK={};
+function heroTrunkK(tag){if(tag in HTRK)return HTRK[tag];const H=HERO[tag];if(!H||!H.B||!H.B.geometry)return 0;let k=0;
+  try{const a=H.B.geometry.attributes.position.array;let y0=1e9,y1=-1e9;for(let i=1;i<a.length;i+=3){if(a[i]<y0)y0=a[i];if(a[i]>y1)y1=a[i];}
+    const L=[];for(let i=0;i<a.length;i+=3)if(a[i+1]<=y0+(y1-y0)*.03)L.push(Math.hypot(a[i],a[i+2]));if(L.length>=3){L.sort((p,q)=>p-q);k=L[L.length>>1]/(H.h||1);}}catch(e){k=0;}
+  HTRK[tag]=k;return k;}
+/* trunk radius at height zz: the thicker of the drawn trunk (picture) and the 3D tree's trunk, never under the old .13 m + .7% of the height; tapers toward the top */
+function trunkR(t,zz,top){let r0=t._r0;if(r0===undefined){const P=t._impM?treeProfile(t._impM):null,v=P&&P.rows>1?t.v%P.rows:0,tag=t.hero!==undefined?t.hero:(t.fir?'fir':'dec'),H=tag?HERO[tag]:null,
+    hk=H&&t._impM?heroTrunkK(tag)*t.h*(H.k||(t.fir?1.02:1.08)):0;r0=Math.min(1.2,Math.max(.13+t.h*.007,P?t.h*P.tw[v]*.95:0,hk));if(P!==null&&(!H||!H.B||HTRK[tag]!==undefined))t._r0=r0;}
+  return r0*(1-.45*Math.min(1,zz/top));}
+function trunkTop(t){const base=t.fir?t.h*.7:t.h*.5,P=t._impM?treeProfile(t._impM):null;if(!P)return base;const v=P.rows>1?t.v%P.rows:0;return Math.max(base,Math.min(t.h*.9,P.cb[v]*t.h*P.ratio[v]-.3));}
 function treePart(x,y,z){const a=THASH.get(Math.floor(x/10)+','+Math.floor(y/10));if(!a)return null;let fol=null;
-  for(const t of a){const d=Math.hypot(x-t.x,y-t.y);if(d>t.r+.5)continue;const zz=z-t.gz;if(zz<0)continue;
-    const top=t.fir?t.h*.7:t.h*.5,tr=(.13+t.h*.007)*(1-.75*Math.min(1,zz/top));if(zz<top&&d<tr)return{t,trunk:true};/* trunk tapers toward the top */
+  for(const t of a){const d=Math.hypot(x-t.x,y-t.y);if(d>t.r+.5)continue;const zz=z-t.gz;if(zz<-1)continue;
+    const top=trunkTop(t),tr=trunkR(t,Math.max(0,zz),top);if(zz<top&&d<tr)return{t,trunk:true};if(zz<0)continue;/* trunk tapers toward the top */
     if(t.fir){if(zz>2&&zz<t.h){const r=t.r*.85*(t.h-zz)/(t.h-2);if(d<r)fol=fol||{t,trunk:false};}}
     else{const dz=zz-t.h*.62;if(Math.hypot(d,dz/.92)<t.r*.8)fol=fol||{t,trunk:false};}}
   return fol;}
-function trunkSeg(x0,y0,z0,x1,y1,z1){const cells=new Set([Math.floor(x0/10)+','+Math.floor(y0/10),Math.floor(x1/10)+','+Math.floor(y1/10)]);const vx=x1-x0,vy=y1-y0,L2=vx*vx+vy*vy||1e-9;
-  for(const key of cells){const a=THASH.get(key);if(!a)continue;for(const t of a){let u=((t.x-x0)*vx+(t.y-y0)*vy)/L2;u=Math.max(0,Math.min(1,u));const cx=x0+vx*u,cy=y0+vy*u,d=Math.hypot(t.x-cx,t.y-cy);if(d>1.2)continue;
-    const zz=z0+(z1-z0)*u-t.gz,top=t.fir?t.h*.7:t.h*.5;if(zz<0||zz>top)continue;const tr=(.13+t.h*.007)*(1-.75*zz/top)+.021;if(d<tr)return{t,u,x:cx,y:cy,z:z0+(z1-z0)*u};}}return null;}
+function trunkSeg(x0,y0,z0,x1,y1,z1,leaveOK){const cells=new Set([Math.floor(x0/10)+','+Math.floor(y0/10),Math.floor(x1/10)+','+Math.floor(y1/10)]);const vx=x1-x0,vy=y1-y0,L2=vx*vx+vy*vy||1e-9;
+  for(const key of cells){const a=THASH.get(key);if(!a)continue;for(const t of a){let u=((t.x-x0)*vx+(t.y-y0)*vy)/L2;u=Math.max(0,Math.min(1,u));const cx=x0+vx*u,cy=y0+vy*u,d=Math.hypot(t.x-cx,t.y-cy);if(d>1.4)continue;
+    const zz=z0+(z1-z0)*u-t.gz,top=trunkTop(t);if(zz<-1||zz>top)continue;/* on a slope the ground beside the trunk can sit below its foot */const tr=trunkR(t,Math.max(0,zz),top)+.021;
+    if(d<tr){/* where the ball first touches the bark, not the point nearest the trunk's middle */const fx=x0-t.x,fy=y0-t.y,B=fx*vx+fy*vy,C=fx*fx+fy*fy-tr*tr;if(C<=0&&leaveOK)continue;/* the ball sits against it before the shot: let it leave */let ue=C<=0?0:(-B-Math.sqrt(Math.max(0,B*B-L2*C)))/L2;ue=Math.max(0,Math.min(u,ue));
+      return{t,u:ue,x:x0+vx*ue,y:y0+vy*ue,z:z0+(z1-z0)*ue};}}}return null;}
+/* a rolling ball and a trunk (round 98): the trunk at ground level, from the drawing, plus the ball's radius */
+let SIMEV=null;
+function trunkAtGround(x,y){const L=THASH.get(Math.floor(x/10)+','+Math.floor(y/10));if(!L)return null;
+  for(const t of L){const dx=x-t.x,dy=y-t.y;if(Math.abs(dx)>1.4||Math.abs(dy)>1.4)continue;const d=Math.hypot(dx,dy),R=trunkR(t,0,trunkTop(t))+.021;if(d<R)return{t,d,R};}return null;}
+/* a ball that meets wood ricochets (round 98). Off a branch: off a branch surface at a random angle facing the ball (square-on hits
+   likelier), keeping 12-40% of its speed (up to 60% on a glancing touch), at most 12 m/s; off a trunk: off the round trunk (+-20 degrees),
+   keeping 30-65%, at most 20 m/s. It can come back toward the player, kick sideways or drop. It then falls (gravity, extra drag while
+   still in the leaves, the trunk still in the way), takes its first bounce and rolls. */
+function lambN(d){/* surface normal of a random twig the ball strikes: facing the ball, weighted by how square-on (cosine) */const u=Math.random(),a=Math.random()*6.2832,ct=Math.sqrt(u),st=Math.sqrt(1-u);let ax=-d.x,ay=-d.y,az=-d.z;
+  const tx0=Math.abs(az)<.9?0:1,tz0=Math.abs(az)<.9?1:0;let bx=ay*tz0-az*0,by=az*tx0-ax*tz0,bz=ax*0-ay*tx0;const bl=Math.hypot(bx,by,bz)||1;bx/=bl;by/=bl;bz/=bl;const cx=ay*bz-az*by,cy=az*bx-ax*bz,cz=ax*by-ay*bx;
+  return {x:ax*ct+(bx*Math.cos(a)+cx*Math.sin(a))*st,y:ay*ct+(by*Math.cos(a)+cy*Math.sin(a))*st,z:az*ct+(bz*Math.cos(a)+cz*Math.sin(a))*st};}
+function treeClank(res,pts,hit){const g=9.8,vin=hit.v||{x:0,y:0,z:-1},sp=Math.max(4,Math.hypot(vin.x,vin.y,vin.z)),TEV=res.treeEv||[];
+  /* bounce v off surface normal n, keeping part of the speed; returns the new speed */
+  const bounce=(vx,vy,vz,n,trunk,cap)=>{const s=Math.max(1e-3,Math.hypot(vx,vy,vz)),d={x:vx/s,y:vy/s,z:vz/s};let dn=d.x*n.x+d.y*n.y+d.z*n.z;if(dn>0){n={x:-n.x,y:-n.y,z:-n.z};dn=-dn;}
+    const g2=1-Math.abs(dn),keep=trunk?.3+Math.random()*.25+.1*g2*g2:.12+Math.random()*.28+.2*g2*g2,vo=Math.min(s*keep,cap);
+    return {x:(d.x-2*dn*n.x)*vo,y:(d.y-2*dn*n.y)*vo,z:(d.z-2*dn*n.z)*vo,keep};};
+  const trunkN=(tr,x,y,d)=>{let nx=x-tr.x,ny=y-tr.y;const nl=Math.hypot(nx,ny);if(nl<1e-4){nx=-d.x;ny=-d.y;}else{nx/=nl;ny/=nl;}const a=(Math.random()-.5)*.7,c=Math.cos(a),s=Math.sin(a);return {x:nx*c-ny*s,y:nx*s+ny*c,z:(Math.random()-.5)*.35};};
+  const d0={x:vin.x/sp,y:vin.y/sp,z:vin.z/sp};let n=hit.trunk&&hit.tree?trunkN(hit.tree,hit.x,hit.y,d0):lambN(d0);
+  {const l=Math.hypot(n.x,n.y,n.z)||1;n.x/=l;n.y/=l;n.z/=l;}
+  const b0=bounce(d0.x*sp,d0.y*sp,d0.z*sp,n,hit.trunk,hit.trunk?20:12),keep=b0.keep;/* a branch can't throw it more than about 12 m/s, a trunk about 20 m/s */
+  let vx=b0.x,vy=b0.y,vz=Math.min(b0.z,hit.trunk?3:4),x=hit.x,y=hit.y,z=hit.z,t=hit.t,rat=0,lastTr=hit.trunk?hit.tree:null;const dt=1/60;let air=0;pts.push({t,x,y,z});
+  for(let k=0;k<600;k++){const gz=H(x,y)+.021,tp=treePart(x,y,z),v=Math.hypot(vx,vy,vz);air+=dt;
+    if(tp&&tp.trunk){/* inside bark (only possible at the start): step out */const T2=tp.t,R2=trunkR(T2,Math.max(0,z-T2.gz),trunkTop(T2))+.021;let ex=x-T2.x,ey=y-T2.y;if(Math.hypot(ex,ey)<1e-4){ex=-vx;ey=-vy;}const el=Math.hypot(ex,ey)||1;x=T2.x+ex/el*(R2+.01);y=T2.y+ey/el*(R2+.01);}
+    const dr=tp&&!tp.trunk?.45:.12;/* extra drag while still in the leaves */
+    vx*=1-dr*dt;vy*=1-dr*dt;vz=vz*(1-dr*dt)-g*dt;const nx=x+vx*dt,ny=y+vy*dt,nz=z+vz*dt;t+=dt;
+    const ts=trunkSeg(x,y,z,nx,ny,nz,true);
+    if(ts){/* on the way down it meets a trunk: it stops at the bark and comes off it, never through */x=ts.x;y=ts.y;z=ts.z;const T2=ts.t,s=Math.max(1e-3,v),dd={x:vx/s,y:vy/s,z:vz/s};let ex=x-T2.x,ey=y-T2.y;const el=Math.hypot(ex,ey)||1;ex/=el;ey/=el;
+      const bb=bounce(vx,vy,vz,trunkN(T2,x,y,dd),true,20);vx=bb.x;vy=bb.y;vz=Math.min(bb.z,Math.max(vz,0));const vn=vx*ex+vy*ey;if(vn<.3){vx+=(.3-vn)*ex;vy+=(.3-vn)*ey;}
+      x+=ex*.01;y+=ey*.01;if(v>2&&T2!==lastTr)TEV.push({t,k:'trunk',x,y,z,g:Math.min(1,v/12)});lastTr=T2;pts.push({t,x,y,z});continue;}
+    x=nx;y=ny;z=nz;
+    if(z<=gz){z=gz;break;}if(k%3===0)pts.push({t,x,y,z});}
+  pts.push({t,x,y,z:H(x,y)+.021});const l2=lieAt(x,y),dbg={hx:hit.x,hy:hit.y,hz:+(hit.z-H(hit.x,hit.y)).toFixed(1),air:+air.toFixed(2),lx:x,ly:y,tx:hit.tree?hit.tree.x:null,ty:hit.tree?hit.tree.y:null};
+  if(l2==='water'||l2==='oob'){Object.assign(res,{x,y,tree:true,treeKind:hit.trunk?'trunk':'limb',holed:false,oob:true,clank:dbg});return res;}
+  const vh=Math.hypot(vx,vy),k=l2==='green'?.45:l2==='bunker'?.03:l2==='rough'?.15:.3,ux=vh>1e-3?vx/vh:0,uy=vh>1e-3?vy/vh:0;
+  const r=simRoll(x,y,ux*vh*k,uy*vh*k,t,true,true);res.pts=pts.concat(r.pts);
+  Object.assign(res,{x:r.x,y:r.y,tree:true,treeKind:hit.trunk?'trunk':'limb',holed:r.holed,oob:r.oob,clank:dbg});return res;}
 function treeHit(x,y,z){const a=THASH.get(Math.floor(x/10)+','+Math.floor(y/10));if(!a)return null;
   for(const t of a){const d=Math.hypot(x-t.x,y-t.y);if(d>t.r+.5)continue;const zz=z-t.gz;
     if(d<.35&&zz<(t.fir?2.5:t.h*.55))return t;
@@ -1919,10 +1994,14 @@ function simRoll(x,y,vx,vy,t,cupOK,noise,slopeK){if(slopeK===undefined)slopeK=1;
     vx+=ax*dt;vy+=ay*dt;x+=vx*dt;y+=vy*dt;t+=dt;
     if(SOLIDS.length){const s=solidAt(x,y,H(x,y)+.03);if(s){const ux0=x-s.x,uy0=y-s.y,ul=Math.hypot(ux0,uy0)||1,ux=ux0/ul,uy=uy0/ul,vn=vx*ux+vy*uy;
       if(vn<0){vx-=1.6*vn*ux;vy-=1.6*vn*uy;const kk=(Math.random()-.5)*.6,c=Math.cos(kk),sn=Math.sin(kk),tx=vx*c-vy*sn;vy=vx*sn+vy*c;vx=tx;}x+=ux*.06;y+=uy*.06;}}
+    {const tk=trunkAtGround(x,y);if(tk){const t2=tk.t,d=Math.max(1e-3,tk.d),nx=d>1e-3?(x-t2.x)/d:-vx/(Math.hypot(vx,vy)||1),ny=d>1e-3?(y-t2.y)/d:-vy/(Math.hypot(vx,vy)||1),vn=vx*nx+vy*ny;
+      x=t2.x+nx*(tk.R+.01);y=t2.y+ny*(tk.R+.01);/* never inside the bark */
+      if(vn<0){const s0=Math.hypot(vx,vy),tx=vx-vn*nx,ty=vy-vn*ny;vx=tx*.8-.4*vn*nx;vy=ty*.8-.4*vn*ny;/* bark: 40% back off the trunk, a little scrub along it */
+        const kk=(Math.random()-.5)*.4,c=Math.cos(kk),sn=Math.sin(kk),qx=vx*c-vy*sn;vy=vx*sn+vy*c;vx=qx;if(SIMEV&&s0>.6)SIMEV.push({t,k:'trunk',x,y,z:H(x,y)+.05,g:Math.min(1,s0/8)});pts.push({t,x,y,z:H(x,y)+.021,r:1});/* keep the contact in the drawn path */}}}
     if(cupOK){const d=Math.hypot(x-PIN.x,y-PIN.y);sp=Math.hypot(vx,vy);
       if(d<.075){if(sp<1.35){holed=true;x=PIN.x;y=PIN.y;break;}else if(noise){vx*=.7;vy*=.7;const k=(Math.random()-.5)*.7,c=Math.cos(k),s=Math.sin(k);const nx=vx*c-vy*s;vy=vx*s+vy*c;vx=nx;}}}
-    if(i%3===0)pts.push({t,x,y,z:H(x,y)+.021});}
-  pts.push({t:t+.01,x,y,z:holed?H(x,y)-.06:H(x,y)+.021});return{pts,x,y,holed,oob};}
+    if(i%3===0)pts.push({t,x,y,z:H(x,y)+.021,r:1});}
+  pts.push({t:t+.01,x,y,z:holed?H(x,y)-.06:H(x,y)+.021,r:1});return{pts,x,y,holed,oob};}
 
 /*ROCK-BOUNCE*/const SOLIDS=[],SHASH=new Map();
 function addSolid(x,y,z,r,hz){const s={x,y,z,r,hz};SOLIDS.push(s);const R=Math.ceil(r/5),cx=Math.floor(x/5),cy=Math.floor(y/5);for(let i=-R;i<=R;i++)for(let j=-R;j<=R;j++){const k=(cx+i)+','+(cy+j);let a=SHASH.get(k);if(!a)SHASH.set(k,a=[]);a.push(s);}}
@@ -1950,7 +2029,13 @@ function luckyShot(p,err,r){if(p.boost!=='hl'||!r||r.holed||r.oob||r.tree||r.roc
     q2.x+=dX*w;q2.y+=dY*w;const g1=H(q2.x,q2.y);q2.z=i<iL?q2.z+(g1-g0)*w:g1+Math.max(0,up);}
   const L=P[P.length-1];if(hole){L.x=PIN.x;L.y=PIN.y;L.z=H(PIN.x,PIN.y)+.021;P.push({t:L.t+.14,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});}
   r.x=tx;r.y=ty;r.holed=hole;r.oob=false;r.lucky=true;}
-function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;
+function planFull(p,power,err){const r=planFull0(p,power,err);SIMEV=null;try{hopTrunk(r);}catch(e){console.warn('hopTrunk',e);}return r;}
+/* after the flight: a hop or bounce (first bounce, cart path, rock) that would pass through a trunk bounces off it instead */
+function hopTrunk(r){if(!r||r.putt||r.tree||r.rock&&!r.rockBounce||!r.pts||r.fEnd==null)return;const P=r.pts;
+  for(let k=Math.max(1,r.fEnd);k<P.length;k++){const a=P[k-1],b=P[k];if(b.r)break;const ts=trunkSeg(a.x,a.y,a.z,b.x,b.y,b.z);if(!ts)continue;
+    const dt=Math.max(1e-3,b.t-a.t),hit={x:ts.x,y:ts.y,z:ts.z,t:a.t+(b.t-a.t)*ts.u,trunk:true,tree:ts.t,v:{x:(b.x-a.x)/dt,y:(b.y-a.y)/dt,z:(b.z-a.z)/dt}};
+    (r.treeEv||[]).push({t:hit.t,k:'trunk',x:hit.x,y:hit.y,z:hit.z});delete r.spin;delete r.pathBounce;r.hopTrunk=true;treeClank(r,P.slice(0,k),hit);return;}}
+function planFull0(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)*lieMult(p,p.lie,c)*power;if(p.boost==='rip')carry*=1.12;
   const shp=p.shape||'Straight';if(shp==='Draw')carry*=1.02;if(shp==='Fade')carry*=.98;if(shp==='Punch')carry*=.9;
   let mh=!c.putt?p.mishit:null;const drv=clubType(p.club)==='driver';let MHA=1,MHT=1;const bump=shp==='Bump & run'&&bumpOK(p.club);if(bump){carry=bumpCarry(p,p.club)*Math.min(power,1.05);MHA=2/Math.max(3,c.apex*(.3+.7*Math.min(power,1.05)));MHT=.55;}const sandShot=p.lie==='bunker'&&!c.putt;if(sandShot){MHA=.48;MHT=.8;}
   /* greenside bunker: an explosion shot - low, weak and blunted. Full power just reaches the far edge of the green; running the bar all the way through the red (110%) blades it ~70 yds over */
@@ -1972,12 +2057,13 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
   let cmp=null,leaf=0,inLeaf=false,lat=0;const pathAt=s=>{if(!cmp){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}
     if(s<=cmp.se){const q=baseXY(s);return[q[0],q[1],h0+(H10-h0)*s+4*apex*s*(1-s)];}const u=Math.min(1,(s-cmp.se)/(1-cmp.se)),s2=cmp.se+(s-cmp.se)*cmp.f,q=baseXY(s2);
     return[q[0]+lx*cmp.lat*u,q[1]+ly*cmp.lat*u,cmp.ze+cmp.b*u+cmp.c*u*u];};
-  const pts=[],N=110,TEV=[];let hit=null,prev=null,TREEM=1;
-  for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS;
+  const pts=[],N=110,TEV=[],DTS=Math.max(1e-3,T*TS/N);SIMEV=TEV;let hit=null,prev=null,TREEM=1;
+  for(let i=0;i<=N;i++){const s=i/N,P=pathAt(s),px=P[0],py=P[1],pz=P[2],t=s*T*TS,vel=prev?{x:(px-prev[0])/DTS,y:(py-prev[1])/DTS,z:(pz-prev[2])/DTS}:null;
     if(i>2&&prev&&SOLIDS.length){const rk=rockSeg(prev[0],prev[1],prev[2],px,py,pz);if(rk){hit={x:rk.x,y:rk.y,z:rk.z,t,rock:rk.s,dx:px-prev[0],dy:py-prev[1],dz:pz-prev[2]};TEV.push({t,k:'trunk',x:rk.x,y:rk.y,z:rk.z});break;}}
-    if(i>2&&i<N){const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true};TEV.push({t,k:'trunk',x:ts.x,y:ts.y,z:ts.z});break;}const tp=treePart(px,py,pz);
-      if(tp&&tp.trunk){hit={x:px,y:py,z:pz,t,trunk:true};TEV.push({t,k:'trunk',x:px,y:py,z:pz});break;}
-      if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;if(!inLeaf)TEV.push({t,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false};TEV.push({t,k:'limb',fir:tp.t.fir,x:px,y:py,z:pz},{t:t+.12,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});break;}}
+    if(i>0){/* from the first step (a trunk right in front of the ball) to the landing step (coming down at the foot of a trunk) */const ts=prev?trunkSeg(prev[0],prev[1],prev[2],px,py,pz,i===1):null;if(ts){hit={x:ts.x,y:ts.y,z:ts.z,t,trunk:true,tree:ts.t,v:vel};TEV.push({t,k:'trunk',x:ts.x,y:ts.y,z:ts.z});break;}}
+    if(i>2&&i<=N){const tp=i<N?treePart(px,py,pz):null;
+      if(tp&&tp.trunk){const T2=tp.t,dx2=px-T2.x,dy2=py-T2.y,dl=Math.hypot(dx2,dy2)||1,R2=trunkR(T2,Math.max(0,pz-T2.gz),trunkTop(T2))+.021;/* on the bark, not inside it */hit={x:T2.x+dx2/dl*R2,y:T2.y+dy2/dl*R2,z:pz,t,trunk:true,tree:T2,v:vel};TEV.push({t,k:'trunk',x:hit.x,y:hit.y,z:pz});break;}
+      if(tp){const seg=prev?Math.hypot(px-prev[0],py-prev[1],pz-prev[2]):1;leaf+=seg;if(!inLeaf)TEV.push({t,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});inLeaf=true;if(Math.random()<(tp.t.fir?.005:.008)*seg){hit={x:px,y:py,z:pz,t,trunk:false,tree:tp.t,v:vel};TEV.push({t,k:'limb',fir:tp.t.fir,x:px,y:py,z:pz},{t:t+.12,k:'leaf',fir:tp.t.fir,x:px,y:py,z:pz});break;}}
       else if(inLeaf){inLeaf=false;if(!cmp&&leaf>.3){
         /* through the branches: usually the shot ends up at ~45-75% of its distance (denser foliage takes more), about 1 in 8 squeezes
            through nearly clean; on average ~40% comes off. A late clip (most of the flight already done) naturally costs less. */
@@ -1985,7 +2071,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
           f=Math.max(.04,Math.min(1,(m-s)/Math.max(.02,1-s))),se=s,sL=se+(1-se)*f,q=baseXY(sL);TREEM=se+(1-se)*f;lat=(Math.random()-.5)*Math.min(4,leaf*.5);
         const hl=H(q[0]+lx*lat,q[1]+ly*lat);const sl0=(H10-h0)+4*apex*(1-2*se),b=sl0*(1-se)*f;cmp={se,f,ze:pz,hl,b,c:hl-pz-b,lat};ex=q[0]+lx*lat;ey=q[1]+ly*lat;h1=hl;carry*=se+(1-se)*f;}}}
     pts.push({t,x:px,y:py,z:pz});prev=[px,py,pz];}
-  const res={pts,carry,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV,treeMult:TREEM};
+  const fEnd=pts.length;const res={pts,carry,fEnd,club:c,putt:false,thruLeaves:leaf>.3&&!hit,mishit:mh,sky:mh==='chunk'&&drv,skull,sandX,treeEv:TEV,treeMult:TREEM};
   if(hit&&hit.rock){const R=hit.rock,L0=Math.hypot(hit.dx,hit.dy,hit.dz)||1,dX=hit.dx/L0,dY=hit.dy/L0,dZ=hit.dz/L0;
     let nX=(hit.x-R.x)/(R.r*R.r),nY=(hit.y-R.y)/(R.r*R.r),nZ=(hit.z-R.z)/(R.hz*R.hz);const nl=Math.hypot(nX,nY,nZ)||1;nX/=nl;nY/=nl;nZ/=nl;
     const dn=dX*nX+dY*nY+dZ*nZ;let rX=dX-2*dn*nX,rY=dY-2*dn*nY,rZ=dZ-2*dn*nZ;
@@ -1998,10 +2084,7 @@ function planFull(p,power,err){const c=CLUBS[p.club];let carry=c.c*YD*powMult(p)
       x+=qx*hl;y+=qy*hl;t+=dt2;z0=H(x,y)+.021;}
     Object.assign(res,{rock:true,rockBounce:true});const l2=lieAt(x,y);if(l2==='water'||l2==='oob'){Object.assign(res,{x,y,holed:false,oob:true});return res;}
     const v0=Math.sqrt(2*FR[l2]*Math.max(.3,carry*.06)),r=simRoll(x,y,qx*v0,qy*v0,t,true,true);res.pts=pts.concat(r.pts);Object.assign(res,{x:r.x,y:r.y,holed:r.holed,oob:r.oob});return res;}
-  if(hit&&!hit.trunk){/* caught a limb: drops out of the tree, carrying a little forward */const fwd=.6+Math.random()*1.6,fx=hit.x+dx*fwd,fy=hit.y+dy*fwd,gz=H(fx,fy)+.021;pts.push({t:hit.t+.08,x:hit.x+dx*fwd*.3,y:hit.y+dy*fwd*.3,z:hit.z-.3},{t:hit.t+.45,x:hit.x+dx*fwd*.75,y:hit.y+dy*fwd*.75,z:(hit.z+gz)/2},{t:hit.t+.75,x:fx,y:fy,z:gz});
-    Object.assign(res,{x:fx,y:fy,tree:true,treeKind:'limb',holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
-  if(hit){res.treeKind='trunk';const fx=hit.x-dx*.8,fy=hit.y-dy*.8,gz=H(fx,fy)+.021;pts.push({t:hit.t+.05,x:fx,y:fy,z:hit.z});pts.push({t:hit.t+.35,x:fx,y:fy,z:(hit.z+gz)/2});pts.push({t:hit.t+.6,x:fx,y:fy,z:gz});
-    Object.assign(res,{x:fx,y:fy,tree:true,holed:false,oob:['oob','water'].includes(lieAt(fx,fy))});return res;}
+  if(hit)return treeClank(res,pts,hit);/* branch or trunk: ricochet (round 98; it used to drop on the spot) */
   const land=lieAt(ex,ey);if(land==='oob'||land==='water'){Object.assign(res,{x:ex,y:ey,oob:true,holed:false});return res;}
   if(Math.hypot(ex-PIN.x,ey-PIN.y)<.09){pts.push({t:T*TS+.1,x:PIN.x,y:PIN.y,z:H(PIN.x,PIN.y)-.06});Object.assign(res,{x:PIN.x,y:PIN.y,holed:true});return res;}
   const rd=bump?Math.min(90/TOYD,carry*bumpRatio(p.club))*(land==='green'||land==='fringe'?1:(SURF[land]??.3)):sandX?carry*sandRoll*Math.min(1.3,(SURF[land]??.3)/(SURF.green||1)):carry*c.roll*(SURF[land]??.3)*(c.wedge&&land==='green'?.6:1)*(shp==='Punch'?1.8:1)*(mh==='top'?3.2:mh==='chunk'?.35:1)*(sandShot?1.8:1);
@@ -2417,7 +2500,9 @@ function updBeer(now){const A=BEERA;if(!A)return;if(state!=='aim'){A.p.av.remove
   if(!A.cracked&&u>.12){A.cracked=true;SND.crack&&SND.crack(A.shot);const w=g.localToWorld(palm.clone().addScaledVector(ax,.07));for(let i=0;i<(A.shot?40:14);i++){const R2=Math.random;emit('n',part(w.x,w.y,w.z,(R2()-.5)*.6,R2()*1.0,(R2()-.5)*.6,.5+R2()*.5,.008+R2()*.01,[.96,.94,.86],6,1.5,true));}}
   if(drink>.5&&t>A.gulp){A.gulp=t+(A.shot?.22:.36);SND.gulp&&SND.gulp();}}
 function nextPlayer(){const live=players.filter(p=>!p.done);if(!live.length)return null;const fresh=live.find(p=>p.strokes===0);if(fresh)return fresh;return live.reduce((a,b)=>dist(b)>dist(a)?b:a);}
-function startTurn(){swingAnim=null;for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
+/* read each tree picture's trunk size while the golfer stands aiming (a one-off ~20-60 ms per tree type), not at the moment of the swing */
+let TPWARM=0;function warmTP(){if(!IMPS.length)return;if(state!=='aim'){setTimeout(warmTP,600);return;}for(const M of IMPS)if(!TPROF.has(M)){treeProfile(M);setTimeout(warmTP,TPROF.has(M)?250:900);return;}}
+function startTurn(){if(!TPWARM){TPWARM=1;setTimeout(warmTP,700);}swingAnim=null;for(const p of players)p.av.visible=false;cur=nextPlayer();if(!cur){finish();return;}
   if(GRASS_DEFER){grassPrepare(cur.x,cur.y,cur.lie==='tee');}   /* new hole: the tee's grass is built during the flyover */
   else if(!grassUse(cur.x,cur.y,cur.lie==='tee')){buildTufts(cur.x,cur.y);try{buildBlades(cur.x,cur.y);}catch(e){console.warn('blades',e);}}try{updNearTrees(cur.x,cur.y);}catch(e){console.warn('near trees',e);}setRibbon([]);cur.shape='Straight';cur.drankTurn=false;cur.lie=cur.strokes===0?'tee':lieAt(cur.x,cur.y);autoSetup(cur);cur.av.visible=true;posGolfer(cur,0);cur.intro=performance.now()/1000+2.0;try{buildPuttGrid(cur);}catch(e){console.warn('grid',e);}toast(cur.name,'Handicap '+cur.hcp+(cur.strokes?', stroke '+(cur.strokes+1):', on the tee'));state='aim';swingU=0;swingPow=0;updMeter();refresh();}
 function seatBag(p){const bg=p.av&&p.av.userData.bag;if(!bg)return;p.av.updateMatrixWorld(true);const w=p.av.localToWorld(v3(1.25,0,2.55));bg.position.y=(H(w.x,-w.z)-p.av.position.y)/(p.av.scale.x||1);}
@@ -2635,7 +2720,7 @@ function finishShot(){const p=cur,r=plan;let big='',small='';
       let dx=PIN.x+Math.cos(a)*6,dy=PIN.y+Math.sin(a)*6;if(lieAt(dx,dy)!=='green'){dx=g.cx;dy=g.cy;}p.x=dx;p.y=dy;p.lie='green';small='Penalty stroke. Two in the lake: the boat takes you to the drop zone on the green.';}else small='Penalty stroke. One more try to land it on the island.';}}
   else{p.x=r.x;p.y=r.y;p.lie=lieAt(p.x,p.y);const d=dist(p);
     if(r.putt){big=fmtDist(d,'green')+' left';small=p.lie==='green'?'':lieLabel(p.x,p.y,p.lie);}
-    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?'Clanked off a trunk. ':'Caught a thick branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+lieLabel(p.x,p.y,p.lie).toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
+    else{const tot=Math.hypot(r.x-r.startX,r.y-r.startY);big=Math.round(tot*TOYD)+' yds';small=(r.skull?'Bladed it out of the sand! ':r.sandX?'Splashed out. ':'')+(r.mishit?(r.mishit==='top'?'Topped it! ':r.sky?'Skied it! ':'Chunked it! '):'')+(r.tree?(r.treeKind==='trunk'?(r.hopTrunk?'Kicked off a trunk. ':'Clanked off a trunk. '):'Clanked off a branch. '):r.thruLeaves?'Rattled through the leaves. ':'')+contactWord(p.lastErr)+', '+lieLabel(p.x,p.y,p.lie).toLowerCase()+', '+fmtDist(d,p.lie)+' to the pin';}
 }
   /* 10 is the most anyone takes on a hole: checked after every shot, penalties included (an out of bounds at 9 used to play on to 11, 12...) */
   if(!r.holed&&!p.done&&p.strokes>=10){small=(r.oob?big+'. ':'')+p.name+' takes a 10';p.strokes=10;p.done=true;big='Picked up';cel=startCeleb(p,'hips');}
@@ -3113,7 +3198,7 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
        want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1+lift);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2+lift*.35);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
-    if(state==='flight'&&plan.treeEv)for(const e of plan.treeEv)if(!e.done&&t>=e.t){e.done=1;try{const d=camera.position.distanceTo(V(e.x,e.y,e.z));SND.tree(e.k,e.fir,1.25-d/110);}catch(err){}}
+    if(state==='flight'&&plan.treeEv)for(const e of plan.treeEv)if(!e.done&&t>=e.t){e.done=1;try{const d=camera.position.distanceTo(V(e.x,e.y,e.z));SND.tree(e.k,e.fir,(1.25-d/110)*(e.g||1));}catch(err){}}
     if(state==='flight'&&t>0){if(!plan.landSnd&&!plan.putt&&plan.club&&t>=plan.club.T*TS*(.5+.5*Math.min(1,swingPow))){plan.landSnd=1;SND.land(lieAt(pos.x,pos.y));grassPrepareNext(plan);}if(plan.putt&&!plan.grassPrep&&t>.3){plan.grassPrep=1;grassPrepareNext(plan);}if(t<2.6)flightSparks(p.ball.b.position,camera.position.distanceTo(p.ball.b.position));trailPts.push(V(pos.x,pos.y,pos.z));if(trailPts.length>690)trailPts.shift();setRibbon(trailPts);}
     else if(state==='result'&&trailPts.length>1)setRibbon(trailPts);
     const dx=Math.cos(plan.dir),dy=Math.sin(plan.dir),lastT=plan.pts[plan.pts.length-1].t,land=plan.pts.length>1?plan.pts[Math.min(plan.pts.length-1,111)]:pos;
