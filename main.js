@@ -878,7 +878,7 @@ const CLUB_LEN={driver:1.1,wood:1.03,iron:.95,wedge:.9,putter:.89};
    The lie the game calibrates is taken at impact for the old drawn blade; on this longer head that left the heel up and the toe down. */
 function levelPutter(g){const pc=g.userData.rig&&g.userData.rig.clubs&&g.userData.rig.clubs.putter;if(!pc)return;const hb=pc.userData.hb,hg=pc.userData.hg;if(!hb||!hg||!hb.userData.neckModel)return;
   hb.userData.lieFix=null;pc.updateMatrixWorld(true);const e=hg.matrixWorld.elements,lie=Math.atan2(e[9],e[5]);hb.rotation.x=lie;hb.userData.lieFix=lie;hb.userData.axisMount.dy=0;fitPutterNeck(hb);pc.updateMatrixWorld(true);
-  const o=hb.getWorldPosition(new THREE.Vector3()),up=new THREE.Vector3(0,1,0).transformDirection(hb.matrixWorld),gy=H(o.x,-o.z);hb.userData.axisMount.dy=-(o.y-gy)/Math.max(.5,up.y);fitPutterNeck(hb);pc.updateMatrixWorld(true);}
+  const o=hb.getWorldPosition(new THREE.Vector3()),up=new THREE.Vector3(0,1,0).transformDirection(hb.matrixWorld),gy=H(o.x,-o.z);hb.userData.axisMount.dy=-(o.y-gy)/Math.max(.5,up.y);fitPutterNeck(hb);pc.updateMatrixWorld(true);putterFlush(g,pc,hb);}
 function fitPutterNeck(hb){const n=hb.userData.neck;if(!n)return;const t0=hb.rotation.x,AM=hb.userData.axisMount;
   if(hb.userData.lieFix!=null&&hb.rotation.x!==hb.userData.lieFix){hb.rotation.x=hb.userData.lieFix;return fitPutterNeck(hb);}/* the standard putter keeps the lie that sets it flat at address */
   if(AM){/* the shaft line runs through this frame's origin along (0,cos t,-sin t): extend it straight down into the head, and set the
@@ -949,8 +949,8 @@ function makeClubs(lk){const PSTYLE=(lk&&lk.putter)||'std';/* 'std' = the silver
       bl.rotation.y=-Math.PI/2;const lg=new THREE.Group();lg.add(bl);lg.rotation.z=loft;lg.scale.setScalar(sc);hb.add(lg);
       const hs=new THREE.Mesh(new THREE.CylinderGeometry(.0062,.0078,.068,18),satin);hs.position.set(0,.036,.002);hg.add(hs);const fe=new THREE.Mesh(new THREE.CylinderGeometry(.0058,.0062,.012,18),ferr);fe.position.set(0,.075,.002);hg.add(fe);};
   const dmod=lk&&lk.driverModel,imod=(lk&&lk.ironModel)||'default';/* look.driverModel: a real driver head model (driver_<name>.glb, already in the club's frame: shaft up +y, face +x, toe +z, hosel top 7 cm up) replaces the built head once it has loaded */
-    const withModel=(bld,file)=>!file?bld:(hg,hb)=>{bld(hg,hb);window._drvP=window._drvP||{};window._drvP[file]=window._drvP[file]||new Promise(res=>new THREE.GLTFLoader().load(file,res,undefined,()=>res(null)));
-      window._drvP[file].then(gl=>{if(!gl)return;hb.children.forEach(c=>c.visible=false);hg.children.forEach(c=>{if(c!==hb)c.visible=false;});const w=new THREE.Group();hg.add(w);/* the model carries its own hosel and lie, so it hangs off the shaft end itself (not the head group, whose angle the game re-fits per golfer) - it can never come apart from the shaft */
+    const withModel=(bld,file)=>!file?bld:(hg,hb)=>{bld(hg,hb);hg.userData.wait=1;window._drvP=window._drvP||{};window._drvP[file]=window._drvP[file]||new Promise(res=>new THREE.GLTFLoader().load(file,res,undefined,()=>res(null)));
+      window._drvP[file].then(gl=>{hg.userData.wait=0;if(!gl)return;hb.children.forEach(c=>c.visible=false);hg.children.forEach(c=>{if(c!==hb)c.visible=false;});const w=new THREE.Group();hg.add(w);hg.userData.w=w;/* the model carries its own hosel and lie, so it hangs off the shaft end itself (not the head group, whose angle the game re-fits per golfer) - it can never come apart from the shaft */
         gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,o.material);if(env&&m.material&&!m.material.envMap){m.material.envMap=env;m.material.envMapIntensity=1.1;m.material.needsUpdate=true;}m.castShadow=true;w.add(m);});
         /* a clean black ferrule over the join: the model's hosel runs 1.5 cm up inside our shaft, and this collar hides where it ends */
         const fr=new THREE.Mesh(new THREE.CylinderGeometry(.0063,.0068,.022,24),S({color:0x0b0b0d,metalness:.4,roughness:.3}));fr.position.y=.0815;fr.castShadow=true;hg.add(fr);});};
@@ -994,9 +994,9 @@ mk('driver',withModel(wood(1,dh&&dh.tint&&!dh.c?S({map:T.carbon,color:new THREE.
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(mill),front);`);};body.customProgramCacheKey=()=>'df3v4';
       /* shaft goes in at the junction of the blade and the round piece (8 mm behind the blade's back... i.e. the step at x=-.008 on the
          model), centred heel to toe (model z=.049), on top of the junction (y=.022) */
-      hb.userData.axisMount={xj:.008,zc:.049,y:.0222};hb.userData.hm=[];
+      hb.userData.axisMount={xj:.008,zc:.049,y:.0222};hb.userData.hm=[];hb.userData.wait=1;
       window._df3P=window._df3P||new Promise(res=>new THREE.GLTFLoader().load('putter_df3.glb',res,undefined,()=>res(null)));
-      window._df3P.then(gl=>{if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,body);m.castShadow=true;hb.add(m);hb.userData.hm.push(m);});
+      window._df3P.then(gl=>{hb.userData.wait=0;if(!gl)return;gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,body);m.castShadow=true;hb.add(m);hb.userData.hm.push(m);});
         /* white markings as inlays sitting on the surface (in the model's own coordinates, so they move with the head) */
         const wht=S({color:0xf3f3f0,roughness:.45});
         for(const [len,x,y] of [[.0195,.0063,.02475],[.013,-.091,.0221]]){const gg=new THREE.BoxGeometry(len,.0005,.0022);gg.translate(x,y,.049);const m=new THREE.Mesh(gg,wht);hb.add(m);hb.userData.hm.push(m);}
@@ -1023,10 +1023,10 @@ mk('driver',withModel(wood(1,dh&&dh.tint&&!dh.c?S({map:T.carbon,color:new THREE.
           diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.52,.02,.04),slot);diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.95,.93,.9),slot*tx);`);
         sh.uniforms.uTxt={value:window._degenTxt};};frame.customProgramCacheKey=()=>'spiderTop2';
       const put=(gl)=>{gl.scene.traverse(o=>{if(!o.isMesh)return;const m=new THREE.Mesh(o.geometry,frame);m.castShadow=true;hb.add(m);});};
-      window._spiderP=window._spiderP||new Promise(res=>new THREE.GLTFLoader().load('putter_spider.glb',res,undefined,()=>res(null)));
-      window._spiderP.then(gl=>{if(gl)put(gl);});
+      hb.userData.wait=1;window._spiderP=window._spiderP||new Promise(res=>new THREE.GLTFLoader().load('putter_spider.glb',res,undefined,()=>res(null)));
+      window._spiderP.then(gl=>{if(gl)put(gl);hb.userData.wait=0;});
     }
-    if(PSTYLE==='std'||PSTYLE==='blackout'||PSTYLE==='oilslick'){/* the standard putter model (blackout and oil-slick are the same head in their colours): the drawn blade above shows only until it has loaded */
+    if(PSTYLE==='std'||PSTYLE==='blackout'||PSTYLE==='oilslick'){hb.userData.stdHead=1;/* the standard putter model (blackout and oil-slick are the same head in their colours): the drawn blade above shows only until it has loaded */
       const PFILE=PSTYLE==='oilslick'?'putter_oil.glb':'putter_std.glb';window._pstdPs=window._pstdPs||{};window._pstdPs[PFILE]=window._pstdPs[PFILE]||new Promise(res=>new THREE.GLTFLoader().load(PFILE,res,undefined,()=>res(null)));if(PFILE==='putter_std.glb')window._pstdP=window._pstdPs[PFILE];
       window._pstdPs[PFILE].then(gl=>{if(!gl)return;const hd=gl.scene.getObjectByName('pHead'),nk=gl.scene.getObjectByName('pNeck');if(!hd||!nk)return;
         hb.children.forEach(c=>c.visible=false);hg.children.forEach(c=>{if(c!==hb)c.visible=false;});
@@ -1524,7 +1524,51 @@ function proShape(body,geo,lk,src,meshHead){
       if(g.materialIndex===iT&&(Math.abs(X(a)-cT.a)>lim||Math.abs(X(b)-cT.a)>lim||Math.abs(X(c)-cT.a)>lim))continue;tri.push(a,b,c);}G.push([g.materialIndex,tri]);}
     geo.clearGroups();for(const [m,tri] of G){geo.addGroup(out.length,tri.length,m);out.push(...tri);}geo.setIndex(out);}
   /* the model's own normals are kept: recomputing them folds the fine crease detail at the knees into dark patches */}
+/*HEIGHTS*//* real heights (inches), entered by Justin: each golfer is drawn at their own height, with clubs fitted to it */
+const HEIGHT_IN={andrea:66,'selfie-cam':68,beau:70,'ramble-on':71,shaka:68,'brendan-ws':71,'white-cap':68,'red-brim':69,dillon:71,ephram:70,erik:71,'back-row':62,jarrett:71,'white-snap':69,'flag-holder':70,'green-fleece':69,kanishka:77,keegan:67,landon:74,'navy-cap':69,peter:74,'the-bay':71,photobomber:67,sheldon:73,'grey-snap':69,stephen:68};
+function tplHeight(T){if(T._hm!==undefined)return T._hm;let top=-1e9,sole=1e9;const P=T.pos,C=T.cls;if(P&&C){for(let i=0;i<C.length;i++){const y=P[i*3+1];if(y>top)top=y;if(C[i]===6&&y<sole)sole=y;}}T._hm=(top>-1e8&&sole<1e8&&top-sole>.5)?top-sole:0;return T._hm;}
+function heightScale(p,T){const hi=HEIGHT_IN[p.id],hm=T&&tplHeight(T);return hi&&hm?hi*.0254/hm:0;}
+/* the standard set (CLUB_LEN) fits a 5'10" player; a fitter adds or takes off about 1/6 inch of club per inch of height */
+function clubFit(p){const hi=HEIGHT_IN[p.id];return hi?1+.0045*(hi-70):1;}
+/* a golfer's club length in their own (scaled) frame */
+function CLK(g,type){const R=g&&g.userData&&g.userData.rig;return CLUB_LEN[type]*((R&&R.clubK)||1);}
+/* lie at address: the lie this body had at its model height with the standard club, fitted 0.5 deg more upright per inch taller;
+   returns the lead-hand height (golfer frame) that gives it with this golfer's club - the spine tilt is then found to put the hands there */
+function lieTgtY(g,type,G0,L0){const R=g.userData.rig,tY=type==='driver'?.034:type==='wood'?.016:.012;if(!R.heightIn||!R.tplIn)return .95*L0;
+  const c0=Math.min(.999,Math.max(.2,(G0-tY)/CLUB_LEN[type])),th=Math.max(.12,Math.acos(c0)-.0087*(R.heightIn-R.tplIn));return tY+L0*Math.cos(th);}
+/* ---- flush soles ---- */
+function groundPlane(c){const e=.06,h0=DRAWNH(c.x,-c.z),hx=DRAWNH(c.x+e,-c.z),hz=DRAWNH(c.x,-(c.z+e));return (x,z)=>h0+(hx-h0)/e*(x-c.x)+(hz-h0)/e*(z-c.z);}
+function visIn(o,top){for(let q=o;q&&q!==top;q=q.parent)if(!q.visible)return false;return true;}
+/* lowest point of the club head that is drawn, above (+) or below (-) the turf you see, in metres */
+function soleGap(cg){const hg=cg.userData.hg;if(!hg)return null;hg.updateMatrixWorld(true);const gp=groundPlane(hg.getWorldPosition(new THREE.Vector3())),v=new THREE.Vector3();let mn=1e9;
+  hg.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position||!visIn(o,cg))return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);const d=v.y-gp(v.x,v.z);if(d<mn)mn=d;}});return mn<1e8?mn:null;}
+/* a loaded head model hangs off the shaft end with its own built-in lie; turn it about the face so heel and toe sit level at this golfer's lie
+   (what a fitter does by bending the hosel) */
+function levelModel(cg){const hg=cg.userData.hg,w=hg&&hg.userData.w;if(!w)return;const ms=[];w.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry.attributes.position)ms.push(o);});if(!ms.length)return;
+  if(w.userData.zr===undefined){let z0=1e9,z1=-1e9;for(const m of ms){const P=m.geometry.attributes.position;for(let i=0;i<P.count;i++){const z=P.getZ(i);if(z<z0)z0=z;if(z>z1)z1=z;}}w.userData.zr=[z0,z1];}
+  const [z0,z1]=w.userData.zr,zh=z0+(z1-z0)*.35,zt=z0+(z1-z0)*.65,gp=groundPlane(hg.getWorldPosition(new THREE.Vector3())),v=new THREE.Vector3();
+  const diff=()=>{w.updateMatrixWorld(true);let h=1e9,t=1e9;for(const m of ms){const P=m.geometry.attributes.position;for(let i=0;i<P.count;i++){const z=P.getZ(i);if(z>zh&&z<zt)continue;v.fromBufferAttribute(P,i).applyMatrix4(m.matrixWorld);const d=v.y-gp(v.x,v.z);if(z<=zh){if(d<h)h=d;}else if(d<t)t=d;}}return t-h;};
+  let a0=w.rotation.x,d0=diff();if(Math.abs(d0)<.0008)return;let a1=a0+(d0>0?.05:-.05);w.rotation.x=a1;let d1=diff();
+  for(let k=0;k<5&&Math.abs(d1)>.0005;k++){if(Math.abs(d1-d0)<1e-6)break;const a2=Math.max(-.35,Math.min(.35,a1-d1*(a1-a0)/(d1-d0)));a0=a1;d0=d1;a1=a2;w.rotation.x=a1;d1=diff();}
+  w.updateMatrixWorld(true);}
+/* at a golfer's first address with each club (standing on the turf, head model loaded): level a loaded head, then set the shaft-end
+   height (cal.hY, used at address, impact and by the soling clamp) so the lowest point of the head is 1 mm above the turf */
+function clubSettle(g,ck,type){const R=g.userData.rig,An=R.anim,cal=An&&An.cal[ck+':'+type],cg=R.clubs&&R.clubs[type];
+  if(!cal||cal.fit2||!cg||!g.parent||!cg.visible)return false;const hg=cg.userData.hg,hb=cg.userData.hb;if(!hg||!hb)return false;
+  if(type==='putter'&&(hb.userData.stdHead||hb.userData.neckModel)){cal.fit2=1;return false;}/* the standard putter: levelPutter + putterFlush */
+  if(hg.userData.wait||hb.userData.wait)return false;/* its head model is still loading */
+  if(Math.abs(DRAWNH(g.position.x,-g.position.z)-g.position.y)>.03)return false;/* not standing on the turf yet */
+  g.updateMatrixWorld(true);cg.updateMatrixWorld(true);if(hg.userData.w)levelModel(cg);
+  const gap=soleGap(cg);if(gap===null||Math.abs(gap)>.06)return false;cal.fit2=1;
+  const base=cal.hY!=null?cal.hY:(type==='putter'?.004:.01),err=(gap-.001)/(g.scale.y||1);cal.hY=Math.abs(err)<.0008?base:base-err;return Math.abs(err)>=.0008;}
+/* the standard putter model is levelled by levelPutter (heel and toe level, lowered onto the turf); then put its lowest point 1 mm above
+   the turf you see. Moving the head's mount by dS moves it (0,1,-tan(lie)) in the head's frame. */
+function putterFlush(g,pc,hb){const hm=hb.userData.hm||[],v=new THREE.Vector3();if(!hm.length)return;pc.updateMatrixWorld(true);const gp=groundPlane(hb.getWorldPosition(new THREE.Vector3()));let mn=1e9;
+  for(const m of hm){const P=m.geometry&&m.geometry.attributes.position;if(!P)continue;for(let i=0;i<P.count;i++){v.fromBufferAttribute(P,i).applyMatrix4(m.matrixWorld);const d=v.y-gp(v.x,v.z);if(d<mn)mn=d;}}
+  const e=hb.matrixWorld.elements,k=e[5]-Math.tan(hb.rotation.x)*e[9];if(mn>1e8||Math.abs(mn-.001)<.0005||Math.abs(mn)>.06||Math.abs(k)<.3)return;
+  hb.userData.axisMount.dy-=(mn-.001)/k;fitPutterNeck(hb);pc.updateMatrixWorld(true);}
 function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look,F?F.skin:p.look.skin),T=(p.look.rb&&TPL['RB_'+p.look.rb])||(FEMALE.has(p.id)?TPL.PRO_F:TPL.PRO_M)||TPL[FEMALE.has(p.id)?'F':'M'];
+  const HS=heightScale(p,T);if(HS){lk.tall=HS;p.look.tall=HS;}/* real height */
   const g=new THREE.Group(),root=THREE.SkeletonUtils.clone(T.scene);g.add(root);root.updateMatrixWorld(true);
   let body=null;const capOn=!!(lk.cap&&lk.cap.style&&lk.cap.style!=='none'&&lk.cap.style!=='band');root.traverse(o=>{if(o.isMesh){if(o.isSkinnedMesh&&o.name===T.bodyName)body=o;else if(T.rb&&/Hair/.test(o.name)&&!capOn){o.visible=true;o.frustumCulled=false;o.castShadow=true;}else o.visible=false;}});
   /* per-vertex clothing colors + face-photo projection */
@@ -1571,7 +1615,7 @@ function buildAvatarSkel(p){const F=window.FACES&&FACES[p.id],lk=golfLook(p.look
   if(T.pro&&T.k!=='PRO_F'){const bn={};body.skeleton.bones.forEach(b=>bn[b.name]=b);for(const s of['l','r']){for(const n of['lowerarm_'+s,'hand_'+s]){const b=bn[n];if(b)b.position.multiplyScalar(1.45);}}body.updateMatrixWorld(true);}
   const B={},all=[];body.skeleton.bones.forEach(b=>{B[b.name]=b;all.push(b);b.userData.q0=b.quaternion.clone();b.userData.p0=b.position.clone();b.userData.r0=b.getWorldQuaternion(new THREE.Quaternion());});
   const gpR=nm=>B[nm].getWorldPosition(new THREE.Vector3());
-  const R={skel:true,tpl:T,footPitch:(()=>{const o={};for(const s of['l','r']){const f=B['foot_'+s],b=B['ball_'+s];if(!f||!b)continue;const a=f.getWorldPosition(new THREE.Vector3()),c=b.getWorldPosition(new THREE.Vector3()),v=c.sub(a);o[s]=Math.atan2(v.y,Math.hypot(v.x,v.z));}return o;})(),footRestY:B.foot_l?B.foot_l.getWorldPosition(new THREE.Vector3()).y:undefined,pro:!!T.pro,fem:T.k==='PRO_F',rb:!!T.rb,shl:!!(SHL&&SHL.pants)||!!T.rb,B,all,ballZ:SK.ballZ*(lk.tall||1),pelvisPos:gpR('pelvis'),J_ankY:T.J.ankY,arms:{},legs:{}};g.userData.rig=R;R.fem=FEMALE.has(p.id);/* the women's taller putting stance (animApply) keys off this - it was never set */
+  const R={skel:true,tpl:T,footPitch:(()=>{const o={};for(const s of['l','r']){const f=B['foot_'+s],b=B['ball_'+s];if(!f||!b)continue;const a=f.getWorldPosition(new THREE.Vector3()),c=b.getWorldPosition(new THREE.Vector3()),v=c.sub(a);o[s]=Math.atan2(v.y,Math.hypot(v.x,v.z));}return o;})(),footRestY:B.foot_l?B.foot_l.getWorldPosition(new THREE.Vector3()).y:undefined,pro:!!T.pro,fem:T.k==='PRO_F',rb:!!T.rb,shl:!!(SHL&&SHL.pants)||!!T.rb,B,all,ballZ:SK.ballZ*(lk.tall||1),pelvisPos:gpR('pelvis'),J_ankY:T.J.ankY,arms:{},legs:{}};g.userData.rig=R;R.fem=FEMALE.has(p.id);if(HS){R.clubK=clubFit(p)/HS;R.heightIn=HEIGHT_IN[p.id];R.tplIn=tplHeight(T)/.0254;R.hW=HS*tplHeight(T);}/* fitted clubs, in this golfer's scaled frame *//* the women's taller putting stance (animApply) keys off this - it was never set */
   for(const s of[1,-1]){const sd=s>0?'l':'r',u=gpR('upperarm_'+sd),l=gpR('lowerarm_'+sd),h=gpR('hand_'+sd),m=gpR('middle_01_'+sd);
     const f0=m.clone().sub(h).normalize(),n0=v3(0,-1,0);n0.addScaledVector(f0,-n0.dot(f0)).normalize();
     const hinge=v3(0,0,0).crossVectors(l.clone().sub(u).normalize(),v3(0,0,1)).normalize();
@@ -1788,17 +1832,17 @@ function clubFaceBall(g,cg,faceH){/* ball centre = middle of the head, pushed ou
   hg.traverse(o=>{if(!o.isMesh||!o.geometry||!o.geometry.attributes.position)return;const P=o.geometry.attributes.position;for(let i=0;i<P.count;i+=Math.max(1,Math.floor(P.count/400))){v.fromBufferAttribute(P,i).applyMatrix4(o.matrixWorld);g.worldToLocal(v);const d=v.x*faceH.x+v.z*faceH.z;if(d>mx)mx=d;sx+=v.x;sy+=v.y;sz+=v.z;n++;}});
   if(!n)return null;const cx=sx/n,cz=sz/n,cd=cx*faceH.x+cz*faceH.z,push=mx-cd+.0214;return{bx:cx+faceH.x*push,bz:cz+faceH.z*push};}
 function animCal(g,ck,type){const An=animSetup(g),key=ck+':'+type;if(An.cal[key])return An.cal[key];animGround(g,ck);const C=ANIM.clips[ck],B=g.userData.rig.B;
-  if(type!=='putter'){const L0=CLUB_LEN[type],tgtY=.95*L0;An.bend=An.bend||{};An.bend[key]=0;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY){let lo=0,hi=.16;for(let k=0;k<14;k++){const m=(lo+hi)/2;An.bend[key]=m;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY)lo=m;else hi=m;}An.bend[key]=hi;}
-    animApply(g,ck,C.keys.imp,undefined,0,type);const lg0=gripPt(g,'l'),L=Math.max(CLUB_LEN[type],(lg0.y-.012)/.93),lg=lg0,tY=type==='driver'?.034:type==='wood'?.016:.012,lean=type==='driver'?.0:type==='wood'?-.02:type==='wedge'?-.06:-.05,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-lean*lean));
+  if(type!=='putter'){const L0=CLK(g,type),Rh=g.userData.rig.heightIn;An.bend=An.bend||{};An.bend[key]=0;animApply(g,ck,C.keys.imp,undefined,0,type);const gy0=gripPt(g,'l').y,tgtY=lieTgtY(g,type,gy0,L0);if(gy0>tgtY||(Rh&&gy0<tgtY-.002)){const dn=gy0>tgtY;let lo=dn?0:-.12,hi=dn?(Rh?.3:.16):0;for(let k=0;k<16;k++){const m=(lo+hi)/2;An.bend[key]=m;animApply(g,ck,C.keys.imp,undefined,0,type);if(gripPt(g,'l').y>tgtY)lo=m;else hi=m;}An.bend[key]=dn?hi:lo;}
+    animApply(g,ck,C.keys.imp,undefined,0,type);const lg0=gripPt(g,'l'),L=Math.max(CLK(g,type),(lg0.y-.012)/.93),lg=lg0,tY=type==='driver'?.034:type==='wood'?.016:.012,lean=type==='driver'?.0:type==='wood'?-.02:type==='wedge'?-.06:-.05,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-lean*lean));
     const head=new THREE.Vector3(lg.x+lean,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
     const iq=relQ(g,B.hand_l).invert(),cal={dL:d1.clone().applyQuaternion(iq),fL:face.clone().applyQuaternion(iq),bx:head.x+.03,bz:head.z+.045,lie:Math.PI/2-Math.atan2(dy,Math.hypot(hz,lean)),len:L};An.cal[key]=cal;
     const cg=g.userData.rig.clubs[type];if(cg&&cg.userData.hb){cg.userData.hb.rotation.x=cal.lie;g.userData.rig.calib=1;animClub(g,ck,type);g.userData.rig.calib=0;const fb=clubFaceBall(g,cg,new THREE.Vector3(1,0,0));if(fb){cal.bx=fb.bx;cal.bz=fb.bz;}}
     return cal;}
-  if(type==='putter'){animApply(g,ck,C.keys.imp,undefined,0,'putter');/* calibrate on the same posture the putt is played in (the women's taller putting stance is applied only when the type is given) */const L=CLUB_LEN.putter,lg=gripPt(g,'l'),tY=.012,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-.0004));const head=new THREE.Vector3(lg.x+.02,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
+  if(type==='putter'){animApply(g,ck,C.keys.imp,undefined,0,'putter');/* calibrate on the same posture the putt is played in (the women's taller putting stance is applied only when the type is given) */const L=CLK(g,'putter'),lg=gripPt(g,'l'),tY=.012,dy=lg.y-tY,hz=Math.sqrt(Math.max(.01,L*L-dy*dy-.0004));const head=new THREE.Vector3(lg.x+.02,tY,lg.z+hz),d1=head.clone().sub(lg).normalize(),face=new THREE.Vector3(1,0,0);face.addScaledVector(d1,-face.dot(d1)).normalize();
     const iq=relQ(g,B.hand_l).invert(),cal={dL:d1.clone().applyQuaternion(iq),fL:face.clone().applyQuaternion(iq),bx:head.x+.039,bz:head.z+.047,lie:Math.PI/2-Math.atan2(dy,hz)};An.cal[key]=cal;const pc=g.userData.rig.clubs.putter;if(pc&&pc.userData.hb){pc.userData.hb.rotation.x=cal.lie;fitPutterNeck(pc.userData.hb);
     /* put the ball where the face actually is at impact: pose the club and measure the face centre */
     g.userData.rig.calib=1;animClub(g,ck,'putter');g.userData.rig.calib=0;pc.updateMatrixWorld(true);const fp=g.worldToLocal(pc.userData.hb.localToWorld(pc.userData.hb.userData.fc?pc.userData.hb.userData.fc.clone():new THREE.Vector3(.0175+.0214,.013,.049)));cal.bx=fp.x;cal.bz=fp.z;}return cal;}
-  animApply(g,ck,C.keys.imp);const L=CLUB_LEN[type],lg=gripPt(g,'l'),tg=gripPt(g,'r');let d0=tg.clone().sub(lg);if(d0.lengthSq()<1e-6)d0.set(0,-1,.3);d0.normalize();
+  animApply(g,ck,C.keys.imp);const L=CLK(g,type),lg=gripPt(g,'l'),tg=gripPt(g,'r');let d0=tg.clone().sub(lg);if(d0.lengthSq()<1e-6)d0.set(0,-1,.3);d0.normalize();
   const face=new THREE.Vector3(1,0,0);face.addScaledVector(d0,-face.dot(d0)).normalize();const tY=type==='driver'?.035:.012,hy=th=>lg.y+d0.clone().applyAxisAngle(face,th).y*L;
   let best=0,bd=1e9;for(let k=0;k<=120;k++){const th=(k%2?1:-1)*Math.ceil(k/2)*.01,e=Math.abs(hy(th)-tY);if(e<.006){best=th;bd=e;break;}if(e<bd){bd=e;best=th;}}
   const d1=d0.clone().applyAxisAngle(face,best),iq=relQ(g,B.hand_l).invert(),head=lg.clone().addScaledVector(d1,L);
@@ -1807,12 +1851,12 @@ function animClub(g,ck,type,wA){const R=g.userData.rig,cal=animCal(g,ck,type),hq
   const sh=cal.dL.clone().applyQuaternion(hq).normalize(),fc=cal.fL.clone().applyQuaternion(hq);
   let putX=0;
   /* at address the club is soled right behind the ball, square to the target; it hands over to the captured hands during the takeaway */
-  if(wA>0&&!R.calib){const tgt=new THREE.Vector3(cal.bx-.034,type==='driver'?.034:.013,cal.bz-.047);g.updateMatrixWorld(true);{const bw=g.localToWorld(new THREE.Vector3(cal.bx,0,cal.bz));tgt.y+=(H(bw.x,-bw.z)-g.position.y)/(g.scale.y||1);}const L0=cal.len||CLUB_LEN[type]||1,Lt=Math.max(L0*.75,Math.min(L0*1.32,tgt.distanceTo(grip)));R._lenA=L0+(Lt-L0)*wA;const dA=tgt.sub(grip).normalize();sh.lerp(dA,wA).normalize();fc.lerp(new THREE.Vector3(1,0,0),wA);}
+  if(wA>0&&!R.calib){const tgt=new THREE.Vector3(cal.bx-.034,cal.hY!=null?cal.hY:(type==='driver'?.034:.013),cal.bz-.047);g.updateMatrixWorld(true);{const bw=g.localToWorld(new THREE.Vector3(cal.bx,0,cal.bz));tgt.y+=(DRAWNH(bw.x,-bw.z)-g.position.y)/(g.scale.y||1);}const L0=cal.len||CLK(g,type)||1,Lt=Math.max(L0*.75,Math.min(L0*1.32,tgt.distanceTo(grip)));R._lenA=L0+(Lt-L0)*wA;const dA=tgt.sub(grip).normalize();sh.lerp(dA,wA).normalize();fc.lerp(new THREE.Vector3(1,0,0),wA);}
   if(!(wA>0)||R.calib)R._lenA=0;const Lput=putX*(1-Math.min(1,wA>0?wA:0));let xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();
-  R._solX=0;if(!R.calib){let L=(R._lenA||cal.len||CLUB_LEN[type]||1)+Lput,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(H(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(type==='putter'?.004:.01);
+  R._solX=0;if(!R.calib){let L=(R._lenA||cal.len||CLK(g,type)||1)+Lput,head=grip.clone().addScaledVector(sh,L);g.updateMatrixWorld(true);const hw=g.localToWorld(head.clone()),gy=(DRAWNH(hw.x,-hw.z)-g.position.y)/(g.scale.y||1)+(cal.hY!=null?cal.hY:(type==='putter'?.004:.01));
     const sw=R._soleW||0;if(sw>0&&head.y>gy+.002&&sh.y<-.2){const ext=Math.min(L*.3,(head.y-gy)/(-sh.y))*sw;R._solX=ext;L+=ext;head.copy(grip).addScaledVector(sh,L);}
     if(head.y<gy){const c=new THREE.Vector3().crossVectors(xa,sh),k=(gy-grip.y)/L,Rr=Math.hypot(sh.y,c.y);if(Rr>1e-4&&Math.abs(k)<=Rr){const ph=Math.atan2(c.y,sh.y),ac=Math.acos(k/Rr),t1=ph+ac,t2=ph-ac,th=Math.abs(t1)<Math.abs(t2)?t1:t2;sh.multiplyScalar(Math.cos(th)).addScaledVector(c,Math.sin(th)).normalize();xa=fc.clone().addScaledVector(sh,-fc.dot(sh)).normalize();}}}
-  let Lfin=(R._lenA||cal.len||CLUB_LEN[type]||1)+Lput+(R._solX||0);if(type==='putter'&&R.pro&&!R.calib){const Lp=CLUB_LEN.putter*.7;grip.addScaledVector(sh,Lfin-Lp);Lfin=Lp;}/* 30% shorter putter, same head position */
+  let Lfin=(R._lenA||cal.len||CLK(g,type)||1)+Lput+(R._solX||0);if(type==='putter'&&R.pro&&!R.calib){const Lp=CLK(g,'putter')*.7;grip.addScaledVector(sh,Lfin-Lp);Lfin=Lp;}/* 30% shorter putter, same head position */
   const ya=sh.clone().negate(),za=new THREE.Vector3().crossVectors(xa,ya).normalize();xa.crossVectors(ya,za).normalize();{const cgs=R.clubs[type],Lu=Lfin;/* the putter has no calibrated length: fall back to its real length (a NaN here froze the putter's size, so it hovered) */if(cgs&&Lu)cgs.scale.set(1,Lu/(CLUB_LEN[type]||Lu),1);}
   _m4.makeBasis(xa,ya,za);for(const kk in R.clubs){const cg=R.clubs[kk];cg.visible=kk===type;if(kk===type){cg.position.copy(grip);cg.quaternion.setFromRotationMatrix(_m4);}}}
 
@@ -1893,7 +1937,7 @@ function animPose(g,S,type){if(!ANIM||!S||!S._ph)return false;const ck=animClip(
       if(g.userData.rig.pro&&type==='putter'){const s1=g.userData.rig.B.spine_01;if(s1)setRelG(g,s1,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.26).multiply(relQ(g,s1)));}/* putting: bend a little more from the hips (eyes over the ball) so the hands reach the shorter putter with the shoulders square */
       if(g.userData.rig.pro){const B2=g.userData.rig.B,sp=B2.spine_02;if(sp&&B2.upperarm_l&&B2.upperarm_r&&B2.spine_03&&B2.spine_01){const want=type==='putter'?-1:.065;
         for(let it=0;it<2;it++){const L1=gpG(g,B2.upperarm_l),R1=gpG(g,B2.upperarm_r),up=gpG(g,B2.spine_03).sub(gpG(g,B2.spine_01)).normalize(),ax=new THREE.Vector3().crossVectors(up,L1.clone().sub(R1)).normalize(),drop=L1.y-R1.y;if(drop>=want-.004)break;
-          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}if(type!=='putter'){try{const cb=animCal(g,ck,type),ssh=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);};headStill(g,ph==='thru'?1-ssh(0,.35,u):1,new THREE.Vector3(cb.bx,0,cb.bz));}catch(e){}}leadExtend(g,g.userData.rig._topW||0);try{clubPath(g,ck,type,ph,u,p);}catch(e){}const wA0=type==='putter'?0:(ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}
+          const ang=Math.min(.22,(want-drop)/Math.max(.2,L1.distanceTo(R1)));const q1=new THREE.Quaternion().setFromAxisAngle(ax,ang);setRelG(g,sp,q1.clone().multiply(relQ(g,sp)));const d2=gpG(g,B2.upperarm_l).y-gpG(g,B2.upperarm_r).y;if(d2<drop){setRelG(g,sp,q1.invert().multiply(new THREE.Quaternion().setFromAxisAngle(ax,-ang)).multiply(relQ(g,sp)));}}}}}if(type!=='putter'){try{const cb=animCal(g,ck,type),ssh=(a,b,x)=>{const k=Math.max(0,Math.min(1,(x-a)/(b-a)));return k*k*(3-2*k);};headStill(g,ph==='thru'?1-ssh(0,.35,u):1,new THREE.Vector3(cb.bx,0,cb.bz));}catch(e){}}leadExtend(g,g.userData.rig._topW||0);try{clubPath(g,ck,type,ph,u,p);}catch(e){}const wA0=type==='putter'?0:(ph==='addr'?1:ph==='back'?Math.max(0,1-p/.3):0);animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}if(ph==='addr'){try{if(clubSettle(g,ck,type)){animClub(g,ck,type,wA0);try{gripFix(g,type);}catch(e){}}}catch(e){}}
       {const R2=g.userData.rig;if(R2._topHdT){/* second pass: the trail hand lands wherever the grip puts it; nudge both hands so it lands on the planned spot */
         const B2=R2.B,err=R2._topHdT.clone().sub(gpG(g,B2.hand_r)).multiplyScalar(R2._topW||0);if(err.length()>.008){const hq=relQ(g,B2.hand_l);armTo(g,'l',gpG(g,B2.hand_l).add(err),gpG(g,B2.lowerarm_l).add(new THREE.Vector3(0,-.1,0)));setRelG(g,B2.hand_l,hq);const cg2=R2.clubs&&R2.clubs[type];if(cg2){cg2.position.add(err);cg2.updateMatrixWorld(true);}try{gripFix(g,type);}catch(e){}}}}const R=g.userData.rig,tn=performance.now()/1000,dtl=Math.min(.12,tn-(R.hlT||tn));R.hlT=tn;const tgt=ph==='addr'?1:0;R.hlW=R.hlW===undefined?1:R.hlW+(tgt-R.hlW)*Math.min(1,dtl*8);if(ph==='addr')R.hlW=1;if(ph==='addr'||ph==='back')headLift(g,R.hlW);/* waiting at address the golfer looks out toward the target; once the swing starts the look fades and the head settles in line with the spine, eyes on the ball */return true;}catch(e){console.warn('anim',e);return false;}}
 function animBall(p){const g=p.av,R=g&&g.userData.rig;if(!ANIM||!R||!R.skel)return null;try{const t=clubType(p.club),ck=animClip(t);if(!ANIM.clips[ck])return null;const c=animCal(g,ck,t);return c;}catch(e){return null;}}
@@ -3190,12 +3234,12 @@ function frameInner(){try{updCurtain(performance.now()/1000);}catch(e){dgErr(e,'
       INTRO_D=camPos.distanceTo(want);if(p._it0==null)p._it0=now;
       if(!p._held){if(INTRO_D<.4){p._held=true;p.intro=Math.max(p.intro,now+2.2);}else if(now<p._it0+6)p.intro=Math.max(p.intro,now+.3);}}   /* never cut away mid-trip; then a full beat on the face */
     else if(overhead&&state==='aim'){const d=dist(p),mx=(p.x+PIN.x)/2,my=(p.y+PIN.y)/2;want=V(mx-dx*d*.25,my-dy*d*.25,z+Math.max(25,d*.85));look=V(mx,my,z);}
-    else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75);look=V(p.x+dx*4,p.y+dy*4,z);}
+    else if(pt){want=V(p.x-dx*4.4,p.y-dy*4.4,z+1.75+Math.max(0,(((p.av&&p.av.userData.rig&&p.av.userData.rig.hW)||1.78)-1.78)*.9));look=V(p.x+dx*4,p.y+dy*4,z);}
     else{/* blind tee shot (a dune or bank rising in front): lift the camera until the eye line clears it */
        /* only when the landing area itself is hidden behind a rise - looking up a hill needs no lift */
        let lift=0;try{const Dt=Math.max(30,Math.min(carryOf(p,p.club)*.95,dist(p))),tz=H(p.x+dx*Dt,p.y+dy*Dt)+1,dB=7.5;
          let found=-1;for(let L=0;L<=6;L+=.5){const ez=z+2.1+L;let ok=true;for(let s=8;s<Dt-10;s+=6){const lz=ez+(tz-ez)*(s+dB)/(Dt+dB);if(H(p.x+dx*s,p.y+dy*s)+.6>lz){ok=false;break;}}if(ok){found=L;break;}}lift=found>0?found:0;}catch(e){lift=0;}/* if even 6 m up can't see over it (a long uphill like Augusta 8), stay at eye level and look up the hill */
-       want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1+lift);look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2+lift*.35);}}
+       want=V(p.x-dx*7.5,p.y-dy*7.5,z+2.1+lift+Math.max(0,(((p.av&&p.av.userData.rig&&p.av.userData.rig.hW)||1.78)-1.78)*.9));look=V(p.x+dx*40,p.y+dy*40,H(p.x+dx*40,p.y+dy*40)+1.2+lift*.35);}}
   else if(p&&(state==='flight'||state==='result')&&plan){
     const t=now-flightT0,pos=state==='flight'?interp(plan.pts,Math.max(0,t)):interp(plan.pts,1e9);placeBall(p,pos.x,pos.y,pos.z);
     if(state==='flight'&&plan.treeEv)for(const e of plan.treeEv)if(!e.done&&t>=e.t){e.done=1;try{const d=camera.position.distanceTo(V(e.x,e.y,e.z));SND.tree(e.k,e.fir,(1.25-d/110)*(e.g||1));}catch(err){}}
